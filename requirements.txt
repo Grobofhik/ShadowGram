@@ -2,7 +2,7 @@
 PyQt6>=6.6.0
 
 # Telegram Client Library (MTProto)
-hydrogram>=0.2.1
+hydrogram
 
 # Performance & Encryption (recommended for hydrogram)
 tgcrypto>=1.2.5
