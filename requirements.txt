@@ -1,6 +1,5 @@
 # Core GUI Framework
 PyQt6>=6.6.0
-PyQt6-Multimedia
 
 # Telegram Client Library (MTProto)
 hydrogram>=0.2.1
