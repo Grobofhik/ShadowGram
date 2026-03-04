@@ -184,10 +184,9 @@ class BaseModule:
         self.local_port = self._get_free_port()
         try:
             log_path = os.path.join(self.workdir, "gost_module.log")
-            # Открываем файл и НЕ закрываем его до старта Popen
-            log_file = open(log_path, "w")
-
             self.log(f"Запуск Gost на порту {self.local_port}...", "info")
+            
+            log_file = open(log_path, "w")
             self.gost_process = subprocess.Popen(
                 [
                     "gost",
@@ -200,6 +199,10 @@ class BaseModule:
                 stderr=log_file,
                 start_new_session=True,
             )
+            
+            # Даем процессу время занять дескрипторы и инициализироваться
+            import time
+            time.sleep(0.5)
             log_file.close()
 
             # Ждем готовности порта

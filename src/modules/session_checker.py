@@ -59,8 +59,10 @@ async def _setup_proxy(proxy_url: str) -> Tuple[Optional[subprocess.Popen], Opti
 async def _download_avatar(client: Client, me: Any, workdir: Path) -> None:
     if me.photo:
         avatar_dest = workdir / "avatar.jpg"
+        if avatar_dest.exists():
+            return
         try:
-            await client.download_media(me.photo.big_file_id, file_name=avatar_dest)
+            await client.download_media(me.photo.big_file_id, file_name=str(avatar_dest))
         except:  # noqa: E722
             pass
 

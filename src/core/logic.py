@@ -421,7 +421,7 @@ def _setup_gost_proxy(
 
         import time
 
-        time.sleep(1.2)
+        time.sleep(3) # Дать 3 секунды что бы запустился gost
 
         if gost_process.poll() is not None:
             print("[ERROR] gost упал.")
