@@ -136,10 +136,12 @@ class AccountListPage(QWidget):
         self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)
         self.scroll_content = QWidget()
+        self.scroll_content.setObjectName("ScrollContent")
         self.scroll_layout = QVBoxLayout(self.scroll_content)
         self.scroll_layout.setSpacing(10)
         self.scroll_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.scroll.setWidget(self.scroll_content)
+        self.scroll.verticalScrollBar().setSingleStep(25)  # Делаем скролл мышью более плавным и быстрым
         layout.addWidget(self.scroll)
 
         btn_ref = QPushButton("Обновить список")

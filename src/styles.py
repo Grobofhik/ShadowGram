@@ -32,12 +32,16 @@ QToolTip {{
 /* Основная область списка */
 QScrollArea {{
     border: none;
-    background-color: transparent;
+    background-color: #1a1f1a;
+}}
+
+QWidget#ScrollContent {{
+    background-color: #1a1f1a;
 }}
 
 /* Карточка аккаунта */
 QFrame#AccountRow {{
-    background-color: #242b24;
+    background-color: #1e241e;
     border: 1px solid #2d382d;
     border-radius: 12px;
     margin: 2px;
@@ -45,7 +49,7 @@ QFrame#AccountRow {{
 
 QFrame#AccountRow:hover {{
     border: 1px solid #4caf50;
-    background-color: #2a312a;
+    background-color: #262e26;
 }}
 
 /* Общий стиль кнопок */

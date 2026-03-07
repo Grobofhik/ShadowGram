@@ -101,6 +101,8 @@ class TelegramAccountRow(QFrame):
         layout.addWidget(self.checkbox)
 
         self.label = QLabel()
+        self.label.setObjectName("AccountName")
+        self.label.setTextFormat(Qt.TextFormat.RichText)
         self.update_label_text()
         layout.addWidget(self.label, 1)
 
@@ -146,8 +148,16 @@ class TelegramAccountRow(QFrame):
                 proto, rest = self.proxy_url.split("://", 1)
                 display_proxy = f"{proto}://****************"
             else: display_proxy = "****************"
-        proxy_info = f"<br><small style='color: #4caf50;'>Proxy: {display_proxy}</small>" if self.proxy_url else ""
-        text = f"<b>{self.name}</b>{proxy_info}<br><small style='color: #888;'>{self.workdir}</small>"
+        
+        # Строгая табличная верстка обеспечивает ровные отступы для Monocraft шрифта
+        proxy_info = f"<tr><td style='color: #4caf50; font-size: 11px; padding-top: 2px;'>Proxy: {display_proxy}</td></tr>" if self.proxy_url else ""
+        text = f"""
+        <table border='0' cellpadding='0' cellspacing='0'>
+            <tr><td style='font-size: 14px; font-weight: bold; color: #ffffff;'>{self.name}</td></tr>
+            {proxy_info}
+            <tr><td style='color: #888888; font-size: 10px; padding-top: 2px;'>{self.workdir}</td></tr>
+        </table>
+        """
         self.label.setText(text)
 
     def set_proxy_hidden(self, hidden):
