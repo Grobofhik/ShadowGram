@@ -43,6 +43,7 @@ class ModulesWindow(QWidget):
         self.active_tasks_win.stop_requested.connect(self.stop_running_task)
         
         self.running_tasks = {} # { task_id: (asyncio_task, loop) }
+        self.local_tasks = {} # { task_id: { loop, tasks, instances } }
         
         self.init_ui()
         self.log_signal.connect(self.append_log)
@@ -151,6 +152,16 @@ class ModulesWindow(QWidget):
         plugin_name = self.module_combo.currentText()
         p_class = self.available_plugins.get(plugin_name)
         if not p_class or not hasattr(p_class, 'PARAMS'): return
+        
+        # Загружаем настройки для автозаполнения полей
+        settings = {}
+        try:
+            if os.path.exists(CONFIG_FILE):
+                with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+                    settings = json.load(f).get("settings", {})
+        except Exception:
+            pass
+
         for param in p_class.PARAMS:
             param_layout = QHBoxLayout()
             param_layout.addWidget(QLabel(f"{param['label']}:"))
@@ -159,7 +170,14 @@ class ModulesWindow(QWidget):
                 btn.clicked.connect(lambda ch, l=le: self.browse_file(l))
                 param_layout.addWidget(le); param_layout.addWidget(btn); self.param_widgets[param['name']] = le
             elif param['type'] == 'text':
-                le = QLineEdit(); param_layout.addWidget(le); self.param_widgets[param['name']] = le
+                le = QLineEdit()
+                # Автозаполнение известных полей из настроек
+                if param['name'] == 'cloud_password':
+                    le.setText(settings.get('default_cloud_password', ''))
+                elif param['name'] == 'email_data':
+                    le.setText(settings.get('default_imap_email', ''))
+                
+                param_layout.addWidget(le); self.param_widgets[param['name']] = le
             elif param['type'] == 'textarea':
                 te = QTextEdit(); te.setFixedHeight(80); param_layout.addWidget(te); self.param_widgets[param['name']] = te
             self.params_layout.addLayout(param_layout)
