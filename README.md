@@ -22,8 +22,18 @@
 - **Циклы и Ротации:** Автоматические циклы «Работа — Сон» для поддержания активности 24/7.
 - **Динамический UI:** Автоматическая генерация полей настроек на основе параметров плагина.
 
-### <img src="resources/icons/folder_icon.png" width="20" valign="middle"> Доступные плагины
-*Подробную документацию по настройке каждого модуля можно найти в папке [moduls_docs/](moduls_docs/).*
+### <img src="resources/icons/folder_icon.png" width="20" valign="middle"> База знаний (Wiki)
+В приложении реализована встроенная **интерактивная документация**. Найти её можно в разделе **Настройки (<img src="resources/icons/settings_icon.png" width="16" valign="middle">) -> 📖 Документация**. 
+Там вы найдете подробные гайды по:
+- Установке и первому запуску.
+- Работе с профилями и прокси.
+- Инструкции ко всем модулям автоматизации.
+- Руководство по разработке собственных плагинов.
+
+---
+
+## <img src="resources/icons/folder_icon.png" width="20" valign="middle"> Доступные плагины
+*Подробную документацию по каждому модулю можно найти в папке [documentation/modules/](documentation/modules/).*
 
 - <img src="resources/icons/rocket_icon.png" width="18" valign="middle"> **Smart Warmer:** Интеллектуальный прогрев через чаты, чтение и пересылку постов.
 - <img src="resources/icons/view_icon.png" width="18" valign="middle"> **Channel Viewer:** Массовая накрутка просмотров на сообщения в каналах.
@@ -45,9 +55,7 @@
 
 ---
 
-## <img src="resources/icons/save_icon.png" width="20" valign="middle"> Установка и запуск
-
-Проект использует стандартное виртуальное окружение Python и внешние бинарные зависимости.
+## <img src="resources/icons/save_icon.png" width="20" valign="middle"> Установка и запуск (Arch Linux)
 
 1. **Клонируйте репозиторий:**
    ```bash
@@ -56,11 +64,9 @@
    ```
 
 2. **Установите системные зависимости:**
-   Для полноценной работы (прокси, изоляция) установите необходимые утилиты. Пример для Arch Linux:
    ```bash
    sudo pacman -S gost firejail proxychains-ng thunar
    ```
-   *Примечание: Если вы используете другой дистрибутив, используйте соответствующий пакетный менеджер (apt, dnf и т.д.).*
 
 3. **Создайте и настройте виртуальное окружение:**
    ```bash
@@ -76,41 +82,17 @@
 
 ---
 
-## <img src="resources/icons/rocket_icon.png" width="20" valign="middle"> Как начать работу
-
-1. В **Настройках (<img src="resources/icons/settings_icon.png" width="16" valign="middle">)** укажите свои `api_id` и `api_hash` с [my.telegram.org](https://my.telegram.org).
-2. Добавьте аккаунты, указав их рабочие директории.
-3. Нажмите кнопку **<img src="resources/icons/moduls_icon.png" width="16" valign="middle"> Модули**, выберите нужный плагин и настройте параметры.
-4. Отслеживайте прогресс во вкладке **<img src="resources/icons/rocket_icon.png" width="16" valign="middle"> Активные задачи**.
-
----
-
 ## <img src="resources/icons/folder_icon.png" width="20" valign="middle"> Структура проекта
 
 ```text
 ShadowGram/
 ├── ShadowGram.py          # Главная точка входа (GUI)
 ├── resources/             # Иконки, звуки и шрифты
-├── moduls_docs/           # Подробная документация по каждому плагину
+├── documentation/         # Интерактивная база знаний (START, Modules, Developers)
 ├── src/
-│   ├── core/              # Ядро системы
-│   │   ├── base_module.py # Базовый класс для всех плагинов
-│   │   ├── constants.py   # Пути и глобальные константы
-│   │   ├── logic.py       # Взаимодействие с процессами и прокси
-│   │   ├── checker.py     # Синхронная обертка для проверки сессий
-│   │   └── module_manager.py # Динамический загрузчик плагинов
-│   ├── modules/
-│   │   ├── session_checker.py # Асинхронная логика валидации аккаунтов
-│   │   └── plugins/       # Папка со всеми доступными плагинами
-│   ├── ui/                # Компоненты интерфейса PyQt6
-│   │   ├── main_window.py    # Главный контроллер страниц
-│   │   ├── list_page.py      # Страница списка аккаунтов
-│   │   ├── account_row.py    # Виджет отдельной строки аккаунта
-│   │   ├── modules_window.py # Окно управления задачами и консоль
-│   │   ├── active_tasks_window.py # Мониторинг запущенных модулей
-│   │   └── settings_page.py  # Настройки API и управление бэкапами
-│   ├── styles.py          # Общие стили приложения
-│   └── modules_styles.py  # Специфичные стили для модулей
+│   ├── core/              # Ядро системы (логика, константы, менеджер модулей)
+│   ├── modules/           # Плагины и асинхронные чекеры
+│   └── ui/                # Интерфейс PyQt6 (страницы, окна, стили)
 └── config.json            # Файл конфигурации (создается автоматически)
 ```
 

@@ -6,6 +6,7 @@ from PyQt6.QtCore import pyqtSignal
 
 from src.core import logic
 from src.core.constants import CONFIG_FILE
+from src.ui.docs_window import DocsWindow
 
 """
 Страница настроек приложения.
@@ -23,6 +24,7 @@ class SettingsPage(QWidget):
 
     def __init__(self):
         super().__init__()
+        self.docs_window = None
         self.init_ui()
 
     def init_ui(self):
@@ -30,11 +32,22 @@ class SettingsPage(QWidget):
         layout.setContentsMargins(40, 40, 40, 40)
         layout.setSpacing(20)
 
+        header_layout = QHBoxLayout()
         btn_back = QPushButton("← Назад")
         btn_back.setObjectName("BackBtn")
         btn_back.setFixedWidth(120)
         btn_back.clicked.connect(self.back_requested.emit)
-        layout.addWidget(btn_back)
+        header_layout.addWidget(btn_back)
+
+        header_layout.addStretch()
+
+        btn_docs = QPushButton("📖 Документация")
+        btn_docs.setFixedWidth(150)
+        btn_docs.setStyleSheet("background-color: #0277bd; border: 1px solid #01579b;")
+        btn_docs.clicked.connect(self.show_docs)
+        header_layout.addWidget(btn_docs)
+
+        layout.addLayout(header_layout)
 
         label_title = QLabel("Настройки")
         label_title.setObjectName("SettingsTitle")
@@ -68,6 +81,18 @@ class SettingsPage(QWidget):
         
         layout.addLayout(backup_layout)
         layout.addStretch()
+
+    def show_docs(self):
+        try:
+            if self.docs_window is None:
+                self.docs_window = DocsWindow()
+            self.docs_window.show()
+            self.docs_window.raise_()
+            self.docs_window.activateWindow()
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            QMessageBox.critical(self, "Ошибка", f"Не удалось открыть документацию: {e}")
 
     def load_settings(self):
         try:

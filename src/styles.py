@@ -11,6 +11,10 @@
 FONT_NAME = "Monocraft"
 TITLE_FONT_NAME = "alagard-12px-unicode"
 
+# Иконки для дерева документации (Base64 SVG)
+CHEVRON_RIGHT = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMiIgaGVpZ2h0PSIxMiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM0Y2FmNTAiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cG9seWxpbmUgcG9pbnRzPSI5IDE4IDE1IDEyIDkgNiI+PC9wb2x5bGluZT48L3N2Zz4="
+CHEVRON_DOWN = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMiIgaGVpZ2h0PSIxMiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM0Y2FmNTAiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cG9seWxpbmUgcG9pbnRzPSI2IDkgMTIgMTUgMTggOSI+PC9wb2x5bGluZT48L3N2Zz4="
+
 # Refined Shadowgram Stylesheet
 STYLESHEET = f"""
 QWidget {{
@@ -253,5 +257,83 @@ QCheckBox::indicator {{
 QCheckBox::indicator:checked {{
     background-color: #2e7d32;
     border-color: #4caf50;
+}}
+"""
+
+# Специальные стили для окна документации
+DOCS_STYLESHEET = f"""
+QWidget#DocsWindow {{
+    background-color: #1a1f1a;
+    color: #e0e0e0;
+}}
+
+QFrame#DocsSidebar {{
+    background-color: #161b16;
+    border-right: 1px solid #2d382d;
+}}
+
+QLabel#DocsSidebarTitle {{
+    color: #4caf50;
+    font-weight: bold;
+    font-size: 14px;
+    letter-spacing: 1px;
+}}
+
+QTreeWidget#DocsTree {{
+    background-color: transparent;
+    border: none;
+    outline: none;
+    color: #e0e0e0;
+    font-size: 13px;
+}}
+
+QTreeWidget#DocsTree::item {{
+    padding: 8px;
+    border-radius: 6px;
+    margin-bottom: 2px;
+}}
+
+QTreeWidget#DocsTree::item:hover {{
+    background-color: #242b24;
+    color: #00e676;
+}}
+
+QTreeWidget#DocsTree::item:selected {{
+    background-color: transparent;
+    color: #00e676;
+    font-weight: bold;
+}}
+
+QTreeWidget#DocsTree::branch:has-children:!has-siblings:closed,
+QTreeWidget#DocsTree::branch:closed:has-children:has-siblings {{
+    image: url({CHEVRON_RIGHT});
+}}
+
+QTreeWidget#DocsTree::branch:open:has-children:!has-siblings,
+QTreeWidget#DocsTree::branch:open:has-children:has-siblings {{
+    image: url({CHEVRON_DOWN});
+}}
+
+QPushButton#DocsCloseBtn {{
+    background-color: #263238;
+    border: 1px solid #37474f;
+    border-radius: 6px;
+    color: #cfd8dc;
+    font-weight: bold;
+}}
+
+QPushButton#DocsCloseBtn:hover {{
+    background-color: #b71c1c;
+    border-color: #ff5252;
+    color: white;
+}}
+
+QTextBrowser#DocsBrowser {{
+    background-color: #1e241e;
+    color: #e0e0e0;
+    font-size: 15px;
+    border: none;
+    padding: 40px;
+    font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
 }}
 """
