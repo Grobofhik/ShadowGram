@@ -10,3 +10,7 @@ tgcrypto>=1.2.5
 # Optional: Networking
 PySocks>=1.7.1
 websocket-client>=1.6.1
+
+# Markdown
+markdown
+
