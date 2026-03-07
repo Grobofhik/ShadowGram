@@ -14,8 +14,10 @@ class ChannelViewerPlugin(BaseModule):
     MODULE_NAME = "👁️ Накрутка просмотров"
     MODULE_DESC = "Параллельно просматривает посты в канале, имитируя активность."
     
-    # Разрешаем запускать все аккаунты сразу!
-    ALLOW_PARALLEL = True
+    # Новая система жизненного цикла:
+    IS_CYCLIC = True
+    START_DELAY = (60, 7200) # Стартовая задержка от 1 до 120 минут
+    CYCLE_DELAY = (10800, 21600) # Сон между циклами от 3 до 6 часов
     
     PARAMS = [
         {"name": "channel_link", "type": "text", "label": "Ссылка на канал (или ID)"},
@@ -23,7 +25,14 @@ class ChannelViewerPlugin(BaseModule):
     ]
 
     async def run(self, **kwargs):
-        channel_id = kwargs.get("channel_link")
+        channel_raw = kwargs.get("channel_link", "").strip()
+        try:
+            # Если передали числовой ID (например, -100...), приводим к int
+            channel_id = int(channel_raw)
+        except ValueError:
+            # Иначе это текстовая ссылка (@username или t.me/...)
+            channel_id = channel_raw
+
         try:
             limit = int(kwargs.get("post_limit", 60))
         except:
@@ -31,10 +40,6 @@ class ChannelViewerPlugin(BaseModule):
 
         if not channel_id:
             self.log("ID или ссылка на канал не указана!", "error")
-            return
-
-        # Инициализация (база сама поднимет прокси и зайдет в сессию)
-        if not await self.init_client():
             return
 
         try:
@@ -45,15 +50,48 @@ class ChannelViewerPlugin(BaseModule):
                 count = 0
                 async for _ in self.client.get_dialogs(limit=5):
                     count += 1
-                await asyncio.sleep(random.uniform(2, 5))
-            except: pass
-
-            # 2. Получаем объект чата
-            try:
-                chat = await self.client.get_chat(channel_id)
             except Exception as e:
-                self.log(f"Ошибка доступа к каналу: {e}", "error")
+                self.log(f"Не удалось получить диалоги: {e}", "warning")
+            
+            start_delay = random.uniform(2, 5)
+            self.log(f"Случайная микро-пауза: {start_delay:.1f} сек...", "info")
+            await asyncio.sleep(start_delay)
+
+            chat = None
+            # 2. Получаем объект чата (с обработкой PEER_ID_INVALID)
+            try:
+                if isinstance(channel_id, str):
+                    try:
+                        chat = await self.client.join_chat(channel_id)
+                    except Exception as join_err:
+                        if "USER_ALREADY_PARTICIPANT" in str(join_err):
+                            chat = await self.client.get_chat(channel_id)
+                        else:
+                            chat = await self.client.get_chat(channel_id)
+                else:
+                    chat = await self.client.get_chat(channel_id)
+            except Exception as e:
+                # Если сессия еще "не знает" этот чат (особенно актуально для приватных каналов по ID)
+                if "PEER_ID_INVALID" in str(e):
+                    self.log("Канал неизвестен локальному кешу. Ищу в диалогах...", "warning")
+                    found = False
+                    async for dialog in self.client.get_dialogs(limit=200):
+                        if dialog.chat.id == channel_id or dialog.chat.username == channel_id:
+                            chat = dialog.chat
+                            found = True
+                            break
+                    if not found:
+                        self.log("Канал не найден в последних диалогах. Аккаунт точно подписан?", "error")
+                        return
+                else:
+                    self.log(f"Ошибка доступа к каналу: {e}", "error")
+                    return
+
+            if not chat:
+                self.log("Не удалось получить объект чата.", "error")
                 return
+
+            self.log(f"Целевой чат определен: {chat.title} (ID: {chat.id})", "success")
 
             # 3. Собираем ID последних сообщений
             messages_ids = []
@@ -105,5 +143,3 @@ class ChannelViewerPlugin(BaseModule):
 
         except Exception as e:
             self.log(f"Критическая ошибка: {e}", "error")
-        finally:
-            await self.cleanup()

@@ -5,6 +5,17 @@ from typing import Dict, Optional, Type
 
 from src.core.base_module import BaseModule
 
+"""
+Менеджер модулей (ShadowGram Client).
+Функции:
+- discover_modules: сканирование папки плагинов и загрузка классов, наследуемых от BaseModule
+- get_module_class: получение класса загруженного плагина по его отображаемому имени
+- get_all_modules: возврат словаря всех загруженных плагинов
+- reload_module: горячая перезагрузка конкретного плагина
+- _load_module: низкоуровневая загрузка Python-файла как модуля
+- _extract_module_classes: извлечение классов BaseModule из объекта загруженного модуля
+- _is_valid_module_class: проверка, является ли класс наследником BaseModule
+"""
 
 class ModuleManager:
     def __init__(self):

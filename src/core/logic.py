@@ -7,6 +7,7 @@ import urllib.request
 import zipfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
+import tempfile
 
 """
 Основная логика приложения.
@@ -28,7 +29,76 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 - move_account_in_list: изменение позиции аккаунта в списке (сортировка)
 - open_explorer: открытие папки аккаунта в файловом менеджере Thunar
 - clear_cache: очистка временных файлов и кэша в папке профиля
+- pack_selected_sessions: упаковка выбранных аккаунтов для отправки на сервер
+- send_sessions_to_server: отправка архива на сервер
 """
+
+
+def pack_selected_sessions(
+    config_file: Union[str, Path],
+    selected_workdirs: List[str],
+    output_path: Union[str, Path]
+) -> Tuple[bool, str]:
+    """Упаковка только .session файлов выбранных аккаунтов и config.json для сервера"""
+    try:
+        config_file = Path(config_file)
+        output_path = Path(output_path)
+
+        with open(config_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        # Оставляем в конфиге только выбранные аккаунты
+        server_config_data = {
+            "settings": {}, 
+            "accounts": [acc for acc in data.get("accounts", []) if acc["workdir"] in selected_workdirs]
+        }
+
+        with zipfile.ZipFile(output_path, "w", zipfile.ZIP_DEFLATED) as zipf:
+            # Записываем урезанный конфиг во временный файл и добавляем в архив
+            with tempfile.NamedTemporaryFile("w", encoding="utf-8", delete=False) as tmp_config:
+                json.dump(server_config_data, tmp_config, indent=4, ensure_ascii=False)
+                tmp_config_path = tmp_config.name
+            
+            zipf.write(tmp_config_path, "config.json")
+            os.unlink(tmp_config_path)
+
+            for acc in server_config_data["accounts"]:
+                workdir = Path(acc["workdir"])
+                if workdir.exists():
+                    session_files = list(workdir.glob("*.session"))
+                    avatar_file = workdir / "avatar.jpg"
+                    if avatar_file.exists():
+                        session_files.append(avatar_file)
+
+                    for file_path in session_files:
+                        arcname = f"accounts/{workdir.name}/{file_path.name}"
+                        zipf.write(file_path, arcname)
+
+        return True, "Архив для сервера успешно создан!"
+    except Exception as e:
+        return False, f"Ошибка сборки архива: {e}"
+
+def send_sessions_to_server(
+    zip_path: Union[str, Path],
+    server_ip: str,
+    server_port: str
+) -> Tuple[bool, str]:
+    """Отправка собранного ZIP-архива на сервер через /api/sessions/import"""
+    try:
+        import requests
+        url = f"http://{server_ip}:{server_port}/api/sessions/import"
+        with open(zip_path, 'rb') as f:
+            files = {'file': (Path(zip_path).name, f, 'application/zip')}
+            response = requests.post(url, files=files, timeout=30)
+        
+        if response.status_code == 200:
+            return True, "Успешно отправлено на сервер!"
+        else:
+            return False, f"Ошибка сервера {response.status_code}: {response.text}"
+    except ImportError:
+        return False, "Не установлена библиотека requests. Установите 'pip install requests'"
+    except Exception as e:
+        return False, f"Сетевая ошибка при отправке: {e}"
 
 
 def get_free_port() -> int:

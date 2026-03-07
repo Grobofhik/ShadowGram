@@ -13,6 +13,7 @@ from PyQt6.QtCore import QTimer, QEvent, QUrl
 - show_settings: переключение на страницу настроек
 - show_list: переключение на страницу списка аккаунтов
 - show_modules: открытие окна модулей управления
+- show_server: открытие окна управления сервером
 - sync_status: периодическая синхронизация статусов всех аккаунтов
 - eventFilter: перехват событий (в частности, кликов по логотипу для воспроизведения звука)
 """
@@ -20,12 +21,14 @@ from PyQt6.QtCore import QTimer, QEvent, QUrl
 from src.ui.list_page import AccountListPage
 from src.ui.settings_page import SettingsPage
 from src.ui.modules_window import ModulesWindow
+from src.ui.server_window import ServerWindow
 from src.core.constants import SOUND_PATH
 
 class TelegramManager(QWidget):
     def __init__(self):
         super().__init__()
         self.modules_win = None
+        self.server_win = None
         self.init_ui()
         self.init_audio()
         self.timer = QTimer()
@@ -42,6 +45,7 @@ class TelegramManager(QWidget):
 
         self.acc_list_page.settings_requested.connect(self.show_settings)
         self.acc_list_page.modules_requested.connect(self.show_modules)
+        self.acc_list_page.server_requested.connect(self.show_server)
         self.settings_page.back_requested.connect(self.show_list)
 
         self.stack.addWidget(self.acc_list_page)
@@ -72,6 +76,13 @@ class TelegramManager(QWidget):
         self.modules_win.show()
         self.modules_win.raise_()
         self.modules_win.activateWindow()
+
+    def show_server(self):
+        if self.server_win is None:
+            self.server_win = ServerWindow()
+        self.server_win.show()
+        self.server_win.raise_()
+        self.server_win.activateWindow()
 
     def sync_status(self):
         for r in self.acc_list_page.rows:

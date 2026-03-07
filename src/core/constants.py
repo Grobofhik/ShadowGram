@@ -40,7 +40,15 @@ NOTE_ICON_PATH: Final[Path] = RESOURCE_DIR / "icons" / "note_icon.png"
 NEW_PROXY_ICON_PATH: Final[Path] = RESOURCE_DIR / "icons" / "new_proxy_icon.png"
 DEVICE_ICON_PATH: Final[Path] = RESOURCE_DIR / "icons" / "device_icon.png"
 START_ICON_PATH: Final[Path] = RESOURCE_DIR / "icons" / "start_icon.png"
+SERVER_ICON_PATH: Final[Path] = RESOURCE_DIR / "icons" / "server_icon.png"
+
+# Новые иконки для ServerGram UI
+PING_ICON_PATH: Final[Path] = RESOURCE_DIR / "icons" / "ping_icon.png"
+RELOAD_ICON_PATH: Final[Path] = RESOURCE_DIR / "icons" / "reload_icon.png"
+ROCKET_ICON_PATH: Final[Path] = RESOURCE_DIR / "icons" / "rocket_icon.png"
+SAVE_ICON_PATH: Final[Path] = RESOURCE_DIR / "icons" / "save_icon.png"
 
 # Другие ресурсы
 SOUND_PATH: Final[Path] = RESOURCE_DIR / "sounds" / "Nuya.mp3"
 FONTS_DIR: Final[Path] = RESOURCE_DIR / "fonts"
+

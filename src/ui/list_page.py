@@ -3,6 +3,7 @@ import threading
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QCheckBox, QLineEdit, QScrollArea, QFrame, QFileDialog, QMessageBox
 from PyQt6.QtGui import QPixmap, QIcon
 from PyQt6.QtCore import Qt, pyqtSignal, QPropertyAnimation, QEasingCurve, QParallelAnimationGroup, QSize
+import json
 
 """
 Страница списка аккаунтов.
@@ -31,12 +32,13 @@ from src.core.constants import (
     CONFIG_FILE, ICON_PATH, LOGO_PATH, SUCCESS_ICON_PATH, 
     CANCEL_ICON_PATH, PROXY_ICON_PATH, SETTINGS_ICON_PATH, 
     CASH_ICON_PATH, VIEV_ICON_PATH, MODULS_ICON_PATH, 
-    FOLDER_ICON_PATH, NEW_PROXY_ICON_PATH
+    FOLDER_ICON_PATH, NEW_PROXY_ICON_PATH, SERVER_ICON_PATH
 )
 
 class AccountListPage(QWidget):
     settings_requested = pyqtSignal()
     modules_requested = pyqtSignal()
+    server_requested = pyqtSignal()
     creation_proxy_check_finished = pyqtSignal(bool)
 
     def __init__(self, parent):
@@ -69,6 +71,15 @@ class AccountListPage(QWidget):
         title_label.setContentsMargins(0, 0, 0, 10) # 10px отступа снизу поднимут текст выше
         title_layout.addWidget(title_label)
         title_layout.addStretch()
+
+        self.btn_server = QPushButton(" Сервер")
+        # Reuse MODULS_ICON_PATH or another icon for server
+        self.btn_server.setIcon(QIcon(str(SERVER_ICON_PATH)))
+        self.btn_server.setIconSize(QSize(20, 20))
+        self.btn_server.setFixedWidth(120)
+        self.btn_server.setToolTip("Управление ServerGram")
+        self.btn_server.clicked.connect(self.server_requested.emit)
+        title_layout.addWidget(self.btn_server)
 
         self.btn_modules = QPushButton(" Модули")
         self.btn_modules.setIcon(QIcon(str(MODULS_ICON_PATH)))
@@ -253,6 +264,4 @@ class AccountListPage(QWidget):
 
     def toggle_all_proxies(self):
         self.proxies_hidden = not self.proxies_hidden
-        # Иконка глаза остается той же, так как она универсальна для действия "просмотр"
-        # но мы можем добавить визуальную обратную связь через смену иконки, если будет нужно
         for row in self.rows: row.set_proxy_hidden(self.proxies_hidden)

@@ -2,7 +2,7 @@ import os
 import asyncio
 import subprocess
 import socket
-from typing import Dict, List, Optional, Callable, Any
+from typing import Dict, List, Optional, Callable, Any, Tuple
 from hydrogram import Client
 from hydrogram.errors import FloodWait
 
@@ -30,8 +30,21 @@ class BaseModule:
     # Флаг: разрешить запуск только для ОДНОГО аккаунта одновременно
     SINGLE_ACCOUNT: bool = False
 
-    # Флаг: разрешить параллельный запуск для всех выбранных аккаунтов
+    # (Устаревший флаг, оставлен для обратной совместимости, лучше использовать новые)
     ALLOW_PARALLEL: bool = False
+
+    # --- Новая система жизненного цикла задач ---
+    
+    # 1. Задержка перед самым первым запуском аккаунта (в секундах).
+    # Позволяет "размазать" массовый запуск (по умолчанию от 1 до 15 сек).
+    START_DELAY: Tuple[int, int] = (1, 15)
+
+    # 2. Должен ли этот скрипт работать циклично (бесконечно)?
+    IS_CYCLIC: bool = False
+
+    # 3. Сколько отдыхать между циклами, если IS_CYCLIC = True (в секундах).
+    # По дефолту от 3 до 6 часов.
+    CYCLE_DELAY: Tuple[int, int] = (10800, 21600)
 
     def __init__(
         self,

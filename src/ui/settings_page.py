@@ -72,7 +72,7 @@ class SettingsPage(QWidget):
     def load_settings(self):
         try:
             if os.path.exists(CONFIG_FILE):
-                with open(CONFIG_FILE, "r") as f: data = json.load(f)
+                with open(CONFIG_FILE, "r", encoding="utf-8") as f: data = json.load(f)
                 s = data.get("settings", {})
                 self.input_api_id.setText(str(s.get("api_id", "")))
                 self.input_api_hash.setText(s.get("api_hash", ""))
@@ -82,13 +82,13 @@ class SettingsPage(QWidget):
         try:
             data = {"settings": {}, "accounts": []}
             if os.path.exists(CONFIG_FILE):
-                with open(CONFIG_FILE, "r") as f: data = json.load(f)
+                with open(CONFIG_FILE, "r", encoding="utf-8") as f: data = json.load(f)
             
             data["settings"] = {
                 "api_id": int(self.input_api_id.text()) if self.input_api_id.text().isdigit() else 0, 
                 "api_hash": self.input_api_hash.text().strip()
             }
-            with open(CONFIG_FILE, "w") as f: json.dump(data, f, indent=4, ensure_ascii=False)
+            with open(CONFIG_FILE, "w", encoding="utf-8") as f: json.dump(data, f, indent=4, ensure_ascii=False)
             QMessageBox.information(self, "Успех", "Настройки сохранены!")
         except Exception as e: QMessageBox.critical(self, "Ошибка", f"Не удалось сохранить: {e}")
 

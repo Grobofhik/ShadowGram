@@ -81,7 +81,7 @@ class ActiveTasksWindow(QWidget):
             v_bar = self.tabs[task_id]["log"].verticalScrollBar()
             v_bar.setValue(v_bar.maximum())
             
-            if "Задача завершена" in text or "Критическая ошибка" in text or "остановлена" in text:
+            if "Задача завершена" in text or "Критическая ошибка" in text or "остановлена" in text or "Сессия задач завершена." in text or "Все задачи завершены!" in text:
                 self.tabs[task_id]["status"].setText("Статус: Завершено")
                 self.tabs[task_id]["status"].setStyleSheet("color: #888;")
                 self.tabs[task_id]["btn"].setEnabled(False)

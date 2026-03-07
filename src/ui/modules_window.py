@@ -217,50 +217,71 @@ class ModulesWindow(QWidget):
         self.btn_run.setEnabled(False)
         QTimer.singleShot(2000, lambda: self.btn_run.setEnabled(True))
         
-        is_parallel = getattr(p_class, "ALLOW_PARALLEL", False)
         task_id = f"{p_name}_{datetime.now().strftime('%H%M%S')}"
-        if is_parallel:
-            self.active_tasks_win.add_task_tab(task_id, f"{p_name} ({len(selected_accounts)})")
-            self.active_tasks_win.show()
+        
+        # Теперь всегда показываем вкладку активных задач, так как любая задача может быть отменена
+        self.active_tasks_win.add_task_tab(task_id, f"{p_name} ({len(selected_accounts)})")
+        self.active_tasks_win.show()
         
         threading.Thread(target=self.run_plugins_batch, args=(selected_accounts, p_class, params, task_id), daemon=True).start()
+
+    def format_time(self, seconds: int) -> str:
+        h = seconds // 3600
+        m = (seconds % 3600) // 60
+        s = seconds % 60
+        if h > 0: return f"{h} ч {m} мин {s} сек"
+        elif m > 0: return f"{m} мин {s} сек"
+        return f"{s} сек"
 
     def run_plugins_batch(self, accounts, plugin_class, params, task_id):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
+        self.local_tasks[task_id] = { "loop": loop, "tasks": [], "instances": [] }
         try:
             with open(CONFIG_FILE, "r") as f: cfg = json.load(f)
             aid, ah = cfg.get("settings", {}).get("api_id"), cfg.get("settings", {}).get("api_hash")
             
             async def run_all():
-                is_parallel = getattr(plugin_class, "ALLOW_PARALLEL", False)
                 tasks = []
+                concurrency_limit = asyncio.Semaphore(15)
+                
                 for i, a in enumerate(accounts):
-                    # Callback для логов: дублируем в основную консоль и в окно задач
                     def log_f(msg, acc_name=a['name'], tid=task_id):
                         self.log_signal.emit(msg)
                         self.task_log_signal.emit(tid, msg)
                         
                     instance = plugin_class(a, aid, ah, log_f)
+                    self.local_tasks[task_id]["instances"].append(instance)
                     
-                    # Начальная задержка от 1 до 120 минут для параллельных задач
-                    delay = random.randint(60, 7200) if is_parallel else 0
-                    
-                    async def wrapped_run(inst, d, p):
+                    async def wrapped_run(inst, p):
                         try:
-                            if d > 0:
-                                inst.log(f"Запуск запланирован через {self.format_time(d)}", "warning")
-                                await asyncio.sleep(d)
+                            # Читаем новые параметры из плагина
+                            start_delay_range = getattr(inst, "START_DELAY", (1, 15))
+                            is_cyclic = getattr(inst, "IS_CYCLIC", False)
+                            cycle_delay_range = getattr(inst, "CYCLE_DELAY", (10800, 21600))
                             
-                            # Начинаем цикл ротаций для параллельных задач
+                            delay = random.randint(start_delay_range[0], start_delay_range[1])
+                            
+                            if delay > 0:
+                                inst.log(f"Запуск запланирован через {self.format_time(delay)}", "warning")
+                                await asyncio.sleep(delay)
+                            
+                            # Жизненный цикл задачи
                             while True:
-                                inst.log("🚀 Начинаю активную фазу...", "info")
-                                await inst.run(**p)
+                                async with concurrency_limit:
+                                    inst.log("🚀 Начинаю активную фазу...", "info")
+                                    try:
+                                        if await inst.init_client():
+                                            await inst.run(**p)
+                                    except Exception as loop_e:
+                                        inst.log(f"Ошибка в цикле: {loop_e}", "error")
+                                    finally:
+                                        await inst.cleanup()
                                 
-                                if not is_parallel: break # Одиночные задачи не зацикливаем
+                                if not is_cyclic: 
+                                    break 
                                 
-                                # Расчёт времени отдыха (3 - 6 часов)
-                                wait_seconds = random.randint(10800, 21600)
+                                wait_seconds = random.randint(cycle_delay_range[0], cycle_delay_range[1])
                                 inst.log(f"✅ Работа завершена. Сон: {self.format_time(wait_seconds)}", "success")
                                 await asyncio.sleep(wait_seconds)
                                 
@@ -272,11 +293,11 @@ class ModulesWindow(QWidget):
                         finally:
                             await inst.cleanup()
 
-                    tasks.append(wrapped_run(instance, delay, params))
+                    task_obj = loop.create_task(wrapped_run(instance, params))
+                    self.local_tasks[task_id]["tasks"].append(task_obj)
+                    tasks.append(task_obj)
                 
-                if is_parallel: await asyncio.gather(*tasks)
-                else: 
-                    for t in tasks: await t
+                await asyncio.gather(*tasks)
 
             main_task = loop.create_task(run_all())
             self.running_tasks[task_id] = (main_task, loop)
