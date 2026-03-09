@@ -44,8 +44,7 @@ def pack_selected_sessions(
         config_file = Path(config_file)
         output_path = Path(output_path)
 
-        with open(config_file, "r", encoding="utf-8") as f:
-            data = json.load(f)
+        data = _read_config(config_file)
 
         # Оставляем в конфиге только выбранные аккаунты
         server_config_data = {
@@ -101,6 +100,35 @@ def send_sessions_to_server(
         return False, f"Сетевая ошибка при отправке: {e}"
 
 
+
+_cached_config = None
+_last_config_path = None
+_last_mtime = 0
+
+def _read_config(config_file: Path):
+    global _cached_config, _last_config_path, _last_mtime
+    if not config_file.exists():
+        return {"settings": {}, "accounts": []}
+    try:
+        mtime = config_file.stat().st_mtime
+        if _cached_config is not None and _last_config_path == config_file and _last_mtime == mtime:
+            return _cached_config
+        with open(config_file, "r", encoding="utf-8") as f:
+            _cached_config = json.load(f)
+            _last_config_path = config_file
+            _last_mtime = mtime
+            return _cached_config
+    except:
+        return {"settings": {}, "accounts": []}
+
+def _write_config(config_file: Path, data):
+    global _cached_config, _last_config_path, _last_mtime
+    _write_config(config_file, data)
+    _cached_config = data
+    _last_config_path = config_file
+    _last_mtime = config_file.stat().st_mtime
+
+
 def get_free_port() -> int:
     """Получает свободный порт для прокси-туннеля"""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -116,8 +144,7 @@ def export_backup(
         config_file = Path(config_file)
         output_path = Path(output_path)
 
-        with open(config_file, "r", encoding="utf-8") as f:
-            data = json.load(f)
+        data = _read_config(config_file)
 
         with zipfile.ZipFile(output_path, "w", zipfile.ZIP_DEFLATED) as zipf:
             zipf.write(config_file, "config.json")
@@ -189,10 +216,8 @@ def load_config(config_file: Union[str, Path]) -> List[Dict[str, Any]]:
     """Загрузка списка аккаунтов из config.json"""
     try:
         config_file = Path(config_file)
-        if not config_file.exists():
-            return []
-        with open(config_file, "r", encoding="utf-8") as f:
-            return json.load(f).get("accounts", [])
+        data = _read_config(config_file)
+        return list(data.get("accounts", []))
     except Exception as e:
         print(f"Ошибка загрузки конфига: {e}")
         return []
@@ -290,8 +315,7 @@ def add_account(
 
         data = {"accounts": []}
         if config_file.exists():
-            with open(config_file, "r", encoding="utf-8") as f:
-                data = json.load(f)
+            data = _read_config(config_file)
 
         data["accounts"].append(
             {
@@ -302,8 +326,7 @@ def add_account(
             }
         )
 
-        with open(config_file, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=4, ensure_ascii=False)
+        _write_config(config_file, data)
         return True
     except Exception as e:
         print(f"Ошибка при добавлении аккаунта: {e}")
@@ -320,16 +343,14 @@ def update_proxy(
         config_file = Path(config_file)
         workdir = Path(workdir)
 
-        with open(config_file, "r", encoding="utf-8") as f:
-            data = json.load(f)
+        data = _read_config(config_file)
 
         for acc in data.get("accounts", []):
             if Path(acc["workdir"]) == workdir:
                 acc["proxy_url"] = new_proxy_url
                 break
 
-        with open(config_file, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=4, ensure_ascii=False)
+        _write_config(config_file, data)
         return True
     except Exception as e:
         print(f"Ошибка при обновлении прокси: {e}")
@@ -344,16 +365,14 @@ def update_notes(
         config_file = Path(config_file)
         workdir = Path(workdir)
 
-        with open(config_file, "r", encoding="utf-8") as f:
-            data = json.load(f)
+        data = _read_config(config_file)
 
         for acc in data.get("accounts", []):
             if Path(acc["workdir"]) == workdir:
                 acc["notes"] = new_notes
                 break
 
-        with open(config_file, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=4, ensure_ascii=False)
+        _write_config(config_file, data)
         return True
     except Exception as e:
         print(f"Ошибка при обновлении заметок: {e}")
@@ -368,16 +387,14 @@ def update_device_info(
         config_file = Path(config_file)
         workdir = Path(workdir)
 
-        with open(config_file, "r", encoding="utf-8") as f:
-            data = json.load(f)
+        data = _read_config(config_file)
 
         for acc in data.get("accounts", []):
             if Path(acc["workdir"]) == workdir:
                 acc["device_name"] = device_name
                 break
 
-        with open(config_file, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=4, ensure_ascii=False)
+        _write_config(config_file, data)
         return True
     except Exception as e:
         print(f"Ошибка при обновлении устройства: {e}")
@@ -390,15 +407,13 @@ def remove_account(config_file: Union[str, Path], workdir: Union[str, Path]) -> 
         config_file = Path(config_file)
         workdir = Path(workdir)
 
-        with open(config_file, "r", encoding="utf-8") as f:
-            data = json.load(f)
+        data = _read_config(config_file)
 
         data["accounts"] = [
             acc for acc in data.get("accounts", []) if Path(acc["workdir"]) != workdir
         ]
 
-        with open(config_file, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=4, ensure_ascii=False)
+        _write_config(config_file, data)
         return True
     except Exception as e:
         print(f"Ошибка при удалении аккаунта: {e}")
@@ -418,8 +433,7 @@ def move_account_in_list(
         config_file = Path(config_file)
         workdir = Path(workdir)
 
-        with open(config_file, "r", encoding="utf-8") as f:
-            data = json.load(f)
+        data = _read_config(config_file)
 
         accounts = data.get("accounts", [])
         idx = next(
@@ -432,8 +446,7 @@ def move_account_in_list(
         new_idx = idx + direction
         if 0 <= new_idx < len(accounts):
             accounts[idx], accounts[new_idx] = accounts[new_idx], accounts[idx]
-            with open(config_file, "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=4, ensure_ascii=False)
+            _write_config(config_file, data)
             return True
         return False
     except Exception as e:

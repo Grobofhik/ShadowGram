@@ -171,12 +171,6 @@ class ModulesWindow(QWidget):
                 param_layout.addWidget(le); param_layout.addWidget(btn); self.param_widgets[param['name']] = le
             elif param['type'] == 'text':
                 le = QLineEdit()
-                # Автозаполнение известных полей из настроек
-                if param['name'] == 'cloud_password':
-                    le.setText(settings.get('default_cloud_password', ''))
-                elif param['name'] == 'email_data':
-                    le.setText(settings.get('default_imap_email', ''))
-                
                 param_layout.addWidget(le); self.param_widgets[param['name']] = le
             elif param['type'] == 'textarea':
                 te = QTextEdit(); te.setFixedHeight(80); param_layout.addWidget(te); self.param_widgets[param['name']] = te

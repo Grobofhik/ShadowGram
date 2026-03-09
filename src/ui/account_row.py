@@ -42,7 +42,17 @@ from src.core.constants import (
     START_ICON_PATH, CANCEL_ICON_PATH
 )
 
+
+_ICON_CACHE = {}
+
+def get_cached_icon(path_str):
+    path_str = str(path_str)
+    if path_str not in _ICON_CACHE:
+        _ICON_CACHE[path_str] = QIcon(path_str)
+    return _ICON_CACHE[path_str]
+
 class TelegramAccountRow(QFrame):
+
     proxy_check_finished = pyqtSignal(bool)
     session_check_finished = pyqtSignal(str, str)
     account_removed = pyqtSignal()
@@ -93,7 +103,10 @@ class TelegramAccountRow(QFrame):
         self.avatar_label.setScaledContents(True)
         self.avatar_label.setCursor(Qt.CursorShape.PointingHandCursor)
         self.avatar_label.installEventFilter(self)
-        self.load_avatar()
+        
+        from PyQt6.QtCore import QTimer
+        QTimer.singleShot(0, self.load_avatar)
+        
         layout.addWidget(self.avatar_label)
 
         self.checkbox = QCheckBox()
@@ -102,7 +115,7 @@ class TelegramAccountRow(QFrame):
 
         self.label = QLabel()
         self.label.setObjectName("AccountName")
-        self.label.setTextFormat(Qt.TextFormat.RichText)
+        # self.label.setTextFormat(Qt.TextFormat.RichText)
         self.update_label_text()
         layout.addWidget(self.label, 1)
 
@@ -123,7 +136,7 @@ class TelegramAccountRow(QFrame):
 
         for icon_path, obj_name, slot, tip in btns:
             btn = QPushButton()
-            btn.setIcon(QIcon(str(icon_path)))
+            btn.setIcon(get_cached_icon(icon_path))
             btn.setIconSize(QSize(20, 20))
             btn.setObjectName(obj_name)
             btn.setFixedWidth(38)
@@ -311,7 +324,7 @@ class TelegramAccountRow(QFrame):
         self.status_label.setText("Запущен" if is_running else "Остановлен")
         self.status_label.setObjectName("StatusRunning" if is_running else "StatusStopped")
         self.btn_launch.setText("Закрыть" if is_running else "Запустить")
-        self.btn_launch.setIcon(QIcon(str(CANCEL_ICON_PATH if is_running else START_ICON_PATH)))
+        self.btn_launch.setIcon(get_cached_icon(CANCEL_ICON_PATH if is_running else START_ICON_PATH))
         self.btn_launch.setStyleSheet("background-color: #c62828;" if is_running else "")
         self.status_label.style().unpolish(self.status_label); self.status_label.style().polish(self.status_label)
 

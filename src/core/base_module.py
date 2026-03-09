@@ -3,8 +3,6 @@ import asyncio
 import subprocess
 import socket
 from typing import Dict, List, Optional, Callable, Any, Tuple
-from hydrogram import Client
-from hydrogram.errors import FloodWait
 
 """
 Базовый класс для всех модулей автоматизации ShadowGram.
@@ -68,7 +66,7 @@ class BaseModule:
         self.proxy_url: Optional[str] = self.acc.get("proxy_url")
         self.device_name: str = self.acc.get("device_name", "ShadowGram-PC")
 
-        self.client: Optional[Client] = None
+        self.client: Optional[Any] = None
         self.gost_process: Optional[subprocess.Popen] = None
         self.local_port: Optional[int] = None
 
@@ -255,6 +253,10 @@ class BaseModule:
         self, session_path: str, proxy_settings: Optional[Dict[str, Any]]
     ) -> bool:
         """Создание и подключение клиента Telegram"""
+        
+        from hydrogram import Client
+        from hydrogram.errors import FloodWait
+        
         try:
             self.client = Client(
                 name=os.path.basename(session_path),

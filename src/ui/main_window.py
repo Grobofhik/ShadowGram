@@ -1,7 +1,7 @@
 import os
 import subprocess
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QStackedWidget
-from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
+# from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
 from PyQt6.QtCore import QTimer, QEvent, QUrl
 
 """
@@ -20,8 +20,6 @@ from PyQt6.QtCore import QTimer, QEvent, QUrl
 
 from src.ui.list_page import AccountListPage
 from src.ui.settings_page import SettingsPage
-from src.ui.modules_window import ModulesWindow
-from src.ui.server_window import ServerWindow
 from src.core.constants import SOUND_PATH
 
 class TelegramManager(QWidget):
@@ -46,6 +44,7 @@ class TelegramManager(QWidget):
         self.acc_list_page.settings_requested.connect(self.show_settings)
         self.acc_list_page.modules_requested.connect(self.show_modules)
         self.acc_list_page.server_requested.connect(self.show_server)
+        self.acc_list_page.docs_requested.connect(self.show_docs)
         self.settings_page.back_requested.connect(self.show_list)
 
         self.stack.addWidget(self.acc_list_page)
@@ -57,11 +56,11 @@ class TelegramManager(QWidget):
         self.acc_list_page.refresh_accounts()
 
     def init_audio(self):
-        self.audio_output = QAudioOutput(self)
-        self.media_player = QMediaPlayer(self)
-        self.media_player.setAudioOutput(self.audio_output)
         self.sound_path = str(SOUND_PATH)
-        self.audio_output.setVolume(1.0)
+        # self.audio_output = QAudioOutput(self)
+        # self.media_player = QMediaPlayer(self)
+        # self.media_player.setAudioOutput(self.audio_output)
+        # self.audio_output.setVolume(1.0)
 
     def show_settings(self):
         self.settings_page.load_settings()
@@ -70,8 +69,12 @@ class TelegramManager(QWidget):
     def show_list(self):
         self.stack.setCurrentWidget(self.acc_list_page)
 
+    def show_docs(self):
+        self.settings_page.show_docs()
+
     def show_modules(self):
         if self.modules_win is None:
+            from src.ui.modules_window import ModulesWindow
             self.modules_win = ModulesWindow()
         self.modules_win.show()
         self.modules_win.raise_()
@@ -79,6 +82,7 @@ class TelegramManager(QWidget):
 
     def show_server(self):
         if self.server_win is None:
+            from src.ui.server_window import ServerWindow
             self.server_win = ServerWindow()
         self.server_win.show()
         self.server_win.raise_()
@@ -86,7 +90,8 @@ class TelegramManager(QWidget):
 
     def sync_status(self):
         for r in self.acc_list_page.rows:
-            r.check_status()
+            if r.tg_process is not None:
+                r.check_status()
 
     def eventFilter(self, obj, event):
         if event.type() == QEvent.Type.MouseButtonPress:
@@ -97,7 +102,7 @@ class TelegramManager(QWidget):
                     return True
                 except:
                     continue
-            self.media_player.setSource(QUrl.fromLocalFile(self.sound_path))
-            self.media_player.play()
+            # self.media_player.setSource(QUrl.fromLocalFile(self.sound_path))
+            # self.media_player.play()
             return True
         return super().eventFilter(obj, event)

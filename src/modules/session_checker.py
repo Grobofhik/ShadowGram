@@ -3,8 +3,6 @@ import socket
 import subprocess
 from typing import Tuple, Optional, Dict, Any, Union
 from pathlib import Path
-from hydrogram import Client
-from hydrogram.errors import UserDeactivated, AuthKeyUnregistered, Unauthorized
 
 """
 Модуль проверки статуса сессий Telegram.
@@ -56,7 +54,7 @@ async def _setup_proxy(proxy_url: str) -> Tuple[Optional[subprocess.Popen], Opti
         return None, None
 
 
-async def _download_avatar(client: Client, me: Any, workdir: Path) -> None:
+async def _download_avatar(client: Any, me: Any, workdir: Path) -> None:
     if me.photo:
         avatar_dest = workdir / "avatar.jpg"
         if avatar_dest.exists():
@@ -67,7 +65,7 @@ async def _download_avatar(client: Client, me: Any, workdir: Path) -> None:
             pass
 
 
-async def _cleanup_resources(client: Client, gost_process: Optional[subprocess.Popen]) -> None:
+async def _cleanup_resources(client: Any, gost_process: Optional[subprocess.Popen]) -> None:
     try:
         await client.disconnect()
     except:  # noqa: E722
@@ -96,6 +94,10 @@ async def check_account(
     Returns:
         Tuple[str, str]: (статус, сообщение)
     """
+    
+    from hydrogram import Client
+    from hydrogram.errors import UserDeactivated, AuthKeyUnregistered, Unauthorized
+    
     workdir = Path(workdir)
     session_file = _find_session_file(workdir)
     
