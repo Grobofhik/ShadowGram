@@ -17,6 +17,7 @@ from datetime import datetime
 
 - format_time: перевод секунд в формат "X ч. Y мин."
 - run_plugins_batch: бесконечный цикл выполнения для параллельных задач
+- start_scenario_execution: запуск составного сценария из конструктора
 """
 
 from src.core import logic
@@ -24,6 +25,7 @@ from src.core.constants import CONFIG_FILE, START_ICON_PATH
 from src.core.module_manager import ModuleManager
 from src.modules_styles import MODULES_STYLESHEET
 from src.ui.active_tasks_window import ActiveTasksWindow
+from src.ui.scenario_window import ScenarioWindow
 
 class ModulesWindow(QWidget):
     log_signal = pyqtSignal(str)
@@ -44,6 +46,7 @@ class ModulesWindow(QWidget):
         
         self.running_tasks = {} # { task_id: (asyncio_task, loop) }
         self.local_tasks = {} # { task_id: { loop, tasks, instances } }
+        self.scenario_win = None
         
         self.init_ui()
         self.log_signal.connect(self.append_log)
@@ -129,16 +132,128 @@ class ModulesWindow(QWidget):
         self.params_layout = QVBoxLayout(self.params_container)
         self.params_layout.setContentsMargins(0, 10, 0, 10)
         right_layout.addWidget(self.params_container)
+        
+        btns_layout = QHBoxLayout()
         self.btn_run = QPushButton(" ЗАПУСТИТЬ ПЛАГИН")
         self.btn_run.setIcon(QIcon(str(START_ICON_PATH)))
         self.btn_run.setIconSize(QSize(20, 20))
         self.btn_run.setObjectName("RunModuleBtn")
         self.btn_run.clicked.connect(self.start_module_execution)
-        right_layout.addWidget(self.btn_run)
+        btns_layout.addWidget(self.btn_run, 2)
+        
+        self.btn_scenario = QPushButton("🛠️ СЦЕНАРИЙ")
+        self.btn_scenario.setStyleSheet("background-color: #0277bd; border: 1px solid #01579b; font-weight: bold;")
+        self.btn_scenario.setFixedHeight(45)
+        self.btn_scenario.clicked.connect(self.open_scenario_builder)
+        btns_layout.addWidget(self.btn_scenario, 1)
+        right_layout.addLayout(btns_layout)
+        
         right_layout.addWidget(QLabel("Консоль плагина", objectName="SectionTitle", styleSheet="margin-top: 10px;"))
         self.log_output = QTextEdit(); self.log_output.setObjectName("LogOutput"); self.log_output.setReadOnly(True)
         right_layout.addWidget(self.log_output, 1)
         main_layout.addWidget(right_frame, 2)
+
+    def open_scenario_builder(self):
+        selected_accounts = [c.property("acc_data") for c in self.checkboxes if c.isChecked()]
+        if not selected_accounts:
+            QMessageBox.warning(self, "Внимание", "Сначала выберите аккаунты для сценария!")
+            return
+            
+        self.scenario_win = ScenarioWindow(self, self.manager, selected_accounts)
+        self.scenario_win.show()
+
+    def start_scenario_execution(self, accounts, steps, task_id):
+        self.active_tasks_win.add_task_tab(task_id, f"Сценарий ({len(accounts)} акк.)")
+        self.active_tasks_win.show()
+        
+        threading.Thread(target=self.run_scenario_batch, args=(accounts, steps, task_id), daemon=True).start()
+
+    def run_scenario_batch(self, accounts, steps, task_id):
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        self.local_tasks[task_id] = { "loop": loop, "tasks": [], "instances": [] }
+        try:
+            with open(CONFIG_FILE, "r") as f: cfg = json.load(f)
+            aid, ah = cfg.get("settings", {}).get("api_id"), cfg.get("settings", {}).get("api_hash")
+            
+            async def run_all():
+                tasks = []
+                concurrency_limit = asyncio.Semaphore(15)
+                
+                for i, a in enumerate(accounts):
+                    def log_f(msg, acc_name=a['name'], tid=task_id):
+                        self.log_signal.emit(msg)
+                        self.task_log_signal.emit(tid, msg)
+                        
+                    async def wrapped_run(acc_data, _log_f):
+                        try:
+                            # Start Delay
+                            delay = random.randint(1, 15)
+                            _log_f(f"Запуск сценария через {self.format_time(delay)}", "warning")
+                            await asyncio.sleep(delay)
+                            
+                            # Execute steps sequentially for this account
+                            for step_idx, step in enumerate(steps):
+                                async with concurrency_limit:
+                                    if step["type"] == "pause":
+                                        pause_sec = random.randint(step["params"]["min"], step["params"]["max"])
+                                        _log_f(f"[{step_idx+1}/{len(steps)}] ⏳ Пауза на {self.format_time(pause_sec)}...", "info")
+                                        await asyncio.sleep(pause_sec)
+                                        _log_f(f"[{step_idx+1}/{len(steps)}] ⏳ Пауза завершена.", "success")
+                                    elif step["type"] == "plugin":
+                                        p_name = step["name"]
+                                        p_params = step["params"]
+                                        p_class = self.manager.get_module_class(p_name)
+                                        
+                                        if not p_class:
+                                            _log_f(f"[{step_idx+1}/{len(steps)}] ❌ Ошибка: плагин {p_name} не найден!", "error")
+                                            continue
+                                            
+                                        _log_f(f"[{step_idx+1}/{len(steps)}] 🚀 Запуск: {p_name}...", "info")
+                                        instance = p_class(acc_data, aid, ah, _log_f)
+                                        self.local_tasks[task_id]["instances"].append(instance)
+                                        
+                                        try:
+                                            if await instance.init_client():
+                                                await instance.run(**p_params)
+                                        except Exception as e:
+                                            _log_f(f"[{step_idx+1}/{len(steps)}] ❌ Ошибка плагина: {e}", "error")
+                                        finally:
+                                            await instance.cleanup()
+                                            
+                            _log_f("✅ Сценарий полностью выполнен!", "success")
+                                            
+                        except asyncio.CancelledError:
+                            _log_f("❌ Сценарий отменен пользователем.", "error")
+                            raise
+                        except Exception as e:
+                            _log_f(f"Критическая ошибка сценария: {e}", "error")
+
+                    task_obj = loop.create_task(wrapped_run(a, log_f))
+                    self.local_tasks[task_id]["tasks"].append(task_obj)
+                    tasks.append(task_obj)
+                
+                await asyncio.gather(*tasks)
+
+            main_task = loop.create_task(run_all())
+            self.running_tasks[task_id] = (main_task, loop)
+            loop.run_until_complete(main_task)
+            self.task_log_signal.emit(task_id, "<b style='color: #00e676;'>Сессия сценариев завершена.</b>")
+        except asyncio.CancelledError:
+            self.task_log_signal.emit(task_id, "<b style='color: #ff5252;'>Все процессы в этой вкладке остановлены.</b>")
+        finally:
+            if task_id in self.running_tasks: del self.running_tasks[task_id]
+            try:
+                pending = asyncio.all_tasks(loop)
+                for task in pending: task.cancel()
+                if pending: loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+                loop.run_until_complete(loop.shutdown_asyncgens())
+                loop.run_until_complete(loop.shutdown_default_executor())
+            except Exception as e:
+                print(f"Ошибка при закрытии цикла сценариев: {e}")
+            finally:
+                loop.close()
+                asyncio.set_event_loop(None)
 
     def refresh_plugins_list(self):
         self.available_plugins = self.manager.discover_modules()
@@ -153,7 +268,6 @@ class ModulesWindow(QWidget):
         p_class = self.available_plugins.get(plugin_name)
         if not p_class or not hasattr(p_class, 'PARAMS'): return
         
-        # Загружаем настройки для автозаполнения полей
         settings = {}
         try:
             if os.path.exists(CONFIG_FILE):
@@ -171,6 +285,14 @@ class ModulesWindow(QWidget):
                 param_layout.addWidget(le); param_layout.addWidget(btn); self.param_widgets[param['name']] = le
             elif param['type'] == 'text':
                 le = QLineEdit()
+                # Автозаполнение известных полей из настроек
+                if param['name'] == 'api_key':
+                    le.setText(settings.get('default_ai_api_key', ''))
+                elif param['name'] == 'api_base_url':
+                    le.setText(settings.get('default_ai_base_url', 'https://api.groq.com/openai/v1'))
+                elif param['name'] == 'model_name':
+                    le.setText(settings.get('default_ai_model_name', 'llama-3.1-8b-instant'))
+                
                 param_layout.addWidget(le); self.param_widgets[param['name']] = le
             elif param['type'] == 'textarea':
                 te = QTextEdit(); te.setFixedHeight(80); param_layout.addWidget(te); self.param_widgets[param['name']] = te
@@ -231,7 +353,6 @@ class ModulesWindow(QWidget):
         
         task_id = f"{p_name}_{datetime.now().strftime('%H%M%S')}"
         
-        # Теперь всегда показываем вкладку активных задач, так как любая задача может быть отменена
         self.active_tasks_win.add_task_tab(task_id, f"{p_name} ({len(selected_accounts)})")
         self.active_tasks_win.show()
         
@@ -267,7 +388,6 @@ class ModulesWindow(QWidget):
                     
                     async def wrapped_run(inst, p):
                         try:
-                            # Читаем новые параметры из плагина
                             start_delay_range = getattr(inst, "START_DELAY", (1, 15))
                             is_cyclic = getattr(inst, "IS_CYCLIC", False)
                             cycle_delay_range = getattr(inst, "CYCLE_DELAY", (10800, 21600))
@@ -278,7 +398,6 @@ class ModulesWindow(QWidget):
                                 inst.log(f"Запуск запланирован через {self.format_time(delay)}", "warning")
                                 await asyncio.sleep(delay)
                             
-                            # Жизненный цикл задачи
                             while True:
                                 async with concurrency_limit:
                                     inst.log("🚀 Начинаю активную фазу...", "info")
@@ -320,16 +439,13 @@ class ModulesWindow(QWidget):
         finally:
             if task_id in self.running_tasks: del self.running_tasks[task_id]
             try:
-                # Отменяем все задачи в цикле
                 pending = asyncio.all_tasks(loop)
                 for task in pending:
                     task.cancel()
                 
                 if pending:
-                    # Даем время на выполнение CancelledError
                     loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
                 
-                # Завершаем асинхронные генераторы и исполнителей
                 loop.run_until_complete(loop.shutdown_asyncgens())
                 loop.run_until_complete(loop.shutdown_default_executor())
             except Exception as e:

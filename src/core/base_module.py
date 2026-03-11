@@ -2,7 +2,7 @@ import os
 import asyncio
 import subprocess
 import socket
-from typing import Dict, List, Optional, Callable, Any, Tuple
+from typing import Dict, List, Optional, Callable, Any, Tuple, Union
 
 """
 Базовый класс для всех модулей автоматизации ShadowGram.
@@ -92,6 +92,9 @@ class BaseModule:
 
     def _find_session_file(self) -> Optional[str]:
         """Ищет .session файл в стандартных путях Telegram Desktop"""
+        if not self.workdir:
+            return None
+
         search_paths = [
             self.workdir,
             os.path.join(self.workdir, "tdata"),
@@ -181,10 +184,14 @@ class BaseModule:
                 self.gost_process = None
                 self.local_port = None
 
-    def _setup_proxy(self) -> Optional[Dict[str, Any]]:
+    def _setup_proxy(self) -> Union[Dict[str, Any], bool, None]:
         """Настройка прокси через Gost"""
         if not self.proxy_url:
             return None
+
+        if not self.workdir:
+            self.log("Ошибка: не задана рабочая директория (workdir)!", "error")
+            return False
 
         import shutil
 
@@ -233,6 +240,7 @@ class BaseModule:
 
     def _wait_for_proxy_ready(self) -> bool:
         """Ожидает готовности прокси-порта"""
+        import time
         for i in range(50):
             if self.gost_process.poll() is not None:
                 self.log("Gost внезапно завершился сразу после старта!", "error")
@@ -244,7 +252,8 @@ class BaseModule:
                     if s.connect_ex(("127.0.0.1", self.local_port)) == 0:
                         return True
             except Exception:
-                continue
+                pass
+            time.sleep(0.1)
 
         self.log(f"Ошибка: gost не открыл порт {self.local_port} за 5 секунд!", "error")
         return False
@@ -256,6 +265,20 @@ class BaseModule:
         
         from hydrogram import Client
         from hydrogram.errors import FloodWait
+        
+        # Monkey-patch для исправления багов в hydrogram 0.2.0
+        try:
+            import hydrogram.types
+            if not hasattr(hydrogram.types, 'ChatBackground'):
+                from hydrogram.types.user_and_chats.chat_background import ChatBackground
+                hydrogram.types.ChatBackground = ChatBackground
+                
+            import hydrogram.errors
+            if not hasattr(hydrogram.errors, 'ChatGuestSendForbidden'):
+                from hydrogram.errors.exceptions.forbidden_403 import ChatGuestSendForbidden
+                hydrogram.errors.ChatGuestSendForbidden = ChatGuestSendForbidden
+        except Exception:
+            pass
         
         try:
             self.client = Client(

@@ -238,7 +238,7 @@ class AccountListPage(QWidget):
             
         for _ in range(min(batch_size, len(self._accounts_to_load))):
             acc = self._accounts_to_load.pop(0)
-            row = TelegramAccountRow(acc["name"], acc["workdir"], acc.get("proxy_url"), acc.get("notes"), acc.get("device_name"))
+            row = TelegramAccountRow(acc["name"], acc["workdir"], acc.get("proxy_url"), acc.get("notes"), acc.get("device_name"), acc.get("ai_prompt"))
             row.account_removed.connect(self.refresh_accounts)
             row.move_requested.connect(self.handle_move_request)
             row.set_proxy_hidden(self.proxies_hidden)

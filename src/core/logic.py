@@ -123,7 +123,8 @@ def _read_config(config_file: Path):
 
 def _write_config(config_file: Path, data):
     global _cached_config, _last_config_path, _last_mtime
-    _write_config(config_file, data)
+    with open(config_file, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=4, ensure_ascii=False)
     _cached_config = data
     _last_config_path = config_file
     _last_mtime = config_file.stat().st_mtime
@@ -376,6 +377,28 @@ def update_notes(
         return True
     except Exception as e:
         print(f"Ошибка при обновлении заметок: {e}")
+        return False
+
+
+def update_prompt(
+    config_file: Union[str, Path], workdir: Union[str, Path], new_prompt: Optional[str]
+) -> bool:
+    """Сохранение индивидуального AI-промпта для аккаунта"""
+    try:
+        config_file = Path(config_file)
+        workdir = Path(workdir)
+
+        data = _read_config(config_file)
+
+        for acc in data.get("accounts", []):
+            if Path(acc["workdir"]) == workdir:
+                acc["ai_prompt"] = new_prompt
+                break
+
+        _write_config(config_file, data)
+        return True
+    except Exception as e:
+        print(f"Ошибка при обновлении промпта: {e}")
         return False
 
 

@@ -39,7 +39,7 @@ from src.core.constants import (
     CONFIG_FILE, SEARCH_ICON_PATH, NEW_PROXY_ICON_PATH, 
     DEVICE_ICON_PATH, NOTE_ICON_PATH, PROXY_ICON_PATH, 
     FOLDER_ICON_PATH, CASH_ICON_PATH, DELETE_ICON_PATH,
-    START_ICON_PATH, CANCEL_ICON_PATH
+    START_ICON_PATH, CANCEL_ICON_PATH, ROCKET_ICON_PATH
 )
 
 
@@ -58,7 +58,7 @@ class TelegramAccountRow(QFrame):
     account_removed = pyqtSignal()
     move_requested = pyqtSignal(QFrame, int)
 
-    def __init__(self, name, workdir, proxy_url=None, notes=None, device_name=None):
+    def __init__(self, name, workdir, proxy_url=None, notes=None, device_name=None, ai_prompt=None):
         super().__init__()
         self.setObjectName("AccountRow")
         self.name = name
@@ -66,11 +66,13 @@ class TelegramAccountRow(QFrame):
         self.proxy_url = proxy_url
         self.notes = notes
         self.device_name = device_name
+        self.ai_prompt = ai_prompt
         self.proxy_hidden = True
         self.tg_process = None
         self.gost_process = None
         
         self.btn_notes = None
+        self.btn_prompt = None
         self.avatar_label = None
         
         self.init_ui()
@@ -127,6 +129,7 @@ class TelegramAccountRow(QFrame):
             (SEARCH_ICON_PATH, "SessionBtn", self.run_session_check, "Проверить сессию"),
             (NEW_PROXY_ICON_PATH, "EditBtn", self.edit_proxy, "Изменить прокси"),
             (DEVICE_ICON_PATH, "DeviceBtn", self.edit_device_name, "Имя устройства"),
+            (ROCKET_ICON_PATH, "PromptBtn", self.edit_prompt, "AI Промпт для аккаунта"),
             (NOTE_ICON_PATH, "NotesBtn", self.edit_notes, "Заметки"),
             (PROXY_ICON_PATH, "CheckBtn", self.run_proxy_check, "Проверить прокси"),
             (FOLDER_ICON_PATH, "ExplorerBtn", lambda: logic.open_explorer(self.workdir), "Открыть папку"),
@@ -145,6 +148,7 @@ class TelegramAccountRow(QFrame):
             if obj_name == "CheckBtn": self.btn_check = btn; btn.setVisible(bool(self.proxy_url))
             if obj_name == "NotesBtn": self.btn_notes = btn; btn.installEventFilter(self)
             if obj_name == "SessionBtn": self.btn_session = btn
+            if obj_name == "PromptBtn": self.btn_prompt = btn; btn.setProperty("status", "success" if self.ai_prompt else "default")
             layout.addWidget(btn)
 
         self.btn_launch = QPushButton("Запустить")
@@ -176,6 +180,15 @@ class TelegramAccountRow(QFrame):
     def set_proxy_hidden(self, hidden):
         self.proxy_hidden = hidden
         self.update_label_text()
+
+    def edit_prompt(self):
+        new_prompt, ok = QInputDialog.getMultiLineText(self, "AI Промпт", "Укажите индивидуальный промпт для этого аккаунта:", text=self.ai_prompt or "")
+        if ok:
+            new_prompt = new_prompt.strip() or None
+            if logic.update_prompt(CONFIG_FILE, self.workdir, new_prompt):
+                self.ai_prompt = new_prompt
+                self.btn_prompt.setProperty("status", "success" if new_prompt else "default")
+                self.refresh_btn_style(self.btn_prompt)
 
     def edit_proxy(self):
         new_proxy, ok = QInputDialog.getText(self, "Изменить прокси", "HTTP Proxy:", text=self.proxy_url or "")

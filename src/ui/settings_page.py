@@ -60,6 +60,15 @@ class SettingsPage(QWidget):
         layout.addWidget(QLabel("API Hash:", objectName="SettingLabel"))
         self.input_api_hash = QLineEdit(); layout.addWidget(self.input_api_hash)
 
+        layout.addWidget(QLabel("AI API Ключ (по умолчанию):", objectName="SettingLabel"))
+        self.input_ai_api_key = QLineEdit(); layout.addWidget(self.input_ai_api_key)
+
+        layout.addWidget(QLabel("AI Base URL (по умолчанию):", objectName="SettingLabel"))
+        self.input_ai_base_url = QLineEdit(); layout.addWidget(self.input_ai_base_url)
+
+        layout.addWidget(QLabel("AI Название модели (по умолчанию):", objectName="SettingLabel"))
+        self.input_ai_model_name = QLineEdit(); layout.addWidget(self.input_ai_model_name)
+
         btn_save = QPushButton("💾 Сохранить настройки")
         btn_save.setFixedHeight(45)
         btn_save.clicked.connect(self.save_settings)
@@ -101,6 +110,9 @@ class SettingsPage(QWidget):
                 s = data.get("settings", {})
                 self.input_api_id.setText(str(s.get("api_id", "")))
                 self.input_api_hash.setText(s.get("api_hash", ""))
+                self.input_ai_api_key.setText(s.get("default_ai_api_key", ""))
+                self.input_ai_base_url.setText(s.get("default_ai_base_url", "https://api.groq.com/openai/v1"))
+                self.input_ai_model_name.setText(s.get("default_ai_model_name", "llama-3.1-8b-instant"))
         except: pass
 
     def save_settings(self):
@@ -109,10 +121,13 @@ class SettingsPage(QWidget):
             if os.path.exists(CONFIG_FILE):
                 with open(CONFIG_FILE, "r", encoding="utf-8") as f: data = json.load(f)
             
-            data["settings"] = {
+            data["settings"].update({
                 "api_id": int(self.input_api_id.text()) if self.input_api_id.text().isdigit() else 0, 
-                "api_hash": self.input_api_hash.text().strip()
-            }
+                "api_hash": self.input_api_hash.text().strip(),
+                "default_ai_api_key": self.input_ai_api_key.text().strip(),
+                "default_ai_base_url": self.input_ai_base_url.text().strip(),
+                "default_ai_model_name": self.input_ai_model_name.text().strip()
+            })
             with open(CONFIG_FILE, "w", encoding="utf-8") as f: json.dump(data, f, indent=4, ensure_ascii=False)
             QMessageBox.information(self, "Успех", "Настройки сохранены!")
         except Exception as e: QMessageBox.critical(self, "Ошибка", f"Не удалось сохранить: {e}")
