@@ -16,7 +16,7 @@ class AutoReactor(BaseModule):
         {"name": "reaction_chance", "type": "text", "label": "Шанс поставить реакцию (в %, от 0 до 100)"}
     ]
     
-    START_DELAY = (1, 15)
+    START_DELAY = (10, 18000)
     IS_CYCLIC = False
 
     # Список безопасных дефолтных реакций
@@ -83,14 +83,14 @@ class AutoReactor(BaseModule):
                         display_val = choice if isinstance(choice, str) else f"custom:{choice}"
                         self.log(f"Поставил реакцию {display_val} на пост ID: {msg.id}", "success")
                         
-                        await asyncio.sleep(random.uniform(2.0, 5.0))
+                        await self.sleep(random.uniform(2.0, 5.0))
                     except FloodWait as e:
                         self.log(f"FloodWait: жду {e.value} сек...", "warning")
-                        await asyncio.sleep(e.value)
+                        await self.sleep(e.value)
                     except RPCError as e:
                         self.log(f"Ошибка реакции {choice}: {e.MESSAGE}", "warning")
 
-                await asyncio.sleep(random.uniform(1.5, 4.0))
+                await self.sleep(random.uniform(1.5, 4.0))
 
         except FloodWait as e:
             self.log(f"Лимит запросов Telegram, нужно подождать {e.value} сек.", "error")

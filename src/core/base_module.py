@@ -35,7 +35,7 @@ class BaseModule:
     
     # 1. Задержка перед самым первым запуском аккаунта (в секундах).
     # Позволяет "размазать" массовый запуск (по умолчанию от 1 до 15 сек).
-    START_DELAY: Tuple[int, int] = (1, 15)
+    START_DELAY: Tuple[int, int] = (5, 250)
 
     # 2. Должен ли этот скрипт работать циклично (бесконечно)?
     IS_CYCLIC: bool = False
@@ -69,6 +69,22 @@ class BaseModule:
         self.client: Optional[Any] = None
         self.gost_process: Optional[subprocess.Popen] = None
         self.local_port: Optional[int] = None
+        
+        self.stealth_mode = False
+        try:
+            from src.core.constants import CONFIG_FILE
+            import json
+            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+                config = json.load(f)
+                self.stealth_mode = config.get("settings", {}).get("stealth_mode", False)
+        except Exception:
+            pass
+
+    async def sleep(self, seconds: float):
+        """Обертка над asyncio.sleep с поддержкой режима невидимки (+50% к задержке)"""
+        if self.stealth_mode:
+            seconds *= 1.5
+        await asyncio.sleep(seconds)
 
     def log(self, message: str, status: str = "info") -> None:
         """Отправляет отформатированное сообщение в UI"""

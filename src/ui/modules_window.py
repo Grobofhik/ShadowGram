@@ -176,9 +176,11 @@ class ModulesWindow(QWidget):
             with open(CONFIG_FILE, "r") as f: cfg = json.load(f)
             aid, ah = cfg.get("settings", {}).get("api_id"), cfg.get("settings", {}).get("api_hash")
             
+            max_concurrent = cfg.get("settings", {}).get("max_concurrent_tasks", 10)
+            
             async def run_all():
                 tasks = []
-                concurrency_limit = asyncio.Semaphore(15)
+                concurrency_limit = asyncio.Semaphore(max_concurrent)
                 
                 for i, a in enumerate(accounts):
                     def log_f(msg, acc_name=a['name'], tid=task_id):
@@ -190,7 +192,7 @@ class ModulesWindow(QWidget):
                             # Start Delay
                             delay = random.randint(1, 15)
                             _log_f(f"Запуск сценария через {self.format_time(delay)}", "warning")
-                            await asyncio.sleep(delay)
+                            await inst.sleep(delay)
                             
                             # Execute steps sequentially for this account
                             for step_idx, step in enumerate(steps):
@@ -198,7 +200,7 @@ class ModulesWindow(QWidget):
                                     if step["type"] == "pause":
                                         pause_sec = random.randint(step["params"]["min"], step["params"]["max"])
                                         _log_f(f"[{step_idx+1}/{len(steps)}] ⏳ Пауза на {self.format_time(pause_sec)}...", "info")
-                                        await asyncio.sleep(pause_sec)
+                                        await inst.sleep(pause_sec)
                                         _log_f(f"[{step_idx+1}/{len(steps)}] ⏳ Пауза завершена.", "success")
                                     elif step["type"] == "plugin":
                                         p_name = step["name"]
@@ -374,9 +376,11 @@ class ModulesWindow(QWidget):
             with open(CONFIG_FILE, "r") as f: cfg = json.load(f)
             aid, ah = cfg.get("settings", {}).get("api_id"), cfg.get("settings", {}).get("api_hash")
             
+            max_concurrent = cfg.get("settings", {}).get("max_concurrent_tasks", 10)
+            
             async def run_all():
                 tasks = []
-                concurrency_limit = asyncio.Semaphore(15)
+                concurrency_limit = asyncio.Semaphore(max_concurrent)
                 
                 for i, a in enumerate(accounts):
                     def log_f(msg, acc_name=a['name'], tid=task_id):
@@ -396,7 +400,7 @@ class ModulesWindow(QWidget):
                             
                             if delay > 0:
                                 inst.log(f"Запуск запланирован через {self.format_time(delay)}", "warning")
-                                await asyncio.sleep(delay)
+                                await inst.sleep(delay)
                             
                             while True:
                                 async with concurrency_limit:
@@ -414,7 +418,7 @@ class ModulesWindow(QWidget):
                                 
                                 wait_seconds = random.randint(cycle_delay_range[0], cycle_delay_range[1])
                                 inst.log(f"✅ Работа завершена. Сон: {self.format_time(wait_seconds)}", "success")
-                                await asyncio.sleep(wait_seconds)
+                                await inst.sleep(wait_seconds)
                                 
                         except asyncio.CancelledError:
                             await inst.cleanup()

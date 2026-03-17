@@ -54,7 +54,7 @@ class AuthCodePlugin(BaseModule):
         while asyncio.get_event_loop().time() - start_time < timeout:
             if await self._check_new_message(telegram_id):
                 return
-            await asyncio.sleep(2)
+            await self.sleep(2)
                 
         self.log("Время ожидания истекло. Код не найден.", "warning")
     

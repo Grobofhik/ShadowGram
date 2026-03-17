@@ -55,7 +55,7 @@ class ChannelViewerPlugin(BaseModule):
             
             start_delay = random.uniform(2, 5)
             self.log(f"Случайная микро-пауза: {start_delay:.1f} сек...", "info")
-            await asyncio.sleep(start_delay)
+            await self.sleep(start_delay)
 
             chat = None
             # 2. Получаем объект чата (с обработкой PEER_ID_INVALID)
@@ -117,7 +117,7 @@ class ChannelViewerPlugin(BaseModule):
                 try:
                     # Сначала "загружаем" сообщения
                     await self.client.get_messages(chat.id, chunk)
-                    await asyncio.sleep(random.uniform(1, 2))
+                    await self.sleep(random.uniform(1, 2))
 
                     # Накручиваем "глазик" через API
                     await self.client.invoke(
@@ -137,7 +137,7 @@ class ChannelViewerPlugin(BaseModule):
                 # Имитируем долгое чтение: пауза 10-20 сек
                 delay = random.uniform(10, 25)
                 self.log(f"Читаю блок постов... пауза {delay:.1f} сек.", "info")
-                await asyncio.sleep(delay)
+                await self.sleep(delay)
 
             self.log(f"Просмотры для {channel_id} успешно завершены!", "success")
 

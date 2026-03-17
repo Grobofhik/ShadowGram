@@ -7,7 +7,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QSize, QUrl
 from PyQt6.QtGui import QIcon, QFont
 
-from src.core.constants import FOLDER_ICON_PATH, LOGO_PATH, SERVER_ICON_PATH, MODULS_ICON_PATH
+from src.core.constants import FOLDER_ICON_PATH, LOGO_PATH, SERVER_ICON_PATH, MODULS_ICON_PATH, SETTINGS_ICON_PATH
 from src import styles
 
 class DocsWindow(QWidget):
@@ -79,6 +79,7 @@ class DocsWindow(QWidget):
         home_icon = QIcon(str(LOGO_PATH))
         server_icon = QIcon(str(SERVER_ICON_PATH))
         module_icon = QIcon(str(MODULS_ICON_PATH))
+        settings_icon = QIcon(str(SETTINGS_ICON_PATH))
 
         def create_selectable_item(parent, name, path, icon=None):
             item = QTreeWidgetItem(parent, [name])
@@ -100,7 +101,11 @@ class DocsWindow(QWidget):
         create_selectable_item(cat_profiles, "Создание профиля", "documentation/profiles/create_profile.md")
         create_selectable_item(cat_profiles, "Кнопки управления", "documentation/profiles/profile_actions.md")
 
-        # 3. Модули
+        # 3. Настройки
+        cat_settings = create_category("Настройки программы", settings_icon)
+        create_selectable_item(cat_settings, "Глобальные настройки", "documentation/settings/global_settings.md")
+
+        # 4. Модули
         cat_modules = create_category("Модули автоматизации", module_icon)
         modules_dir = "documentation/modules"
         if os.path.exists(modules_dir):
@@ -109,11 +114,11 @@ class DocsWindow(QWidget):
                     name = file.replace(".md", "").replace("_", " ").title()
                     create_selectable_item(cat_modules, name, os.path.join(modules_dir, file))
 
-        # 4. Сервер
+        # 5. Сервер
         cat_server = create_category("Управление сервером", server_icon)
         create_selectable_item(cat_server, "Настройка сервера", "documentation/server/server_setup.md")
 
-        # 5. Разработка
+        # 6. Разработка
         cat_dev = create_category("Для разработчиков", folder_icon)
         create_selectable_item(cat_dev, "Создание плагинов", "documentation/developers/plugin_development_guide.md")
         

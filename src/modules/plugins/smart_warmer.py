@@ -54,7 +54,7 @@ class SmartWarmerPlugin(BaseModule):
                     read_count = random.randint(5, 10)
                     async for message in self.client.get_chat_history(chat.id, limit=read_count):
                         await self.client.read_chat_history(chat.id, message.id)
-                        await asyncio.sleep(random.uniform(1, 3)) # Маленькая пауза между сообщениями
+                        await self.sleep(random.uniform(1, 3)) # Маленькая пауза между сообщениями
                     
                     self.log(f"Прочитано {read_count} сообщений в {chat.title}", "info")
 
@@ -73,7 +73,7 @@ class SmartWarmerPlugin(BaseModule):
                     # Пауза перед следующим чатом
                     wait_time = random.randint(d_min, d_max)
                     self.log(f"Жду {wait_time} сек. перед следующим действием...", "info")
-                    await asyncio.sleep(wait_time)
+                    await self.sleep(wait_time)
 
                 except FloodWait as e:
                     self.log(f"Флуд-вейт {e.value} сек. Пропускаю чат.", "warning")

@@ -70,6 +70,7 @@ class TelegramAccountRow(QFrame):
         self.proxy_hidden = True
         self.tg_process = None
         self.gost_process = None
+        self.is_compact = False
         
         self.btn_notes = None
         self.btn_prompt = None
@@ -80,9 +81,9 @@ class TelegramAccountRow(QFrame):
         self.session_check_finished.connect(self.on_session_check_finished)
 
     def init_ui(self):
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(10, 10, 10, 10)
-        layout.setSpacing(10)
+        self.layout_main = QHBoxLayout(self)
+        self.layout_main.setContentsMargins(10, 10, 10, 10)
+        self.layout_main.setSpacing(10)
 
         move_layout = QVBoxLayout()
         move_layout.setSpacing(2)
@@ -97,7 +98,7 @@ class TelegramAccountRow(QFrame):
         self.btn_down.setFixedSize(22, 20)
         self.btn_down.clicked.connect(lambda: self.move_requested.emit(self, 1))
         move_layout.addWidget(self.btn_down)
-        layout.addLayout(move_layout)
+        self.layout_main.addLayout(move_layout)
 
         self.avatar_label = QLabel()
         self.avatar_label.setObjectName("AvatarLabel")
@@ -109,23 +110,23 @@ class TelegramAccountRow(QFrame):
         from PyQt6.QtCore import QTimer
         QTimer.singleShot(0, self.load_avatar)
         
-        layout.addWidget(self.avatar_label)
+        self.layout_main.addWidget(self.avatar_label)
 
         self.checkbox = QCheckBox()
         self.checkbox.setFixedWidth(25)
-        layout.addWidget(self.checkbox)
+        self.layout_main.addWidget(self.checkbox)
 
         self.label = QLabel()
         self.label.setObjectName("AccountName")
-        # self.label.setTextFormat(Qt.TextFormat.RichText)
         self.update_label_text()
-        layout.addWidget(self.label, 1)
+        self.layout_main.addWidget(self.label, 1)
 
         self.status_label = QLabel("Остановлен")
         self.status_label.setObjectName("StatusStopped")
-        layout.addWidget(self.status_label)
+        self.layout_main.addWidget(self.status_label)
 
         btns = [
+            (START_ICON_PATH, "LoginBtn", self.open_login_window, "Авторизовать (Войти)"),
             (SEARCH_ICON_PATH, "SessionBtn", self.run_session_check, "Проверить сессию"),
             (NEW_PROXY_ICON_PATH, "EditBtn", self.edit_proxy, "Изменить прокси"),
             (DEVICE_ICON_PATH, "DeviceBtn", self.edit_device_name, "Имя устройства"),
@@ -149,14 +150,41 @@ class TelegramAccountRow(QFrame):
             if obj_name == "NotesBtn": self.btn_notes = btn; btn.installEventFilter(self)
             if obj_name == "SessionBtn": self.btn_session = btn
             if obj_name == "PromptBtn": self.btn_prompt = btn; btn.setProperty("status", "success" if self.ai_prompt else "default")
-            layout.addWidget(btn)
+            self.layout_main.addWidget(btn)
 
         self.btn_launch = QPushButton("Запустить")
         self.btn_launch.setIcon(QIcon(str(START_ICON_PATH)))
         self.btn_launch.setIconSize(QSize(18, 18))
         self.btn_launch.setFixedWidth(115)
         self.btn_launch.clicked.connect(self.toggle_telegram)
-        layout.addWidget(self.btn_launch)
+        self.layout_main.addWidget(self.btn_launch)
+
+    def apply_compact_mode(self, is_compact):
+        self.is_compact = is_compact
+        if is_compact:
+            self.layout_main.setContentsMargins(5, 5, 5, 5)
+            self.avatar_label.setFixedSize(36, 36)
+            self.btn_launch.setFixedHeight(30)
+        else:
+            self.layout_main.setContentsMargins(10, 10, 10, 10)
+            self.avatar_label.setFixedSize(50, 50)
+            self.btn_launch.setFixedHeight(36)
+        
+        self.load_avatar() # Redraw avatar with new size
+        self.update_label_text()
+
+    def open_login_window(self):
+        from src.ui.login_window import LoginWindow
+        account_data = {
+            "name": self.name,
+            "workdir": self.workdir,
+            "proxy_url": self.proxy_url,
+            "device_name": self.device_name
+        }
+        self.login_win = LoginWindow(account_data, self)
+        if self.login_win.exec():
+            # Session checked usually updates avatar, might as well check it now
+            self.run_session_check()
 
     def update_label_text(self):
         display_proxy = self.proxy_url
@@ -166,13 +194,16 @@ class TelegramAccountRow(QFrame):
                 display_proxy = f"{proto}://****************"
             else: display_proxy = "****************"
         
-        # Строгая табличная верстка обеспечивает ровные отступы для Monocraft шрифта
-        proxy_info = f"<tr><td style='color: #4caf50; font-size: 11px; padding-top: 2px;'>Proxy: {display_proxy}</td></tr>" if self.proxy_url else ""
+        name_fs = 12 if self.is_compact else 14
+        proxy_fs = 9 if self.is_compact else 11
+        workdir_fs = 8 if self.is_compact else 10
+        
+        proxy_info = f"<tr><td style='color: #4caf50; font-size: {proxy_fs}px; padding-top: 2px;'>Proxy: {display_proxy}</td></tr>" if self.proxy_url else ""
         text = f"""
         <table border='0' cellpadding='0' cellspacing='0'>
-            <tr><td style='font-size: 14px; font-weight: bold; color: #ffffff;'>{self.name}</td></tr>
+            <tr><td style='font-size: {name_fs}px; font-weight: bold; color: #ffffff;'>{self.name}</td></tr>
             {proxy_info}
-            <tr><td style='color: #888888; font-size: 10px; padding-top: 2px;'>{self.workdir}</td></tr>
+            <tr><td style='color: #888888; font-size: {workdir_fs}px; padding-top: 2px;'>{self.workdir}</td></tr>
         </table>
         """
         self.label.setText(text)
@@ -288,11 +319,17 @@ class TelegramAccountRow(QFrame):
                 painter.setClipPath(path)
                 painter.drawPixmap(0, 0, original_pixmap.scaled(render_size, render_size, Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.SmoothTransformation))
                 painter.end()
-                self.avatar_label.setPixmap(rounded_pixmap)
+                
+                # Scale for UI display
+                display_size = 36 if getattr(self, 'is_compact', False) else 50
+                self.avatar_label.setPixmap(rounded_pixmap.scaled(display_size, display_size, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
                 return
+        
         self.avatar_label.setText("👤")
         self.avatar_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.avatar_label.setStyleSheet("font-size: 24px; color: #4caf50; background-color: #1a1f1a; border-radius: 25px;")
+        fs = 18 if getattr(self, 'is_compact', False) else 24
+        br = 18 if getattr(self, 'is_compact', False) else 25
+        self.avatar_label.setStyleSheet(f"font-size: {fs}px; color: #4caf50; background-color: #1a1f1a; border-radius: {br}px;")
 
     def refresh_btn_style(self, btn):
         btn.style().unpolish(btn); btn.style().polish(btn); btn.update()
@@ -324,6 +361,15 @@ class TelegramAccountRow(QFrame):
     def hide_note_popup(self):
         if hasattr(self, 'popup_label'): self.popup_label.hide()
 
+    def _check_auto_clean(self):
+        try:
+            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+                config = json.load(f)
+                if config.get("settings", {}).get("auto_clean_cache", False):
+                    logic.clear_cache(self.workdir)
+        except Exception:
+            pass
+
     def toggle_telegram(self):
         if not logic.is_process_running(self.tg_process):
             self.tg_process, self.gost_process = logic.start_telegram(self.workdir, self.proxy_url, self.device_name)
@@ -332,6 +378,7 @@ class TelegramAccountRow(QFrame):
             if logic.stop_telegram(self.tg_process, self.gost_process):
                 self.tg_process = self.gost_process = None
                 self.update_status(False)
+                self._check_auto_clean()
 
     def update_status(self, is_running):
         self.status_label.setText("Запущен" if is_running else "Остановлен")
@@ -346,3 +393,4 @@ class TelegramAccountRow(QFrame):
             logic.stop_telegram(self.tg_process, self.gost_process)
             self.tg_process = self.gost_process = None
             self.update_status(False)
+            self._check_auto_clean()

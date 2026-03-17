@@ -46,6 +46,7 @@ class TelegramManager(QWidget):
         self.acc_list_page.server_requested.connect(self.show_server)
         self.acc_list_page.docs_requested.connect(self.show_docs)
         self.settings_page.back_requested.connect(self.show_list)
+        self.settings_page.settings_saved.connect(self.acc_list_page.refresh_accounts)
 
         self.stack.addWidget(self.acc_list_page)
         self.stack.addWidget(self.settings_page)

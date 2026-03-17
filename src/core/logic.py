@@ -308,6 +308,7 @@ def add_account(
     name: str,
     workdir: Union[str, Path],
     proxy_url: Optional[str] = None,
+    device_name: Optional[str] = None,
 ) -> bool:
     """Добавление новой записи об аккаунте в конфиг"""
     try:
@@ -323,7 +324,7 @@ def add_account(
                 "name": name,
                 "workdir": str(workdir),
                 "proxy_url": proxy_url,
-                "device_name": f"PC-{name}",
+                "device_name": device_name if device_name else f"PC-{name}",
             }
         )
 

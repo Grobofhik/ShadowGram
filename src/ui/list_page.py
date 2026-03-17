@@ -133,6 +133,25 @@ class AccountListPage(QWidget):
                 btn.setIconSize(QSize(22, 22))
             btn.clicked.connect(slot)
             toolbar.addWidget(btn)
+
+        from PyQt6.QtWidgets import QMenu
+        from src.services.device_generator import DeviceNameGeneratorService
+        
+        self.btn_services = QPushButton(" Доп сервисы")
+        self.btn_services.setIcon(QIcon(str(MODULS_ICON_PATH)))
+        self.btn_services.setIconSize(QSize(20, 20))
+        
+        services_menu = QMenu(self)
+        services_menu.setStyleSheet("QMenu { background-color: #1e1e1e; border: 1px solid #333; } QMenu::item { padding: 5px 20px 5px 20px; } QMenu::item:selected { background-color: #333; }")
+        
+        action_device_gen = services_menu.addAction("Генератор имён устройств")
+        action_device_gen.triggered.connect(self.open_device_generator)
+
+        action_prompt_gen = services_menu.addAction("Генератор AI Промптов")
+        action_prompt_gen.triggered.connect(self.open_prompt_generator)
+        
+        self.btn_services.setMenu(services_menu)
+        toolbar.addWidget(self.btn_services)
             
         self.btn_toggle_proxies = QPushButton()
         self.btn_toggle_proxies.setIcon(QIcon(str(VIEV_ICON_PATH)))
@@ -189,7 +208,11 @@ class AccountListPage(QWidget):
         proxy_l.addWidget(self.btn_check_creation_proxy)
         inputs.addLayout(proxy_l)
 
-        btn_add = QPushButton("Создать"); btn_add.setFixedHeight(35); btn_add.clicked.connect(self.add_profile); inputs.addWidget(btn_add)
+        btn_add = QPushButton("Создать"); btn_add.setFixedHeight(35); btn_add.clicked.connect(self.add_profile);
+        
+        add_btns_l = QHBoxLayout()
+        add_btns_l.addWidget(btn_add)
+        inputs.addLayout(add_btns_l)
         create_layout.addLayout(inputs)
 
         self.tyanka_label = QLabel()
@@ -223,6 +246,13 @@ class AccountListPage(QWidget):
             r.deleteLater()
         self.rows = []
         
+        try:
+            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+                config = json.load(f)
+                self.is_compact = config.get("settings", {}).get("compact_mode", False)
+        except:
+            self.is_compact = False
+        
         self._accounts_to_load = logic.load_config(CONFIG_FILE)
         if self._accounts_to_load:
             self._load_timer = QTimer(self)
@@ -239,6 +269,7 @@ class AccountListPage(QWidget):
         for _ in range(min(batch_size, len(self._accounts_to_load))):
             acc = self._accounts_to_load.pop(0)
             row = TelegramAccountRow(acc["name"], acc["workdir"], acc.get("proxy_url"), acc.get("notes"), acc.get("device_name"), acc.get("ai_prompt"))
+            row.apply_compact_mode(self.is_compact)
             row.account_removed.connect(self.refresh_accounts)
             row.move_requested.connect(self.handle_move_request)
             row.set_proxy_hidden(self.proxies_hidden)
@@ -273,8 +304,22 @@ class AccountListPage(QWidget):
         for r in self.rows: r.checkbox.setChecked(state == Qt.CheckState.Checked.value)
 
     def bulk_launch(self):
-        for r in self.rows:
-            if r.checkbox.isChecked() and not logic.is_process_running(r.tg_process): r.toggle_telegram()
+        try:
+            with open(CONFIG_FILE, "r") as f: config = json.load(f)
+            delay = config.get("settings", {}).get("launch_delay", 2)
+        except:
+            delay = 2
+
+        self._launch_queue = [r for r in self.rows if r.checkbox.isChecked() and not logic.is_process_running(r.tg_process)]
+        self._launch_delay = delay * 1000
+        self._process_launch_queue()
+
+    def _process_launch_queue(self):
+        if not self._launch_queue: return
+        row = self._launch_queue.pop(0)
+        row.toggle_telegram()
+        if self._launch_queue:
+            QTimer.singleShot(self._launch_delay, self._process_launch_queue)
 
     def bulk_stop(self):
         for r in self.rows:
@@ -299,6 +344,24 @@ class AccountListPage(QWidget):
         n, p, pr = self.input_name.text().strip(), self.input_path.text().strip(), self.input_proxy.text().strip()
         if n and p and logic.add_account(CONFIG_FILE, n, p, pr if pr else None):
             self.input_name.clear(); self.input_path.clear(); self.input_proxy.clear(); self.refresh_accounts()
+
+    def open_login_window(self):
+        from src.ui.login_window import LoginWindow
+        self.login_win = LoginWindow(self)
+        if self.login_win.exec():
+            self.refresh_accounts()
+
+    def open_device_generator(self):
+        from src.services.device_generator import DeviceNameGeneratorService
+        self.device_gen_win = DeviceNameGeneratorService(self)
+        if self.device_gen_win.exec():
+            self.refresh_accounts()
+
+    def open_prompt_generator(self):
+        from src.services.ai_prompt_generator import AIPromptGeneratorService
+        self.prompt_gen_win = AIPromptGeneratorService(self)
+        if self.prompt_gen_win.exec():
+            self.refresh_accounts()
 
     def filter_accounts(self, text):
         query = text.lower().strip()

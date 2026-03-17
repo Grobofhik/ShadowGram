@@ -104,7 +104,7 @@ class AICommenter(BaseModule):
 
                 if random.randint(1, 100) <= c_chance:
                     # Читаем пост (имитация)
-                    await asyncio.sleep(random.uniform(2.0, 5.0))
+                    await self.sleep(random.uniform(2.0, 5.0))
                     
                     self.log(f"Генерирую комментарий для поста ID: {msg.id}...", "info")
                     comment_text = await self._generate_comment(msg.text or msg.caption or "", system_prompt, api_key, api_base_url, model_name)
@@ -123,7 +123,7 @@ class AICommenter(BaseModule):
                                 if "CHAT_GUEST_SEND_FORBIDDEN" in str(e):
                                     self.log("Требуется вступление в группу комментариев. Вступаем...", "warning")
                                     await self.client.join_chat(discussion_msg.chat.id)
-                                    await asyncio.sleep(random.uniform(2.0, 5.0))
+                                    await self.sleep(random.uniform(2.0, 5.0))
                                     await discussion_msg.reply(comment_text)
                                 else:
                                     raise e
@@ -131,10 +131,10 @@ class AICommenter(BaseModule):
                             self.log(f"💬 Отправлено: '{comment_text}'", "success")
                             
                             # Большая пауза после комментария
-                            await asyncio.sleep(random.uniform(10.0, 30.0))
+                            await self.sleep(random.uniform(10.0, 30.0))
                         except FloodWait as e:
                             self.log(f"FloodWait: жду {e.value} сек...", "warning")
-                            await asyncio.sleep(e.value)
+                            await self.sleep(e.value)
                         except RPCError as e:
                             self.log(f"Не удалось оставить коммент (возможно закрыты): {e}", "warning")
                     else:
@@ -142,7 +142,7 @@ class AICommenter(BaseModule):
                         
                 else:
                     self.log(f"Пропуск комментария для поста {msg.id} (шанс)", "info")
-                    await asyncio.sleep(random.uniform(1.0, 3.0))
+                    await self.sleep(random.uniform(1.0, 3.0))
 
         except FloodWait as e:
             self.log(f"Лимит запросов Telegram, нужно подождать {e.value} сек.", "error")
