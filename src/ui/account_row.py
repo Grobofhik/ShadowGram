@@ -2,7 +2,7 @@ import os
 import threading
 import json
 import asyncio
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QCheckBox, QInputDialog, QMessageBox
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QCheckBox, QInputDialog, QMessageBox, QWidget
 from PyQt6.QtGui import QPixmap, QPainter, QPainterPath, QCursor, QIcon
 from PyQt6.QtCore import Qt, pyqtSignal, QEvent, QEasingCurve, QPropertyAnimation, QParallelAnimationGroup, QSize
 
@@ -82,48 +82,73 @@ class TelegramAccountRow(QFrame):
 
     def init_ui(self):
         self.layout_main = QHBoxLayout(self)
-        self.layout_main.setContentsMargins(10, 10, 10, 10)
-        self.layout_main.setSpacing(10)
+        self.layout_main.setContentsMargins(15, 12, 15, 12)
+        self.layout_main.setSpacing(15)
 
+        # 1. Кнопки перемещения
         move_layout = QVBoxLayout()
-        move_layout.setSpacing(2)
+        move_layout.setSpacing(0)
         self.btn_up = QPushButton("▲")
         self.btn_up.setObjectName("MoveBtn")
-        self.btn_up.setFixedSize(22, 20)
+        self.btn_up.setFixedSize(20, 20)
         self.btn_up.clicked.connect(lambda: self.move_requested.emit(self, -1))
         move_layout.addWidget(self.btn_up)
         
         self.btn_down = QPushButton("▼")
         self.btn_down.setObjectName("MoveBtn")
-        self.btn_down.setFixedSize(22, 20)
+        self.btn_down.setFixedSize(20, 20)
         self.btn_down.clicked.connect(lambda: self.move_requested.emit(self, 1))
         move_layout.addWidget(self.btn_down)
         self.layout_main.addLayout(move_layout)
 
+        # 2. Чекбокс
+        self.checkbox = QCheckBox()
+        self.checkbox.setFixedWidth(23)
+        self.layout_main.addWidget(self.checkbox)
+
+        # 3. Аватарка
         self.avatar_label = QLabel()
         self.avatar_label.setObjectName("AvatarLabel")
-        self.avatar_label.setFixedSize(50, 50)
+        self.avatar_label.setFixedSize(54, 54)
         self.avatar_label.setScaledContents(True)
         self.avatar_label.setCursor(Qt.CursorShape.PointingHandCursor)
         self.avatar_label.installEventFilter(self)
         
         from PyQt6.QtCore import QTimer
         QTimer.singleShot(0, self.load_avatar)
-        
         self.layout_main.addWidget(self.avatar_label)
 
-        self.checkbox = QCheckBox()
-        self.checkbox.setFixedWidth(25)
-        self.layout_main.addWidget(self.checkbox)
-
-        self.label = QLabel()
-        self.label.setObjectName("AccountName")
+        # 4. Информация (Имя + Детали)
+        info_layout = QVBoxLayout()
+        info_layout.setSpacing(2)
+        info_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
+        
+        self.label_name = QLabel(self.name)
+        self.label_name.setStyleSheet("font-size: 16px; font-weight: normal; color: #E0E0E0;")
+        info_layout.addWidget(self.label_name)
+        
+        self.label_details = QLabel()
         self.update_label_text()
-        self.layout_main.addWidget(self.label, 1)
+        info_layout.addWidget(self.label_details)
+        
+        self.layout_main.addLayout(info_layout, 1)
 
+        # 5. Статус
         self.status_label = QLabel("Остановлен")
         self.status_label.setObjectName("StatusStopped")
+        self.status_label.setFixedWidth(95)
+        self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.layout_main.addWidget(self.status_label)
+
+        # Разделитель
+        sep1 = QFrame()
+        sep1.setFrameShape(QFrame.Shape.VLine)
+        sep1.setStyleSheet("color: #1A2E1A; margin: 0px 4px;")
+        self.layout_main.addWidget(sep1)
+
+        # 6. Кнопки инструментов
+        btns_layout = QHBoxLayout()
+        btns_layout.setSpacing(6)
 
         btns = [
             (START_ICON_PATH, "LoginBtn", self.open_login_window, "Авторизовать (Войти)"),
@@ -143,34 +168,54 @@ class TelegramAccountRow(QFrame):
             btn.setIcon(get_cached_icon(icon_path))
             btn.setIconSize(QSize(20, 20))
             btn.setObjectName(obj_name)
-            btn.setFixedWidth(38)
+            btn.setFixedSize(38, 38)
             btn.setToolTip(tip)
             btn.clicked.connect(slot)
             if obj_name == "CheckBtn": self.btn_check = btn; btn.setVisible(bool(self.proxy_url))
             if obj_name == "NotesBtn": self.btn_notes = btn; btn.installEventFilter(self)
             if obj_name == "SessionBtn": self.btn_session = btn
             if obj_name == "PromptBtn": self.btn_prompt = btn; btn.setProperty("status", "success" if self.ai_prompt else "default")
-            self.layout_main.addWidget(btn)
+            btns_layout.addWidget(btn)
 
+        self.layout_main.addLayout(btns_layout)
+
+        # Разделитель
+        sep2 = QFrame()
+        sep2.setFrameShape(QFrame.Shape.VLine)
+        sep2.setStyleSheet("color: #1A2E1A; margin: 0px 4px;")
+        self.layout_main.addWidget(sep2)
+
+        # 7. Главная кнопка запуска
         self.btn_launch = QPushButton("Запустить")
+        self.btn_launch.setObjectName("LaunchBtn")
         self.btn_launch.setIcon(QIcon(str(START_ICON_PATH)))
         self.btn_launch.setIconSize(QSize(18, 18))
-        self.btn_launch.setFixedWidth(115)
+        self.btn_launch.setFixedSize(130, 38)
         self.btn_launch.clicked.connect(self.toggle_telegram)
         self.layout_main.addWidget(self.btn_launch)
 
     def apply_compact_mode(self, is_compact):
         self.is_compact = is_compact
         if is_compact:
-            self.layout_main.setContentsMargins(5, 5, 5, 5)
+            self.layout_main.setContentsMargins(8, 6, 8, 6)
             self.avatar_label.setFixedSize(36, 36)
-            self.btn_launch.setFixedHeight(30)
+            self.btn_launch.setFixedSize(100, 32)
+            for btn_name in ["LoginBtn", "SessionBtn", "EditBtn", "DeviceBtn", "PromptBtn", "NotesBtn", "CheckBtn", "ExplorerBtn", "ClearBtn", "DeleteBtn"]:
+                btn = self.findChild(QPushButton, btn_name)
+                if btn:
+                    btn.setFixedSize(30, 30)
+                    btn.setIconSize(QSize(16, 16))
         else:
-            self.layout_main.setContentsMargins(10, 10, 10, 10)
-            self.avatar_label.setFixedSize(50, 50)
-            self.btn_launch.setFixedHeight(36)
+            self.layout_main.setContentsMargins(15, 12, 15, 12)
+            self.avatar_label.setFixedSize(54, 54)
+            self.btn_launch.setFixedSize(130, 38)
+            for btn_name in ["LoginBtn", "SessionBtn", "EditBtn", "DeviceBtn", "PromptBtn", "NotesBtn", "CheckBtn", "ExplorerBtn", "ClearBtn", "DeleteBtn"]:
+                btn = self.findChild(QPushButton, btn_name)
+                if btn:
+                    btn.setFixedSize(38, 38)
+                    btn.setIconSize(QSize(20, 20))
         
-        self.load_avatar() # Redraw avatar with new size
+        self.load_avatar()
         self.update_label_text()
 
     def open_login_window(self):
@@ -183,7 +228,6 @@ class TelegramAccountRow(QFrame):
         }
         self.login_win = LoginWindow(account_data, self)
         if self.login_win.exec():
-            # Session checked usually updates avatar, might as well check it now
             self.run_session_check()
 
     def update_label_text(self):
@@ -195,18 +239,16 @@ class TelegramAccountRow(QFrame):
             else: display_proxy = "****************"
         
         name_fs = 12 if self.is_compact else 14
-        proxy_fs = 9 if self.is_compact else 11
-        workdir_fs = 8 if self.is_compact else 10
+        workdir_fs = 9 if self.is_compact else 10
         
-        proxy_info = f"<tr><td style='color: #4caf50; font-size: {proxy_fs}px; padding-top: 2px;'>Proxy: {display_proxy}</td></tr>" if self.proxy_url else ""
-        text = f"""
-        <table border='0' cellpadding='0' cellspacing='0'>
-            <tr><td style='font-size: {name_fs}px; font-weight: bold; color: #ffffff;'>{self.name}</td></tr>
-            {proxy_info}
-            <tr><td style='color: #888888; font-size: {workdir_fs}px; padding-top: 2px;'>{self.workdir}</td></tr>
-        </table>
-        """
-        self.label.setText(text)
+        self.label_name.setStyleSheet(f"font-size: {name_fs}px; font-weight: bold; color: #00E676;")
+        
+        if self.proxy_url:
+            self.label_details.setText(f"<span style='color: #4A5C4A;'>📁 {self.workdir}</span> &nbsp;|&nbsp; <span style='color: #00C853;'>🌐 {display_proxy}</span>")
+        else:
+            self.label_details.setText(f"📁 {self.workdir}")
+            
+        self.label_details.setStyleSheet(f"color: #8B9A8B; font-size: {workdir_fs}px;")
 
     def set_proxy_hidden(self, hidden):
         self.proxy_hidden = hidden
@@ -321,15 +363,15 @@ class TelegramAccountRow(QFrame):
                 painter.end()
                 
                 # Scale for UI display
-                display_size = 36 if getattr(self, 'is_compact', False) else 50
+                display_size = 32 if getattr(self, 'is_compact', False) else 44
                 self.avatar_label.setPixmap(rounded_pixmap.scaled(display_size, display_size, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
                 return
         
         self.avatar_label.setText("👤")
         self.avatar_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        fs = 18 if getattr(self, 'is_compact', False) else 24
-        br = 18 if getattr(self, 'is_compact', False) else 25
-        self.avatar_label.setStyleSheet(f"font-size: {fs}px; color: #4caf50; background-color: #1a1f1a; border-radius: {br}px;")
+        fs = 16 if getattr(self, 'is_compact', False) else 20
+        br = 16 if getattr(self, 'is_compact', False) else 22
+        self.avatar_label.setStyleSheet(f"font-size: {fs}px; color: #00E676; background-color: #111A11; border-radius: {br}px; border: 1px solid #244024;")
 
     def refresh_btn_style(self, btn):
         btn.style().unpolish(btn); btn.style().polish(btn); btn.update()
@@ -385,7 +427,7 @@ class TelegramAccountRow(QFrame):
         self.status_label.setObjectName("StatusRunning" if is_running else "StatusStopped")
         self.btn_launch.setText("Закрыть" if is_running else "Запустить")
         self.btn_launch.setIcon(get_cached_icon(CANCEL_ICON_PATH if is_running else START_ICON_PATH))
-        self.btn_launch.setStyleSheet("background-color: #c62828;" if is_running else "")
+        self.btn_launch.setStyleSheet("background-color: #FF5252; color: #000000; font-weight: bold;" if is_running else "")
         self.status_label.style().unpolish(self.status_label); self.status_label.style().polish(self.status_label)
 
     def check_status(self):

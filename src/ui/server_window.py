@@ -291,7 +291,7 @@ class ServerWindow(QWidget):
             param_layout = QHBoxLayout()
             param_layout.addWidget(QLabel(f"{param['label']}:"))
             if param['type'] == 'file':
-                le = QLineEdit(); btn = QPushButton("📁"); btn.setFixedWidth(40)
+                le = QLineEdit(); btn = QPushButton(); btn.setIcon(QIcon(str(FOLDER_ICON_PATH))); btn.setIconSize(QSize(20, 20)); btn.setFixedWidth(40)
                 btn.clicked.connect(lambda ch, l=le: self.browse_file(l))
                 param_layout.addWidget(le); param_layout.addWidget(btn); self.param_widgets[param['name']] = le
             elif param['type'] == 'text':

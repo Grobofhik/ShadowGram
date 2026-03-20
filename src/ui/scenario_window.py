@@ -4,10 +4,11 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                              QPushButton, QComboBox, QTextEdit, QFrame, 
                              QMessageBox, QFileDialog, QLineEdit, QListWidget, 
                              QListWidgetItem, QAbstractItemView)
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtGui import QIcon
+from PyQt6.QtCore import Qt, pyqtSignal, QSize
 from datetime import datetime
 
-from src.core.constants import CONFIG_FILE
+from src.core.constants import CONFIG_FILE, FOLDER_ICON_PATH
 from src.modules_styles import MODULES_STYLESHEET
 
 class ScenarioWindow(QWidget):
@@ -16,7 +17,13 @@ class ScenarioWindow(QWidget):
         self.parent_window = parent_window
         self.manager = manager
         self.selected_accounts = selected_accounts
-        self.available_plugins = self.manager.discover_modules()
+        
+        all_plugins = self.manager.discover_modules()
+        if len(self.selected_accounts) > 1:
+            self.available_plugins = {k: v for k, v in all_plugins.items() if not getattr(v, "SINGLE_ACCOUNT", False)}
+        else:
+            self.available_plugins = all_plugins
+            
         self.scenario_steps = []
         self.param_widgets = {}
         
@@ -126,7 +133,7 @@ class ScenarioWindow(QWidget):
             param_layout = QHBoxLayout()
             param_layout.addWidget(QLabel(f"{param['label']}:"))
             if param['type'] == 'file':
-                le = QLineEdit(); btn = QPushButton("📁"); btn.setFixedWidth(40)
+                le = QLineEdit(); btn = QPushButton(); btn.setIcon(QIcon(str(FOLDER_ICON_PATH))); btn.setIconSize(QSize(20, 20)); btn.setFixedWidth(40)
                 btn.clicked.connect(lambda ch, l=le: self.browse_file(l))
                 param_layout.addWidget(le); param_layout.addWidget(btn); self.param_widgets[param['name']] = le
             elif param['type'] == 'text':

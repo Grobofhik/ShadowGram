@@ -21,7 +21,7 @@ from datetime import datetime
 """
 
 from src.core import logic
-from src.core.constants import CONFIG_FILE, START_ICON_PATH
+from src.core.constants import CONFIG_FILE, START_ICON_PATH, RELOAD_ICON_PATH, FOLDER_ICON_PATH
 from src.core.module_manager import ModuleManager
 from src.modules_styles import MODULES_STYLESHEET
 from src.ui.active_tasks_window import ActiveTasksWindow
@@ -123,7 +123,9 @@ class ModulesWindow(QWidget):
         self.module_combo.addItems(list(self.available_plugins.keys()))
         self.module_combo.currentTextChanged.connect(self.update_params_panel)
         plugin_select_layout.addWidget(self.module_combo, 1)
-        btn_refresh_plugins = QPushButton("🔄")
+        btn_refresh_plugins = QPushButton()
+        btn_refresh_plugins.setIcon(QIcon(str(RELOAD_ICON_PATH)))
+        btn_refresh_plugins.setIconSize(QSize(20, 20))
         btn_refresh_plugins.setFixedWidth(40)
         btn_refresh_plugins.clicked.connect(self.refresh_plugins_list)
         plugin_select_layout.addWidget(btn_refresh_plugins)
@@ -282,7 +284,11 @@ class ModulesWindow(QWidget):
             param_layout = QHBoxLayout()
             param_layout.addWidget(QLabel(f"{param['label']}:"))
             if param['type'] == 'file':
-                le = QLineEdit(); btn = QPushButton("📁"); btn.setFixedWidth(40)
+                le = QLineEdit()
+                btn = QPushButton()
+                btn.setIcon(QIcon(str(FOLDER_ICON_PATH)))
+                btn.setIconSize(QSize(20, 20))
+                btn.setFixedWidth(40)
                 btn.clicked.connect(lambda ch, l=le: self.browse_file(l))
                 param_layout.addWidget(le); param_layout.addWidget(btn); self.param_widgets[param['name']] = le
             elif param['type'] == 'text':

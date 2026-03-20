@@ -1,6 +1,6 @@
 import os
 import threading
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QCheckBox, QLineEdit, QScrollArea, QFrame, QFileDialog, QMessageBox
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QCheckBox, QLineEdit, QScrollArea, QFrame, QFileDialog, QMessageBox, QDialog, QMenu
 from PyQt6.QtGui import QPixmap, QIcon
 from PyQt6.QtCore import Qt, pyqtSignal, QPropertyAnimation, QEasingCurve, QParallelAnimationGroup, QSize, QTimer
 import json
@@ -25,6 +25,7 @@ import json
 - add_profile: создание и сохранение нового профиля
 - filter_accounts: фильтрация списка по поисковому запросу
 - toggle_all_proxies: переключение видимости всех прокси в списке
+- open_create_profile_dialog: открытие диалога создания профиля
 """
 
 from src.core import logic
@@ -36,6 +37,102 @@ from src.core.constants import (
     FOLDER_ICON_PATH, NEW_PROXY_ICON_PATH, SERVER_ICON_PATH,
     NOTE_ICON_PATH
 )
+
+class CreateProfileDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Создать новый профиль")
+        self.setFixedSize(500, 450)
+        self.setStyleSheet(parent.styleSheet() if parent else "")
+        
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(15)
+
+        layout.addWidget(QLabel("Добавить новый профиль", styleSheet="font-weight: bold; color: #00E676; font-size: 16px;"))
+        
+        self.input_name = QLineEdit()
+        self.input_name.setPlaceholderText("Имя профиля")
+        layout.addWidget(self.input_name)
+        
+        path_l = QHBoxLayout()
+        self.input_path = QLineEdit()
+        self.input_path.setPlaceholderText("Путь к папке (workdir)")
+        path_l.addWidget(self.input_path)
+        
+        btn_br = QPushButton()
+        btn_br.setFixedWidth(40)
+        btn_br.setIcon(QIcon(str(FOLDER_ICON_PATH)))
+        btn_br.setIconSize(QSize(20, 20))
+        btn_br.clicked.connect(self.browse_directory)
+        path_l.addWidget(btn_br)
+        layout.addLayout(path_l)
+        
+        proxy_l = QHBoxLayout()
+        self.input_proxy = QLineEdit()
+        self.input_proxy.setPlaceholderText("HTTP Proxy (http://user:pass@host:port)")
+        proxy_l.addWidget(self.input_proxy)
+        
+        self.btn_check_creation_proxy = QPushButton()
+        self.btn_check_creation_proxy.setIcon(QIcon(str(NEW_PROXY_ICON_PATH)))
+        self.btn_check_creation_proxy.setIconSize(QSize(22, 22))
+        self.btn_check_creation_proxy.setObjectName("CheckBtn")
+        self.btn_check_creation_proxy.setFixedWidth(40)
+        self.btn_check_creation_proxy.clicked.connect(self.run_creation_proxy_check)
+        proxy_l.addWidget(self.btn_check_creation_proxy)
+        layout.addLayout(proxy_l)
+
+        btn_add = QPushButton("Создать")
+        btn_add.setObjectName("LaunchBtn")
+        btn_add.setFixedHeight(40)
+        btn_add.clicked.connect(self.add_profile)
+        layout.addWidget(btn_add)
+        
+        self.tyanka_label = QLabel()
+        pix = QPixmap(str(ICON_PATH))
+        if not pix.isNull(): 
+            self.tyanka_label.setPixmap(pix.scaled(150, 150, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+        layout.addWidget(self.tyanka_label, alignment=Qt.AlignmentFlag.AlignCenter)
+
+    def browse_directory(self):
+        dir_path = QFileDialog.getExistingDirectory(self, "Выберите папку для профиля")
+        if dir_path: self.input_path.setText(dir_path)
+
+    def run_creation_proxy_check(self):
+        p_url = self.input_proxy.text().strip()
+        if not p_url: return
+        self.btn_check_creation_proxy.setProperty("status", "checking")
+        self.btn_check_creation_proxy.style().unpolish(self.btn_check_creation_proxy)
+        self.btn_check_creation_proxy.style().polish(self.btn_check_creation_proxy)
+        self.btn_check_creation_proxy.setEnabled(False)
+        threading.Thread(target=lambda: self.parent().creation_proxy_check_finished.emit(logic.check_proxy_validity(p_url)), daemon=True).start()
+
+    def set_proxy_status(self, is_valid):
+        self.btn_check_creation_proxy.setEnabled(True)
+        self.btn_check_creation_proxy.setProperty("status", "success" if is_valid else "error")
+        self.btn_check_creation_proxy.style().unpolish(self.btn_check_creation_proxy)
+        self.btn_check_creation_proxy.style().polish(self.btn_check_creation_proxy)
+        if is_valid: QMessageBox.information(self, "Прокси", "Прокси рабочий!")
+        else: QMessageBox.critical(self, "Прокси", "Прокси не работает!")
+
+    def add_profile(self):
+        name = self.input_name.text().strip()
+        path = self.input_path.text().strip()
+        proxy = self.input_proxy.text().strip() or None
+        if not name or not path:
+            QMessageBox.warning(self, "Ошибка", "Заполните имя и путь!")
+            return
+        if logic.add_account(CONFIG_FILE, name, path, proxy):
+            if hasattr(self.parent(), "refresh_accounts"):
+                self.parent().refresh_accounts()
+            self.input_name.clear()
+            self.input_path.clear()
+            self.input_proxy.clear()
+            self.btn_check_creation_proxy.setProperty("status", "default")
+            self.btn_check_creation_proxy.style().unpolish(self.btn_check_creation_proxy)
+            self.btn_check_creation_proxy.style().polish(self.btn_check_creation_proxy)
+            self.accept()
+
 
 class AccountListPage(QWidget):
     settings_requested = pyqtSignal()
@@ -52,6 +149,8 @@ class AccountListPage(QWidget):
         self.is_animating = False
         self._accounts_to_load = []
         self._load_timer = None
+        self.create_dialog = None
+        self.is_compact_mode = False
         self.init_ui()
         self.creation_proxy_check_finished.connect(self.on_creation_proxy_check_finished)
 
@@ -59,57 +158,6 @@ class AccountListPage(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(15)
-
-        title_layout = QHBoxLayout()
-        title_layout.setSpacing(10)
-        
-        logo_label = QLabel()
-        logo_pix = QPixmap(str(LOGO_PATH))
-        if not logo_pix.isNull():
-            logo_label.setPixmap(logo_pix.scaled(90, 90, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
-        logo_label.setAlignment(Qt.AlignmentFlag.AlignVCenter)
-        title_layout.addWidget(logo_label)
-
-        title_label = QLabel("Shadowgram")
-        title_label.setAlignment(Qt.AlignmentFlag.AlignVCenter)
-        title_label.setObjectName("Title")
-        title_label.setContentsMargins(0, 0, 0, 10) # 10px отступа снизу поднимут текст выше
-        title_layout.addWidget(title_label)
-        title_layout.addStretch()
-
-        self.btn_server = QPushButton(" Сервер")
-        # Reuse MODULS_ICON_PATH or another icon for server
-        self.btn_server.setIcon(QIcon(str(SERVER_ICON_PATH)))
-        self.btn_server.setIconSize(QSize(20, 20))
-        self.btn_server.setFixedWidth(120)
-        self.btn_server.setToolTip("Управление ServerGram")
-        self.btn_server.clicked.connect(self.server_requested.emit)
-        title_layout.addWidget(self.btn_server)
-
-        self.btn_modules = QPushButton(" Модули")
-        self.btn_modules.setIcon(QIcon(str(MODULS_ICON_PATH)))
-        self.btn_modules.setIconSize(QSize(20, 20))
-        self.btn_modules.setFixedWidth(120)
-        self.btn_modules.setToolTip("Запуск модулей автоматизации")
-        self.btn_modules.clicked.connect(self.modules_requested.emit)
-        title_layout.addWidget(self.btn_modules)
-
-        self.btn_docs = QPushButton()
-        self.btn_docs.setIcon(QIcon(str(NOTE_ICON_PATH)))
-        self.btn_docs.setIconSize(QSize(24, 24))
-        self.btn_docs.setFixedWidth(45)
-        self.btn_docs.setToolTip("Открыть документацию")
-        self.btn_docs.clicked.connect(self.docs_requested.emit)
-        title_layout.addWidget(self.btn_docs)
-
-        self.btn_settings = QPushButton()
-        self.btn_settings.setIcon(QIcon(str(SETTINGS_ICON_PATH)))
-        self.btn_settings.setIconSize(QSize(24, 24))
-        self.btn_settings.setFixedWidth(45)
-        self.btn_settings.setToolTip("Настройки")
-        self.btn_settings.clicked.connect(self.settings_requested.emit)
-        title_layout.addWidget(self.btn_settings)
-        layout.addLayout(title_layout)
 
         toolbar = QHBoxLayout()
         self.select_all_cb = QCheckBox("Выбрать все")
@@ -133,25 +181,6 @@ class AccountListPage(QWidget):
                 btn.setIconSize(QSize(22, 22))
             btn.clicked.connect(slot)
             toolbar.addWidget(btn)
-
-        from PyQt6.QtWidgets import QMenu
-        from src.services.device_generator import DeviceNameGeneratorService
-        
-        self.btn_services = QPushButton(" Доп сервисы")
-        self.btn_services.setIcon(QIcon(str(MODULS_ICON_PATH)))
-        self.btn_services.setIconSize(QSize(20, 20))
-        
-        services_menu = QMenu(self)
-        services_menu.setStyleSheet("QMenu { background-color: #1e1e1e; border: 1px solid #333; } QMenu::item { padding: 5px 20px 5px 20px; } QMenu::item:selected { background-color: #333; }")
-        
-        action_device_gen = services_menu.addAction("Генератор имён устройств")
-        action_device_gen.triggered.connect(self.open_device_generator)
-
-        action_prompt_gen = services_menu.addAction("Генератор AI Промптов")
-        action_prompt_gen.triggered.connect(self.open_prompt_generator)
-        
-        self.btn_services.setMenu(services_menu)
-        toolbar.addWidget(self.btn_services)
             
         self.btn_toggle_proxies = QPushButton()
         self.btn_toggle_proxies.setIcon(QIcon(str(VIEV_ICON_PATH)))
@@ -175,7 +204,7 @@ class AccountListPage(QWidget):
         self.scroll_layout.setSpacing(10)
         self.scroll_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.scroll.setWidget(self.scroll_content)
-        self.scroll.verticalScrollBar().setSingleStep(25)  # Делаем скролл мышью более плавным и быстрым
+        self.scroll.verticalScrollBar().setSingleStep(25)
         layout.addWidget(self.scroll)
 
         btn_ref = QPushButton("Обновить список")
@@ -183,59 +212,26 @@ class AccountListPage(QWidget):
         btn_ref.clicked.connect(self.refresh_accounts)
         layout.addWidget(btn_ref)
 
-        self.create_frame = QFrame(); self.create_frame.setObjectName("CreateSection")
-        create_layout = QHBoxLayout(self.create_frame)
-        inputs = QVBoxLayout()
-        inputs.addWidget(QLabel("Добавить новый профиль", styleSheet="font-weight: bold; color: #4caf50;"))
-        self.input_name = QLineEdit(); self.input_name.setPlaceholderText("Имя профиля"); inputs.addWidget(self.input_name)
-        
-        path_l = QHBoxLayout()
-        self.input_path = QLineEdit(); self.input_path.setPlaceholderText("Путь к папке (workdir)"); path_l.addWidget(self.input_path)
-        btn_br = QPushButton(); btn_br.setFixedWidth(40)
-        btn_br.setIcon(QIcon(str(FOLDER_ICON_PATH)))
-        btn_br.setIconSize(QSize(20, 20))
-        btn_br.clicked.connect(self.browse_directory); path_l.addWidget(btn_br)
-        inputs.addLayout(path_l)
-        
-        proxy_l = QHBoxLayout()
-        self.input_proxy = QLineEdit(); self.input_proxy.setPlaceholderText("HTTP Proxy (http://user:pass@host:port)"); proxy_l.addWidget(self.input_proxy)
-        self.btn_check_creation_proxy = QPushButton()
-        self.btn_check_creation_proxy.setIcon(QIcon(str(NEW_PROXY_ICON_PATH)))
-        self.btn_check_creation_proxy.setIconSize(QSize(22, 22))
-        self.btn_check_creation_proxy.setObjectName("CheckBtn")
-        self.btn_check_creation_proxy.setFixedWidth(40)
-        self.btn_check_creation_proxy.clicked.connect(self.run_creation_proxy_check)
-        proxy_l.addWidget(self.btn_check_creation_proxy)
-        inputs.addLayout(proxy_l)
+    def open_create_profile_dialog(self):
+        if not self.create_dialog:
+            self.create_dialog = CreateProfileDialog(self)
+        self.create_dialog.show()
+        self.create_dialog.raise_()
+        self.create_dialog.activateWindow()
 
-        btn_add = QPushButton("Создать"); btn_add.setFixedHeight(35); btn_add.clicked.connect(self.add_profile);
-        
-        add_btns_l = QHBoxLayout()
-        add_btns_l.addWidget(btn_add)
-        inputs.addLayout(add_btns_l)
-        create_layout.addLayout(inputs)
+    def open_device_generator(self):
+        from src.services.device_generator import DeviceNameGeneratorService
+        service = DeviceNameGeneratorService(self)
+        service.exec()
 
-        self.tyanka_label = QLabel()
-        self.tyanka_label.installEventFilter(self.mgr)
-        pix = QPixmap(str(ICON_PATH))
-        if not pix.isNull(): self.tyanka_label.setPixmap(pix.scaled(180, 180, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
-        create_layout.addWidget(self.tyanka_label, alignment=Qt.AlignmentFlag.AlignRight)
-        layout.addWidget(self.create_frame)
-
-    def run_creation_proxy_check(self):
-        p_url = self.input_proxy.text().strip()
-        if not p_url: return
-        self.btn_check_creation_proxy.setProperty("status", "checking")
-        self.mgr.refresh_btn_style(self.btn_check_creation_proxy)
-        self.btn_check_creation_proxy.setEnabled(False)
-        threading.Thread(target=lambda: self.creation_proxy_check_finished.emit(logic.check_proxy_validity(p_url)), daemon=True).start()
+    def open_prompt_generator(self):
+        from src.services.ai_prompt_generator import AIPromptGeneratorService
+        service = AIPromptGeneratorService(self)
+        service.exec()
 
     def on_creation_proxy_check_finished(self, is_valid):
-        self.btn_check_creation_proxy.setEnabled(True)
-        self.btn_check_creation_proxy.setProperty("status", "success" if is_valid else "error")
-        self.mgr.refresh_btn_style(self.btn_check_creation_proxy)
-        if is_valid: QMessageBox.information(self, "Прокси", "Прокси рабочий!")
-        else: QMessageBox.critical(self, "Прокси", "Прокси не работает!")
+        if self.create_dialog:
+            self.create_dialog.set_proxy_status(is_valid)
 
     def refresh_accounts(self):
         if self._load_timer:
@@ -248,60 +244,124 @@ class AccountListPage(QWidget):
         
         try:
             with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-                config = json.load(f)
-                self.is_compact = config.get("settings", {}).get("compact_mode", False)
-        except:
-            self.is_compact = False
+                data = json.load(f)
+                accounts = data.get("accounts", [])
+            self.is_compact_mode = data.get("settings", {}).get("compact_mode", False)
+        except Exception:
+            self.is_compact_mode = False
+            accounts = []
         
         self._accounts_to_load = logic.load_config(CONFIG_FILE)
         if self._accounts_to_load:
             self._load_timer = QTimer(self)
             self._load_timer.timeout.connect(self._load_next_batch)
-            self._load_timer.start(15)  # Даем 15мс интерфейсу на отрисовку между пачками
+            self._load_timer.start(10)
 
     def _load_next_batch(self):
-        batch_size = 5  # Уменьшаем размер пачки для большей плавности
-        if not self._accounts_to_load:
-            if self._load_timer:
+        batch_size = 5
+        
+        for _ in range(batch_size):
+            if not self._accounts_to_load:
                 self._load_timer.stop()
-            return
-            
-        for _ in range(min(batch_size, len(self._accounts_to_load))):
+                return
+                
             acc = self._accounts_to_load.pop(0)
-            row = TelegramAccountRow(acc["name"], acc["workdir"], acc.get("proxy_url"), acc.get("notes"), acc.get("device_name"), acc.get("ai_prompt"))
-            row.apply_compact_mode(self.is_compact)
+            row = TelegramAccountRow(
+                acc["name"], 
+                acc["workdir"], 
+                acc.get("proxy_url"), 
+                acc.get("notes"),
+                acc.get("device_name"),
+                acc.get("ai_prompt")
+            )
+            row.apply_compact_mode(self.is_compact_mode)
+            row.set_proxy_hidden(self.proxies_hidden)
             row.account_removed.connect(self.refresh_accounts)
             row.move_requested.connect(self.handle_move_request)
-            row.set_proxy_hidden(self.proxies_hidden)
-            self.scroll_layout.addWidget(row)
             self.rows.append(row)
+            self.scroll_layout.addWidget(row)
             
-            # Применяем фильтр к новым строкам, если есть текст в поиске
             query = self.search_input.text().lower().strip()
             if query:
                 row.setVisible(query in row.name.lower() or query in (row.notes.lower() if row.notes else ""))
 
     def handle_move_request(self, row_widget, direction):
         if self.is_animating: return
-        idx = self.rows.index(row_widget)
-        new_idx = idx + direction
-        if 0 <= new_idx < len(self.rows):
-            self.animate_swap(row_widget, self.rows[new_idx], idx, new_idx)
+        
+        try:
+            with open(CONFIG_FILE, "r", encoding="utf-8") as f: data = json.load(f)
+            accounts = data.get("accounts", [])
+            
+            idx = -1
+            for i, a in enumerate(accounts):
+                if a["name"] == row_widget.name and a["workdir"] == row_widget.workdir:
+                    idx = i
+                    break
+                    
+            if idx == -1: return
+            new_idx = idx + direction
+            
+            if 0 <= new_idx < len(accounts):
+                accounts[idx], accounts[new_idx] = accounts[new_idx], accounts[idx]
+                data["accounts"] = accounts
+                with open(CONFIG_FILE, "w", encoding="utf-8") as f: json.dump(data, f, indent=4, ensure_ascii=False)
+                self.animate_swap(idx, new_idx)
+                
+        except Exception as e:
+            print(f"Ошибка перемещения: {e}")
 
-    def animate_swap(self, w1, w2, idx1, idx2):
+    def animate_swap(self, idx1, idx2):
         self.is_animating = True
-        pos1, pos2 = w1.pos(), w2.pos()
-        self.anim1 = QPropertyAnimation(w1, b"pos"); self.anim1.setDuration(300); self.anim1.setStartValue(pos1); self.anim1.setEndValue(pos2); self.anim1.setEasingCurve(QEasingCurve.Type.InOutQuad)
-        self.anim2 = QPropertyAnimation(w2, b"pos"); self.anim2.setDuration(300); self.anim2.setStartValue(pos2); self.anim2.setEndValue(pos1); self.anim2.setEasingCurve(QEasingCurve.Type.InOutQuad)
+        row1 = self.rows[idx1]
+        row2 = self.rows[idx2]
+        
+        pos1 = row1.pos()
+        pos2 = row2.pos()
+        
+        anim1 = QPropertyAnimation(row1, b"pos")
+        anim1.setDuration(300)
+        anim1.setStartValue(pos1)
+        anim1.setEndValue(pos2)
+        anim1.setEasingCurve(QEasingCurve.Type.InOutQuad)
+        
+        anim2 = QPropertyAnimation(row2, b"pos")
+        anim2.setDuration(300)
+        anim2.setStartValue(pos2)
+        anim2.setEndValue(pos1)
+        anim2.setEasingCurve(QEasingCurve.Type.InOutQuad)
+        
         self.anim_group = QParallelAnimationGroup()
-        self.anim_group.addAnimation(self.anim1); self.anim_group.addAnimation(self.anim2)
-        def finish():
-            logic.move_account_in_list(CONFIG_FILE, w1.workdir, idx2 - idx1)
-            self.is_animating = False; self.refresh_accounts()
-        self.anim_group.finished.connect(finish); self.anim_group.start()
+        self.anim_group.addAnimation(anim1)
+        self.anim_group.addAnimation(anim2)
+        
+        def on_finished():
+            self.scroll_layout.removeWidget(row1)
+            self.scroll_layout.removeWidget(row2)
+            
+            min_idx = min(idx1, idx2)
+            max_idx = max(idx1, idx2)
+            
+            self.rows[idx1], self.rows[idx2] = self.rows[idx2], self.rows[idx1]
+            
+            self.scroll_layout.insertWidget(min_idx, self.rows[min_idx])
+            self.scroll_layout.insertWidget(max_idx, self.rows[max_idx])
+            self.is_animating = False
+            
+        self.anim_group.finished.connect(on_finished)
+        self.anim_group.start()
+
+    def filter_accounts(self, text):
+        t = text.lower()
+        for r in self.rows:
+            r.setVisible(t in r.name.lower() or (r.notes and t in r.notes.lower()))
+
+    def toggle_all_proxies(self):
+        self.proxies_hidden = not self.proxies_hidden
+        for r in self.rows: r.set_proxy_hidden(self.proxies_hidden)
 
     def toggle_select_all(self, state):
-        for r in self.rows: r.checkbox.setChecked(state == Qt.CheckState.Checked.value)
+        st = state == Qt.CheckState.Checked.value
+        for r in self.rows: r.checkbox.setChecked(st)
 
     def bulk_launch(self):
         try:
@@ -330,44 +390,9 @@ class AccountListPage(QWidget):
             if r.checkbox.isChecked() and r.proxy_url: r.run_proxy_check()
 
     def bulk_clear_cache(self):
-        sel = [r for r in self.rows if r.checkbox.isChecked()]
-        if not sel: return
-        if QMessageBox.question(self, "Кэш", f"Очистить кэш {len(sel)} аккаунтов?") == QMessageBox.StandardButton.Yes:
-            for r in sel: logic.clear_cache(r.workdir)
-            QMessageBox.information(self, "Результат", "Кэш очищен.")
-
-    def browse_directory(self):
-        path = QFileDialog.getExistingDirectory(self, "Выберите папку")
-        if path: self.input_path.setText(path)
-
-    def add_profile(self):
-        n, p, pr = self.input_name.text().strip(), self.input_path.text().strip(), self.input_proxy.text().strip()
-        if n and p and logic.add_account(CONFIG_FILE, n, p, pr if pr else None):
-            self.input_name.clear(); self.input_path.clear(); self.input_proxy.clear(); self.refresh_accounts()
-
-    def open_login_window(self):
-        from src.ui.login_window import LoginWindow
-        self.login_win = LoginWindow(self)
-        if self.login_win.exec():
-            self.refresh_accounts()
-
-    def open_device_generator(self):
-        from src.services.device_generator import DeviceNameGeneratorService
-        self.device_gen_win = DeviceNameGeneratorService(self)
-        if self.device_gen_win.exec():
-            self.refresh_accounts()
-
-    def open_prompt_generator(self):
-        from src.services.ai_prompt_generator import AIPromptGeneratorService
-        self.prompt_gen_win = AIPromptGeneratorService(self)
-        if self.prompt_gen_win.exec():
-            self.refresh_accounts()
-
-    def filter_accounts(self, text):
-        query = text.lower().strip()
-        for row in self.rows:
-            row.setVisible(query in row.name.lower() or query in (row.notes.lower() if row.notes else ""))
-
-    def toggle_all_proxies(self):
-        self.proxies_hidden = not self.proxies_hidden
-        for row in self.rows: row.set_proxy_hidden(self.proxies_hidden)
+        cleared = 0
+        for r in self.rows:
+            if r.checkbox.isChecked() and not logic.is_process_running(r.tg_process):
+                logic.clear_cache(r.workdir)
+                cleared += 1
+        QMessageBox.information(self, "Очистка кэша", f"Очищен кэш у {cleared} аккаунтов.")

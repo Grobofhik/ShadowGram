@@ -1,8 +1,8 @@
 import os
 import subprocess
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QStackedWidget
-# from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
-from PyQt6.QtCore import QTimer, QEvent, QUrl
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QStackedWidget, QFrame, QLabel, QPushButton, QMenu
+from PyQt6.QtGui import QPixmap, QIcon
+from PyQt6.QtCore import QTimer, QEvent, Qt, QSize
 
 """
 Главный контроллер интерфейса приложения.
@@ -20,7 +20,11 @@ from PyQt6.QtCore import QTimer, QEvent, QUrl
 
 from src.ui.list_page import AccountListPage
 from src.ui.settings_page import SettingsPage
-from src.core.constants import SOUND_PATH
+from src.core.constants import (
+    SOUND_PATH, LOGO_PATH, FOLDER_ICON_PATH,
+    SERVER_ICON_PATH, MODULS_ICON_PATH, 
+    NOTE_ICON_PATH, SETTINGS_ICON_PATH
+)
 
 class TelegramManager(QWidget):
     def __init__(self):
@@ -35,33 +39,128 @@ class TelegramManager(QWidget):
 
     def init_ui(self):
         self.setWindowTitle("Shadowgram")
-        self.resize(700, 750)
+        self.resize(1000, 750)
+        
+        main_layout = QHBoxLayout(self)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
+
+        # Боковая панель навигации (Sidebar)
+        self.sidebar = QFrame()
+        self.sidebar.setObjectName("Sidebar")
+        self.sidebar.setFixedWidth(270)
+        self.sidebar.setStyleSheet("QFrame#Sidebar { background-color: #0D140D; border-right: 1px solid #1A2E1A; }")
+        
+        sidebar_layout = QVBoxLayout(self.sidebar)
+        sidebar_layout.setContentsMargins(15, 20, 15, 20)
+        sidebar_layout.setSpacing(10)
+
+        # Логотип и заголовок
+        logo_layout = QHBoxLayout()
+        logo_label = QLabel()
+        logo_pix = QPixmap(str(LOGO_PATH))
+        if not logo_pix.isNull():
+            logo_label.setPixmap(logo_pix.scaled(80, 80, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+        logo_label.setAlignment(Qt.AlignmentFlag.AlignVCenter)
+        logo_label.setStyleSheet("background-color: transparent;")
+        logo_label.installEventFilter(self)
+        logo_layout.addWidget(logo_label)
+
+        title_label = QLabel("Shadowgram")
+        title_label.setObjectName("Title")
+        title_label.setStyleSheet("font-size: 24px; background-color: transparent;")
+        logo_layout.addWidget(title_label)
+        sidebar_layout.addLayout(logo_layout)
+        
+        sidebar_layout.addSpacing(10)
+
+        # Навигационные кнопки
+        self.btn_main = self.create_nav_button(" Главная", FOLDER_ICON_PATH)
+        self.btn_main.clicked.connect(self.show_list)
+        sidebar_layout.addWidget(self.btn_main)
+
+        self.btn_create_profile = self.create_nav_button(" Создать профиль", FOLDER_ICON_PATH) # Можно заменить иконку
+        self.btn_create_profile.clicked.connect(self.open_create_profile)
+        sidebar_layout.addWidget(self.btn_create_profile)
+
+        self.btn_server = self.create_nav_button(" Сервер", SERVER_ICON_PATH)
+        self.btn_server.clicked.connect(self.show_server)
+        sidebar_layout.addWidget(self.btn_server)
+
+        self.btn_modules = self.create_nav_button(" Модули", MODULS_ICON_PATH)
+        self.btn_modules.clicked.connect(self.show_modules)
+        sidebar_layout.addWidget(self.btn_modules)
+
+        # Меню доп сервисов
+        self.btn_services = self.create_nav_button(" Доп сервисы", MODULS_ICON_PATH)
+        services_menu = QMenu(self)
+        services_menu.setStyleSheet("QMenu { background-color: #040604; color: #00E676; border: 1px solid #1A2E1A; } QMenu::item { padding: 8px 20px; } QMenu::item:selected { background-color: #1A2B1A; }")
+        
+        action_device_gen = services_menu.addAction("Генератор имён устройств")
+        action_device_gen.triggered.connect(self.open_device_generator)
+
+        action_prompt_gen = services_menu.addAction("Генератор AI Промптов")
+        action_prompt_gen.triggered.connect(self.open_prompt_generator)
+        
+        self.btn_services.setMenu(services_menu)
+        sidebar_layout.addWidget(self.btn_services)
+
+        sidebar_layout.addStretch()
+
+        # Кнопки внизу (Документация и Настройки)
+        self.btn_docs = self.create_nav_button(" Документация", NOTE_ICON_PATH)
+        self.btn_docs.clicked.connect(self.show_docs)
+        sidebar_layout.addWidget(self.btn_docs)
+
+        self.btn_settings = self.create_nav_button(" Настройки", SETTINGS_ICON_PATH)
+        self.btn_settings.clicked.connect(self.show_settings)
+        sidebar_layout.addWidget(self.btn_settings)
+
+        main_layout.addWidget(self.sidebar)
+
+        # Стек с основным контентом
         self.stack = QStackedWidget(self)
         
         self.acc_list_page = AccountListPage(self)
         self.settings_page = SettingsPage()
 
-        self.acc_list_page.settings_requested.connect(self.show_settings)
-        self.acc_list_page.modules_requested.connect(self.show_modules)
-        self.acc_list_page.server_requested.connect(self.show_server)
-        self.acc_list_page.docs_requested.connect(self.show_docs)
         self.settings_page.back_requested.connect(self.show_list)
         self.settings_page.settings_saved.connect(self.acc_list_page.refresh_accounts)
 
         self.stack.addWidget(self.acc_list_page)
         self.stack.addWidget(self.settings_page)
 
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(0,0,0,0)
-        layout.addWidget(self.stack)
+        main_layout.addWidget(self.stack, 1) # 1 - растягивать контент
+
         self.acc_list_page.refresh_accounts()
+
+    def create_nav_button(self, text, icon_path):
+        btn = QPushButton(text)
+        btn.setIcon(QIcon(str(icon_path)))
+        btn.setIconSize(QSize(20, 20))
+        btn.setFixedHeight(45)
+        btn.setStyleSheet("""
+            QPushButton {
+                background-color: transparent;
+                border: none;
+                text-align: left;
+                padding-left: 10px;
+                font-size: 14px;
+                font-weight: bold;
+                border-radius: 8px;
+            }
+            QPushButton:hover {
+                background-color: #111A11;
+                border: 1px solid #1A2E1A;
+            }
+            QPushButton::menu-indicator {
+                image: none;
+            }
+        """)
+        return btn
 
     def init_audio(self):
         self.sound_path = str(SOUND_PATH)
-        # self.audio_output = QAudioOutput(self)
-        # self.media_player = QMediaPlayer(self)
-        # self.media_player.setAudioOutput(self.audio_output)
-        # self.audio_output.setVolume(1.0)
 
     def show_settings(self):
         self.settings_page.load_settings()
@@ -89,6 +188,15 @@ class TelegramManager(QWidget):
         self.server_win.raise_()
         self.server_win.activateWindow()
 
+    def open_create_profile(self):
+        self.acc_list_page.open_create_profile_dialog()
+
+    def open_device_generator(self):
+        self.acc_list_page.open_device_generator()
+
+    def open_prompt_generator(self):
+        self.acc_list_page.open_prompt_generator()
+
     def sync_status(self):
         for r in self.acc_list_page.rows:
             if r.tg_process is not None:
@@ -103,7 +211,5 @@ class TelegramManager(QWidget):
                     return True
                 except:
                     continue
-            # self.media_player.setSource(QUrl.fromLocalFile(self.sound_path))
-            # self.media_player.play()
             return True
         return super().eventFilter(obj, event)
