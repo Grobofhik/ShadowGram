@@ -3,7 +3,7 @@ import os
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                              QPushButton, QComboBox, QTextEdit, QFrame, 
                              QMessageBox, QFileDialog, QLineEdit, QListWidget, 
-                             QListWidgetItem, QAbstractItemView)
+                             QListWidgetItem, QAbstractItemView, QCheckBox)
 from PyQt6.QtGui import QIcon
 from PyQt6.QtCore import Qt, pyqtSignal, QSize
 from datetime import datetime
@@ -132,21 +132,27 @@ class ScenarioWindow(QWidget):
         for param in p_class.PARAMS:
             param_layout = QHBoxLayout()
             param_layout.addWidget(QLabel(f"{param['label']}:"))
-            if param['type'] == 'file':
+            
+            p_type = param.get('type', 'text')
+            p_name = param.get('name')
+
+            if p_type == 'file':
                 le = QLineEdit(); btn = QPushButton(); btn.setIcon(QIcon(str(FOLDER_ICON_PATH))); btn.setIconSize(QSize(20, 20)); btn.setFixedWidth(40)
                 btn.clicked.connect(lambda ch, l=le: self.browse_file(l))
-                param_layout.addWidget(le); param_layout.addWidget(btn); self.param_widgets[param['name']] = le
-            elif param['type'] == 'text':
+                param_layout.addWidget(le); param_layout.addWidget(btn); self.param_widgets[p_name] = le
+            elif p_type in ['text', 'number']:
                 le = QLineEdit()
-                if param['name'] == 'api_key':
-                    le.setText(settings.get('default_ai_api_key', ''))
-                elif param['name'] == 'api_base_url':
-                    le.setText(settings.get('default_ai_base_url', 'https://api.groq.com/openai/v1'))
-                elif param['name'] == 'model_name':
-                    le.setText(settings.get('default_ai_model_name', 'llama-3.1-8b-instant'))
-                param_layout.addWidget(le); self.param_widgets[param['name']] = le
-            elif param['type'] == 'textarea':
-                te = QTextEdit(); te.setFixedHeight(80); param_layout.addWidget(te); self.param_widgets[param['name']] = te
+                if p_type == 'number': le.setPlaceholderText("0")
+                if p_name == 'api_key': le.setText(settings.get('default_ai_api_key', ''))
+                elif p_name == 'api_base_url': le.setText(settings.get('default_ai_base_url', 'https://api.groq.com/openai/v1'))
+                elif p_name == 'model_name': le.setText(settings.get('default_ai_model_name', 'llama-3.1-8b-instant'))
+                param_layout.addWidget(le); self.param_widgets[p_name] = le
+            elif p_type == 'textarea':
+                te = QTextEdit(); te.setFixedHeight(80); param_layout.addWidget(te); self.param_widgets[p_name] = te
+            elif p_type == 'number':
+                le = QLineEdit(); le.setPlaceholderText("0"); param_layout.addWidget(le); self.param_widgets[p_name] = le
+            elif p_type == 'checkbox':
+                cb = QCheckBox(); param_layout.addWidget(cb); self.param_widgets[p_name] = cb
             self.params_layout.addLayout(param_layout)
 
     def _clear_layout(self, layout):
@@ -178,7 +184,9 @@ class ScenarioWindow(QWidget):
         else:
             step_data["type"] = "plugin"
             for n, w in self.param_widgets.items():
-                step_data["params"][n] = w.text() if isinstance(w, QLineEdit) else w.toPlainText()
+                if isinstance(w, QLineEdit): step_data["params"][n] = w.text()
+                elif isinstance(w, QTextEdit): step_data["params"][n] = w.toPlainText()
+                elif isinstance(w, QCheckBox): step_data["params"][n] = w.isChecked()
             display_text = f"🧩 Плагин: {sel_text}"
 
         self.scenario_steps.append(step_data)

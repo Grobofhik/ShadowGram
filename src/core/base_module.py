@@ -2,6 +2,7 @@ import os
 import asyncio
 import subprocess
 import socket
+import time
 from typing import Dict, List, Optional, Callable, Any, Tuple, Union
 
 """
@@ -51,12 +52,6 @@ class BaseModule:
         api_hash: str,
         log_callback: Callable[[str], None],
     ) -> None:
-        """
-        :param account_data: Дикт с данными аккаунта (name, workdir, proxy_url, device_name)
-        :param api_id: Telegram API ID
-        :param api_hash: Telegram API Hash
-        :param log_callback: Функция для вывода логов в консоль UI (принимает строку)
-        """
         self.acc = account_data
         self.api_id = api_id
         self.api_hash = api_hash
@@ -101,13 +96,11 @@ class BaseModule:
         self.log_callback(formatted_msg)
 
     def _get_free_port(self) -> int:
-        """Получает свободный порт для прокси"""
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind(("", 0))
             return s.getsockname()[1]
 
     def _find_session_file(self) -> Optional[str]:
-        """Ищет .session файл в стандартных путях Telegram Desktop"""
         if not self.workdir:
             return None
 
@@ -122,179 +115,114 @@ class BaseModule:
                 try:
                     for f in os.listdir(path):
                         if f.endswith(".session"):
-                            # Возвращаем путь без расширения для Hydrogram
                             return os.path.join(path, f.replace(".session", ""))
                 except OSError:
                     continue
         return None
 
     async def init_client(self) -> bool:
-        """Полная подготовка клиента: прокси + сессия + коннект"""
         try:
             self.log("Инициализация клиента...", "info")
             session_path = self._find_session_file()
             if not session_path:
-                self.log("Файл сессии (.session) не найден в папке профиля!", "error")
+                self.log("Файл сессии (.session) не найден!", "error")
                 return False
 
-            # Настройка прокси
             proxy_settings = self._setup_proxy()
-            if proxy_settings is False:  # Ошибка при настройке прокси
+            if proxy_settings is False:
                 return False
 
-            self.log("Подключение к Telegram API...", "info")
-            success = await self._create_and_connect_client(
-                session_path, proxy_settings
-            )
+            if proxy_settings:
+                self.log("Ожидание стабилизации туннеля (2 сек)...", "info")
+                await asyncio.sleep(2)
+
+            self.log("Подключение к Telegram...", "info")
+            success = await self._create_and_connect_client(session_path, proxy_settings)
 
             if success:
-                self.log("Клиент успешно подключен!", "success")
-
+                self.log("Клиент готов!", "success")
             return success
 
         except asyncio.CancelledError:
             await self.cleanup()
             raise
         except Exception as e:
-            self.log(f"Неожиданная ошибка при инициализации клиента: {e}", "error")
+            self.log(f"Ошибка инициализации: {e}", "error")
             return False
 
     async def run(self, **kwargs: Any) -> Any:
-        """Метод для переопределения в модулях-наследниках"""
         raise NotImplementedError("Модуль должен реализовать метод run()")
 
     async def cleanup(self) -> None:
-        """Корректное завершение работы"""
-        await self._cleanup_client()
-        await self._cleanup_proxy()
-
-    async def _cleanup_client(self) -> None:
-        """Очистка клиента Telegram"""
-        if self.client:
-            try:
+        """Полная очистка ресурсов"""
+        try:
+            if self.client:
                 if self.client.is_connected:
                     await self.client.stop()
-                else:
-                    await self.client.disconnect()
-            except Exception:
-                pass
-            finally:
                 self.client = None
+        except Exception:
+            pass
+        finally:
+            await self._cleanup_proxy()
 
     async def _cleanup_proxy(self) -> None:
-        """Очистка прокси-туннеля"""
         if self.gost_process:
             try:
                 self.gost_process.terminate()
-                # Неблокирующее ожидание завершения
-                for _ in range(20):
-                    if self.gost_process.poll() is not None:
-                        break
-                    await asyncio.sleep(0.1)
-                else:
-                    self.gost_process.kill()
-                self.log("Прокси-туннель закрыт.", "info")
-            except Exception:
-                pass
+                for _ in range(10):
+                    if self.gost_process.poll() is not None: break
+                    await asyncio.sleep(0.2)
+                else: self.gost_process.kill()
+            except: pass
             finally:
                 self.gost_process = None
                 self.local_port = None
 
     def _setup_proxy(self) -> Union[Dict[str, Any], bool, None]:
-        """Настройка прокси через Gost"""
-        if not self.proxy_url:
-            return None
-
-        if not self.workdir:
-            self.log("Ошибка: не задана рабочая директория (workdir)!", "error")
-            return False
-
+        if not self.proxy_url: return None
         import shutil
-
         if not shutil.which("gost"):
-            self.log("Ошибка: утилита 'gost' не найдена в системе!", "error")
+            self.log("Gost не найден!", "error")
             return False
 
         self.local_port = self._get_free_port()
         try:
             log_path = os.path.join(self.workdir, "gost_module.log")
-            self.log(f"Запуск Gost на порту {self.local_port}...", "info")
-            
             log_file = open(log_path, "w")
             self.gost_process = subprocess.Popen(
-                [
-                    "gost",
-                    "-L",
-                    f"socks5://127.0.0.1:{self.local_port}",
-                    "-F",
-                    self.proxy_url,
-                ],
-                stdout=log_file,
-                stderr=log_file,
-                start_new_session=True,
+                ["gost", "-L", f"socks5://127.0.0.1:{self.local_port}", "-F", self.proxy_url],
+                stdout=log_file, stderr=log_file, start_new_session=True
             )
-            
-            # Даем процессу время занять дескрипторы и инициализироваться
-            import time
             time.sleep(0.5)
             log_file.close()
 
-            # Ждем готовности порта
-            if not self._wait_for_proxy_ready():
-                return False
+            if not self._wait_for_proxy_ready(): return False
 
-            self.log("Прокси-туннель готов, ожидание стабилизации...", "info")
-
-            return {
-                "scheme": "socks5",
-                "hostname": "127.0.0.1",
-                "port": self.local_port,
-            }
+            return {"scheme": "socks5", "hostname": "127.0.0.1", "port": self.local_port}
         except Exception as e:
-            self.log(f"Ошибка запуска Gost: {e}", "error")
+            self.log(f"Ошибка Gost: {e}", "error")
             return False
 
     def _wait_for_proxy_ready(self) -> bool:
-        """Ожидает готовности прокси-порта"""
-        import time
         for i in range(50):
-            if self.gost_process.poll() is not None:
-                self.log("Gost внезапно завершился сразу после старта!", "error")
-                return False
-
+            if self.gost_process.poll() is not None: return False
             try:
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                     s.settimeout(0.1)
-                    if s.connect_ex(("127.0.0.1", self.local_port)) == 0:
-                        return True
-            except Exception:
-                pass
+                    if s.connect_ex(("127.0.0.1", self.local_port)) == 0: return True
+            except: pass
             time.sleep(0.1)
-
-        self.log(f"Ошибка: gost не открыл порт {self.local_port} за 5 секунд!", "error")
         return False
 
-    async def _create_and_connect_client(
-        self, session_path: str, proxy_settings: Optional[Dict[str, Any]]
-    ) -> bool:
-        """Создание и подключение клиента Telegram"""
-        
+    async def _create_and_connect_client(self, session_path: str, proxy_settings: Optional[Dict[str, Any]]) -> bool:
         from hydrogram import Client
         from hydrogram.errors import FloodWait
         
-        # Monkey-patch для исправления багов в hydrogram 0.2.0
         try:
+            # Исправляем возможные проблемы с импортами в Hydrogram
             import hydrogram.types
-            if not hasattr(hydrogram.types, 'ChatBackground'):
-                from hydrogram.types.user_and_chats.chat_background import ChatBackground
-                hydrogram.types.ChatBackground = ChatBackground
-                
             import hydrogram.errors
-            if not hasattr(hydrogram.errors, 'ChatGuestSendForbidden'):
-                from hydrogram.errors.exceptions.forbidden_403 import ChatGuestSendForbidden
-                hydrogram.errors.ChatGuestSendForbidden = ChatGuestSendForbidden
-        except Exception:
-            pass
+        except: pass
         
         try:
             self.client = Client(
@@ -304,14 +232,14 @@ class BaseModule:
                 workdir=os.path.dirname(session_path),
                 proxy=proxy_settings,
                 device_model=self.device_name,
-                system_version="Arch Linux",
+                system_version="Linux 6.x",
+                sleep_threshold=60
             )
-
             await self.client.start()
             return True
         except FloodWait as e:
-            self.log(f"Флуд-вейт: нужно подождать {e.value} сек.", "warning")
+            self.log(f"Флуд-вейт {e.value} сек.", "warning")
             return False
         except Exception as e:
-            self.log(f"Ошибка подключения: {e}", "error")
+            self.log(f"Ошибка связи: {e}", "error")
             return False

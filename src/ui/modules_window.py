@@ -194,7 +194,7 @@ class ModulesWindow(QWidget):
                             # Start Delay
                             delay = random.randint(1, 15)
                             _log_f(f"Запуск сценария через {self.format_time(delay)}", "warning")
-                            await inst.sleep(delay)
+                            await asyncio.sleep(delay)
                             
                             # Execute steps sequentially for this account
                             for step_idx, step in enumerate(steps):
@@ -202,7 +202,7 @@ class ModulesWindow(QWidget):
                                     if step["type"] == "pause":
                                         pause_sec = random.randint(step["params"]["min"], step["params"]["max"])
                                         _log_f(f"[{step_idx+1}/{len(steps)}] ⏳ Пауза на {self.format_time(pause_sec)}...", "info")
-                                        await inst.sleep(pause_sec)
+                                        await asyncio.sleep(pause_sec)
                                         _log_f(f"[{step_idx+1}/{len(steps)}] ⏳ Пауза завершена.", "success")
                                     elif step["type"] == "plugin":
                                         p_name = step["name"]
@@ -283,27 +283,31 @@ class ModulesWindow(QWidget):
         for param in p_class.PARAMS:
             param_layout = QHBoxLayout()
             param_layout.addWidget(QLabel(f"{param['label']}:"))
-            if param['type'] == 'file':
+            
+            p_type = param.get('type', 'text')
+            p_name = param.get('name')
+
+            if p_type == 'file':
                 le = QLineEdit()
                 btn = QPushButton()
                 btn.setIcon(QIcon(str(FOLDER_ICON_PATH)))
                 btn.setIconSize(QSize(20, 20))
                 btn.setFixedWidth(40)
                 btn.clicked.connect(lambda ch, l=le: self.browse_file(l))
-                param_layout.addWidget(le); param_layout.addWidget(btn); self.param_widgets[param['name']] = le
-            elif param['type'] == 'text':
+                param_layout.addWidget(le); param_layout.addWidget(btn); self.param_widgets[p_name] = le
+            elif p_type in ['text', 'number']:
                 le = QLineEdit()
+                if p_type == 'number': le.setPlaceholderText("0")
                 # Автозаполнение известных полей из настроек
-                if param['name'] == 'api_key':
-                    le.setText(settings.get('default_ai_api_key', ''))
-                elif param['name'] == 'api_base_url':
-                    le.setText(settings.get('default_ai_base_url', 'https://api.groq.com/openai/v1'))
-                elif param['name'] == 'model_name':
-                    le.setText(settings.get('default_ai_model_name', 'llama-3.1-8b-instant'))
-                
-                param_layout.addWidget(le); self.param_widgets[param['name']] = le
-            elif param['type'] == 'textarea':
-                te = QTextEdit(); te.setFixedHeight(80); param_layout.addWidget(te); self.param_widgets[param['name']] = te
+                if p_name == 'api_key': le.setText(settings.get('default_ai_api_key', ''))
+                elif p_name == 'api_base_url': le.setText(settings.get('default_ai_base_url', 'https://api.groq.com/openai/v1'))
+                elif p_name == 'model_name': le.setText(settings.get('default_ai_model_name', 'llama-3.1-8b-instant'))
+                param_layout.addWidget(le); self.param_widgets[p_name] = le
+            elif p_type == 'textarea':
+                te = QTextEdit(); te.setFixedHeight(80); param_layout.addWidget(te); self.param_widgets[p_name] = te
+            elif p_type == 'checkbox':
+                cb = QCheckBox(); param_layout.addWidget(cb); self.param_widgets[p_name] = cb
+            
             self.params_layout.addLayout(param_layout)
 
     def _clear_layout(self, layout):
@@ -318,6 +322,8 @@ class ModulesWindow(QWidget):
         if fp: le.setText(fp)
 
     def load_accounts(self):
+        self._clear_layout(self.scroll_layout)
+        self.checkboxes.clear()
         for acc in logic.load_config(CONFIG_FILE):
             cb = QCheckBox(f"{acc['name']}")
             cb.setProperty("acc_data", acc)
@@ -347,7 +353,9 @@ class ModulesWindow(QWidget):
     def get_params_values(self):
         res = {}
         for n, w in self.param_widgets.items():
-            res[n] = w.text() if isinstance(w, QLineEdit) else w.toPlainText()
+            if isinstance(w, QLineEdit): res[n] = w.text()
+            elif isinstance(w, QTextEdit): res[n] = w.toPlainText()
+            elif isinstance(w, QCheckBox): res[n] = w.isChecked()
         return res
 
     def start_module_execution(self):
@@ -365,14 +373,6 @@ class ModulesWindow(QWidget):
         self.active_tasks_win.show()
         
         threading.Thread(target=self.run_plugins_batch, args=(selected_accounts, p_class, params, task_id), daemon=True).start()
-
-    def format_time(self, seconds: int) -> str:
-        h = seconds // 3600
-        m = (seconds % 3600) // 60
-        s = seconds % 60
-        if h > 0: return f"{h} ч {m} мин {s} сек"
-        elif m > 0: return f"{m} мин {s} сек"
-        return f"{s} сек"
 
     def run_plugins_batch(self, accounts, plugin_class, params, task_id):
         loop = asyncio.new_event_loop()
@@ -406,7 +406,7 @@ class ModulesWindow(QWidget):
                             
                             if delay > 0:
                                 inst.log(f"Запуск запланирован через {self.format_time(delay)}", "warning")
-                                await inst.sleep(delay)
+                                await asyncio.sleep(delay)
                             
                             while True:
                                 async with concurrency_limit:
@@ -424,7 +424,7 @@ class ModulesWindow(QWidget):
                                 
                                 wait_seconds = random.randint(cycle_delay_range[0], cycle_delay_range[1])
                                 inst.log(f"✅ Работа завершена. Сон: {self.format_time(wait_seconds)}", "success")
-                                await inst.sleep(wait_seconds)
+                                await asyncio.sleep(wait_seconds)
                                 
                         except asyncio.CancelledError:
                             await inst.cleanup()
