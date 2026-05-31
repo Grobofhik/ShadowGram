@@ -148,12 +148,28 @@ class ModulesWindow(QWidget):
         self.btn_scenario.setFixedHeight(45)
         self.btn_scenario.clicked.connect(self.open_scenario_builder)
         btns_layout.addWidget(self.btn_scenario, 1)
+        
+        self.btn_monitor = QPushButton("👁️ МОНИТОРИНГ")
+        self.btn_monitor.setStyleSheet("background-color: #673ab7; border: 1px solid #512da8; font-weight: bold;")
+        self.btn_monitor.setFixedHeight(45)
+        self.btn_monitor.clicked.connect(self.open_monitor_config)
+        btns_layout.addWidget(self.btn_monitor, 1)
+        
         right_layout.addLayout(btns_layout)
         
         right_layout.addWidget(QLabel("Консоль плагина", objectName="SectionTitle", styleSheet="margin-top: 10px;"))
         self.log_output = QTextEdit(); self.log_output.setObjectName("LogOutput"); self.log_output.setReadOnly(True)
         right_layout.addWidget(self.log_output, 1)
         main_layout.addWidget(right_frame, 2)
+
+    def open_monitor_config(self):
+        # Быстрый переход к плагину Мониторинга
+        index = self.module_combo.findText("👁️ Мониторинг канала (24/7)")
+        if index >= 0:
+            self.module_combo.setCurrentIndex(index)
+            QMessageBox.information(self, "Мониторинг 24/7", "Включен режим мониторинга канала!\n\nНастройте параметры модуля ниже, отметьте нужные аккаунты слева и нажмите 'ЗАПУСТИТЬ ПЛАГИН'.\nАккаунты будут работать в фоновом режиме.")
+        else:
+            QMessageBox.warning(self, "Ошибка", "Модуль '👁️ Мониторинг канала (24/7)' не найден в системе.")
 
     def open_scenario_builder(self):
         selected_accounts = [c.property("acc_data") for c in self.checkboxes if c.isChecked()]

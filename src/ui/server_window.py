@@ -226,6 +226,7 @@ class ServerWindow(QWidget):
                 "server_port": self.input_server_port.text().strip()
             }
             with open(CONFIG_FILE, "w", encoding="utf-8") as f: json.dump(data, f, indent=4, ensure_ascii=False)
+            logic.save_active_farm_config()
             QMessageBox.information(self, "Успех", "Настройки сохранены!")
         except Exception as e: QMessageBox.critical(self, "Ошибка", f"Не удалось сохранить: {e}")
 

@@ -108,7 +108,12 @@ async def check_account(
     proxy_settings: Optional[Dict[str, Any]] = None
     
     if proxy_url:
-        gost_process, proxy_settings = await _setup_proxy(proxy_url)
+        is_socks = proxy_url.startswith("socks5://") or proxy_url.startswith("socks4://")
+        if is_socks:
+            from src.core.logic import parse_proxy_url
+            proxy_settings = parse_proxy_url(proxy_url)
+        else:
+            gost_process, proxy_settings = await _setup_proxy(proxy_url)
 
     client = Client(
         name=session_file.stem,

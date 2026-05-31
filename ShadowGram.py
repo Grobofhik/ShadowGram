@@ -85,6 +85,8 @@ def init_config() -> None:
 def main() -> None:
     """Основная функция запуска приложения"""
     _setup_python_path()
+    from src.core.logic import init_farms
+    init_farms()
     init_config()
 
     app = QApplication(sys.argv)

@@ -180,6 +180,16 @@ class BaseModule:
 
     def _setup_proxy(self) -> Union[Dict[str, Any], bool, None]:
         if not self.proxy_url: return None
+        
+        is_socks = self.proxy_url.startswith("socks5://") or self.proxy_url.startswith("socks4://")
+        if is_socks:
+            from src.core.logic import parse_proxy_url
+            proxy_info = parse_proxy_url(self.proxy_url)
+            if proxy_info:
+                self.log(f"Использую SOCKS прокси напрямую: {proxy_info['hostname']}:{proxy_info['port']}", "info")
+                return proxy_info
+            return False
+
         import shutil
         if not shutil.which("gost"):
             self.log("Gost не найден!", "error")

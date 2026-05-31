@@ -125,7 +125,7 @@ class TelegramManager(QWidget):
         self.settings_page = SettingsPage()
 
         self.settings_page.back_requested.connect(self.show_list)
-        self.settings_page.settings_saved.connect(self.acc_list_page.refresh_accounts)
+        self.settings_page.settings_saved.connect(self.reload_all_windows)
 
         self.stack.addWidget(self.acc_list_page)
         self.stack.addWidget(self.settings_page)
@@ -168,6 +168,15 @@ class TelegramManager(QWidget):
 
     def show_list(self):
         self.stack.setCurrentWidget(self.acc_list_page)
+
+    def reload_all_windows(self):
+        self.acc_list_page.refresh_accounts()
+        if self.modules_win is not None:
+            self.modules_win.close()
+            self.modules_win = None
+        if self.server_win is not None:
+            self.server_win.close()
+            self.server_win = None
 
     def show_docs(self):
         self.settings_page.show_docs()

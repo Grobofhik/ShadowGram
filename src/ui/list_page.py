@@ -53,6 +53,7 @@ class CreateProfileDialog(QDialog):
         
         self.input_name = QLineEdit()
         self.input_name.setPlaceholderText("Имя профиля")
+        self.input_name.textChanged.connect(self.auto_fill_path)
         layout.addWidget(self.input_name)
         
         path_l = QHBoxLayout()
@@ -93,6 +94,14 @@ class CreateProfileDialog(QDialog):
         if not pix.isNull(): 
             self.tyanka_label.setPixmap(pix.scaled(150, 150, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
         layout.addWidget(self.tyanka_label, alignment=Qt.AlignmentFlag.AlignCenter)
+
+    def auto_fill_path(self, text):
+        if not text:
+            self.input_path.clear()
+            return
+        farm_dir = logic.get_active_farm_dir()
+        suggested_path = farm_dir / "accounts" / text
+        self.input_path.setText(str(suggested_path))
 
     def browse_directory(self):
         dir_path = QFileDialog.getExistingDirectory(self, "Выберите папку для профиля")

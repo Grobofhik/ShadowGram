@@ -22,4 +22,5 @@ PROJECT_CONTEXT.md
 DEBUG
 UPDATE.md
 IGNORE/
-
+farms/*
+!farms/.gitkeep

@@ -414,7 +414,7 @@ class TelegramAccountRow(QFrame):
 
     def toggle_telegram(self):
         if not logic.is_process_running(self.tg_process):
-            self.tg_process, self.gost_process = logic.start_telegram(self.workdir, self.proxy_url, self.device_name)
+            self.tg_process, self.gost_process = logic.start_telegram(self.workdir, self.proxy_url, self.device_name, account_name=self.name)
             if self.tg_process: self.update_status(True)
         else:
             if logic.stop_telegram(self.tg_process, self.gost_process):
