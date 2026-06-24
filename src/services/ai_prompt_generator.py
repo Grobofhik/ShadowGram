@@ -8,6 +8,7 @@ from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from src.core import logic
 from src.core.constants import CONFIG_FILE
+from src import styles
 
 class PromptGeneratorWorker(QThread):
     progress_update = pyqtSignal(int, int) # current, total
@@ -186,7 +187,7 @@ class AIPromptGeneratorService(QDialog):
         bottom_layout.addWidget(self.log_area)
 
         self.btn_generate = QPushButton("Начать генерацию")
-        self.btn_generate.setStyleSheet("background-color: #4caf50; color: white; font-weight: bold; height: 35px;")
+        self.btn_generate.setStyleSheet(f"background-color: {styles.COLOR_PRIMARY_DARK}; color: {'#000000' if styles.COLOR_PRIMARY == '#00E676' else '#FFFFFF'}; font-weight: bold; height: 35px;")
         self.btn_generate.clicked.connect(self.start_generation)
         bottom_layout.addWidget(self.btn_generate)
 

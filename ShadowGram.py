@@ -4,19 +4,8 @@ from pathlib import Path
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtGui import QFontDatabase
 from PyQt6.QtCore import QObject, QEvent, Qt
-from src.ui.main_window import TelegramManager
-from src import styles
+
 from src.core.constants import CONFIG_FILE, CONFIG_DIR, FONTS_DIR
-
-"""
-Точка входа в приложение ShadowGram.
-Функции:
-
-- load_fonts: загрузка кастомных шрифтов из директории ресурсов
-- init_config: инициализация базового файла конфигурации при первом запуске
-- ShiftScrollFilter: поддержка горизонтального скролла через Shift + Wheel
-- Основной блок: настройка QApplication, стилей и запуск главного окна
-"""
 
 
 class ShiftScrollFilter(QObject):
@@ -86,6 +75,8 @@ def main() -> None:
     """Основная функция запуска приложения"""
     _setup_python_path()
     from src.core.logic import init_farms
+    from src import styles
+
     init_farms()
     init_config()
 
@@ -96,8 +87,12 @@ def main() -> None:
     app.installEventFilter(scroll_filter)
 
     load_fonts()
+
+    # Загружаем тему и применяем глобальный stylesheet
+    styles.load_theme()
     app.setStyleSheet(styles.STYLESHEET)
 
+    from src.ui.main_window import TelegramManager
     window = TelegramManager()
     window.show()
 

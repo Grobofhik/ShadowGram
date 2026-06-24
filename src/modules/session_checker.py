@@ -13,26 +13,12 @@ from pathlib import Path
 """
 
 
-def get_free_port() -> int:
-    """Получает свободный порт для прокси-туннеля"""
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind(("", 0))
-        return s.getsockname()[1]
-
+from src.core.utils import get_free_port
 
 def _find_session_file(workdir: Path) -> Optional[Path]:
-    search_paths = [
-        workdir,
-        workdir / "tdata",
-        workdir / "tdata" / "user_data",
-    ]
-
-    for path in search_paths:
-        if path.exists():
-            for f in path.iterdir():
-                if f.is_file() and f.suffix == ".session":
-                    return f.with_suffix("")
-    return None
+    from src.core.utils import find_session_file
+    path_str = find_session_file(str(workdir))
+    return Path(path_str) if path_str else None
 
 
 async def _setup_proxy(proxy_url: str) -> Tuple[Optional[subprocess.Popen], Optional[Dict[str, Any]]]:
@@ -67,7 +53,8 @@ async def _download_avatar(client: Any, me: Any, workdir: Path) -> None:
 
 async def _cleanup_resources(client: Any, gost_process: Optional[subprocess.Popen]) -> None:
     try:
-        await client.disconnect()
+        if client:
+            await client.disconnect()
     except:  # noqa: E722
         pass
     if gost_process:
@@ -98,36 +85,47 @@ async def check_account(
     from hydrogram import Client
     from hydrogram.errors import UserDeactivated, AuthKeyUnregistered, Unauthorized
     
+    client: Optional[Client] = None
+    gost_process: Optional[subprocess.Popen] = None
+    
+    if not api_id or not str(api_id).isdigit():
+        return "Error", "Некорректный API ID в настройках"
+    if not api_hash:
+        return "Error", "Некорректный API Hash в настройках"
+        
     workdir = Path(workdir)
     session_file = _find_session_file(workdir)
     
     if not session_file:
         return "NoSession", "Файл .session не найден"
 
-    gost_process: Optional[subprocess.Popen] = None
     proxy_settings: Optional[Dict[str, Any]] = None
     
-    if proxy_url:
-        is_socks = proxy_url.startswith("socks5://") or proxy_url.startswith("socks4://")
-        if is_socks:
-            from src.core.logic import parse_proxy_url
-            proxy_settings = parse_proxy_url(proxy_url)
-        else:
-            gost_process, proxy_settings = await _setup_proxy(proxy_url)
-
-    client = Client(
-        name=session_file.stem,
-        api_id=int(api_id),
-        api_hash=api_hash,
-        workdir=str(session_file.parent),
-        proxy=proxy_settings,
-        device_model=device_name or "PC",
-        system_version="Arch Linux"
-    )
-
     try:
-        await client.connect()
+        if proxy_url:
+            is_socks = proxy_url.startswith("socks5://") or proxy_url.startswith("socks4://")
+            if is_socks:
+                from src.core.logic import parse_proxy_url
+                proxy_settings = parse_proxy_url(proxy_url)
+            else:
+                gost_process, proxy_settings = await _setup_proxy(proxy_url)
+
+        client = Client(
+            name=session_file.stem,
+            api_id=int(api_id),
+            api_hash=api_hash,
+            workdir=str(session_file.parent),
+            proxy=proxy_settings,
+            device_model=device_name or "PC",
+            system_version="Arch Linux"
+        )
+
+        try:
+            await asyncio.wait_for(client.connect(), timeout=15.0)
+        except asyncio.TimeoutError:
+            return "Error", "Превышено время ожидания подключения (проверьте прокси или сеть)"
         me = await client.get_me()
+        client.me = me
         
         # Загружаем аватар если есть
         await _download_avatar(client, me, workdir)

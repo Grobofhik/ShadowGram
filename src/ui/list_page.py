@@ -29,6 +29,7 @@ import json
 """
 
 from src.core import logic
+from src import styles
 from src.ui.account_row import TelegramAccountRow
 from src.core.constants import (
     CONFIG_FILE, ICON_PATH, LOGO_PATH, SUCCESS_ICON_PATH, 
@@ -49,7 +50,7 @@ class CreateProfileDialog(QDialog):
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(15)
 
-        layout.addWidget(QLabel("Добавить новый профиль", styleSheet="font-weight: bold; color: #00E676; font-size: 16px;"))
+        layout.addWidget(QLabel("Добавить новый профиль", styleSheet=f"font-weight: bold; color: {styles.COLOR_PRIMARY}; font-size: 16px;"))
         
         self.input_name = QLineEdit()
         self.input_name.setPlaceholderText("Имя профиля")
@@ -252,13 +253,10 @@ class AccountListPage(QWidget):
         self.rows = []
         
         try:
-            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                accounts = data.get("accounts", [])
+            data = logic._read_config(CONFIG_FILE)
             self.is_compact_mode = data.get("settings", {}).get("compact_mode", False)
         except Exception:
             self.is_compact_mode = False
-            accounts = []
         
         self._accounts_to_load = logic.load_config(CONFIG_FILE)
         if self._accounts_to_load:
@@ -298,7 +296,7 @@ class AccountListPage(QWidget):
         if self.is_animating: return
         
         try:
-            with open(CONFIG_FILE, "r", encoding="utf-8") as f: data = json.load(f)
+            data = logic._read_config(CONFIG_FILE)
             accounts = data.get("accounts", [])
             
             idx = -1
@@ -313,7 +311,7 @@ class AccountListPage(QWidget):
             if 0 <= new_idx < len(accounts):
                 accounts[idx], accounts[new_idx] = accounts[new_idx], accounts[idx]
                 data["accounts"] = accounts
-                with open(CONFIG_FILE, "w", encoding="utf-8") as f: json.dump(data, f, indent=4, ensure_ascii=False)
+                logic._write_config(CONFIG_FILE, data)
                 self.animate_swap(idx, new_idx)
                 
         except Exception as e:

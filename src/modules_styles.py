@@ -7,26 +7,32 @@
 - Кастомизацию чекбоксов выбора аккаунтов
 """
 
-from src.styles import FONT_NAME, CHEVRON_DOWN
+from src import styles
 
-MODULES_STYLESHEET = f"""
+MODULES_STYLESHEET = ""
+
+
+def load_theme():
+    """Считывает текущие цвета из styles.py и пересобирает MODULES_STYLESHEET"""
+    global MODULES_STYLESHEET
+    MODULES_STYLESHEET = f"""
 /* Основное окно модулей */
 QWidget {{
-    background-color: #080C08;
+    background-color: {styles.COLOR_BG};
     color: #E0E0E0;
-    font-family: '{FONT_NAME}', 'Segoe UI', sans-serif;
+    font-family: '{styles.FONT_NAME}', 'Segoe UI', sans-serif;
 }}
 
 /* Стили для секций (рамок) */
 QFrame#SectionFrame {{
-    background-color: #0D140D;
-    border: 1px solid #1A2E1A;
+    background-color: {styles.COLOR_ACCENT_BG};
+    border: 1px solid {styles.COLOR_BORDER};
     border-radius: 12px;
 }}
 
 /* Заголовки */
 QLabel#SectionTitle {{
-    color: #00E676;
+    color: {styles.COLOR_PRIMARY};
     font-weight: bold;
     font-size: 13px;
     text-transform: uppercase;
@@ -36,16 +42,16 @@ QLabel#SectionTitle {{
 
 /* Выпадающий список */
 QComboBox {{
-    background-color: #040604;
-    border: 1px solid #1A2E1A;
+    background-color: {styles.COLOR_CONSOLE_BG};
+    border: 1px solid {styles.COLOR_BORDER};
     border-radius: 6px;
     padding: 8px 12px;
-    color: #00E676;
+    color: {styles.COLOR_PRIMARY};
     font-weight: normal;
 }}
 
 QComboBox:hover {{
-    border: 1px solid #00E676;
+    border: 1px solid {styles.COLOR_PRIMARY};
 }}
 
 QComboBox::drop-down {{
@@ -53,32 +59,32 @@ QComboBox::drop-down {{
     subcontrol-position: top right;
     width: 30px;
     border-left-width: 1px;
-    border-left-color: #1A2E1A;
+    border-left-color: {styles.COLOR_BORDER};
     border-left-style: solid;
     border-top-right-radius: 6px;
     border-bottom-right-radius: 6px;
 }}
 
 QComboBox::down-arrow {{
-    image: url({CHEVRON_DOWN});
+    image: url({styles.CHEVRON_DOWN});
     width: 16px;
     height: 16px;
 }}
 
 QComboBox QAbstractItemView {{
-    background-color: #040604;
-    border: 1px solid #1A2E1A;
-    selection-background-color: #1A2B1A;
-    selection-color: #00E676;
+    background-color: {styles.COLOR_CONSOLE_BG};
+    border: 1px solid {styles.COLOR_BORDER};
+    selection-background-color: {styles.COLOR_SELECT_BG};
+    selection-color: {styles.COLOR_PRIMARY};
     color: #E0E0E0;
     outline: none;
 }}
 
 /* Кнопка запуска */
 QPushButton#RunModuleBtn {{
-    background-color: #00C853;
+    background-color: {styles.COLOR_PRIMARY_DARK};
     border: none;
-    color: #000000;
+    color: {"#000000" if styles.COLOR_PRIMARY == "#00E676" else "#FFFFFF"};
     font-size: 15px;
     font-weight: bold;
     border-radius: 8px;
@@ -86,20 +92,20 @@ QPushButton#RunModuleBtn {{
 }}
 
 QPushButton#RunModuleBtn:hover {{
-    background-color: #00E676;
+    background-color: {styles.COLOR_PRIMARY};
 }}
 
 QPushButton#RunModuleBtn:pressed {{
-    background-color: #00B248;
+    background-color: {styles.COLOR_PRIMARY_DARK};
 }}
 
 /* Терминальный лог */
 QTextEdit#LogOutput {{
-    background-color: #040604;
-    border: 1px solid #1A2E1A;
+    background-color: {styles.COLOR_CONSOLE_BG};
+    border: 1px solid {styles.COLOR_BORDER};
     border-radius: 8px;
-    color: #00E676;
-    font-family: '{FONT_NAME}', monospace;
+    color: {styles.COLOR_PRIMARY};
+    font-family: '{styles.FONT_NAME}', monospace;
     font-size: 12px;
     padding: 12px;
 }}
@@ -114,33 +120,37 @@ QCheckBox {{
 QCheckBox::indicator {{
     width: 18px;
     height: 18px;
-    border: 2px solid #1A2E1A;
+    border: 2px solid {styles.COLOR_BORDER};
     border-radius: 5px;
-    background-color: #040604;
+    background-color: {styles.COLOR_CONSOLE_BG};
 }}
 
 QCheckBox::indicator:hover {{
-    border-color: #00E676;
+    border-color: {styles.COLOR_PRIMARY};
 }}
 
 QCheckBox::indicator:checked {{
-    background-color: #00C853;
-    border: 1px solid #00C853;
-    image: url({CHEVRON_DOWN});
+    background-color: {styles.COLOR_PRIMARY_DARK};
+    border: 1px solid {styles.COLOR_PRIMARY_DARK};
+    image: url({styles.CHEVRON_DOWN});
 }}
 
 /* Скроллбары (Тонкие) */
 QScrollBar:vertical {{
     border: none;
-    background: #080C08;
+    background: {styles.COLOR_BG};
     width: 8px;
     border-radius: 4px;
 }}
 QScrollBar::handle:vertical {{
-    background: #1A2E1A;
+    background: {styles.COLOR_SCROLL_HANDLE};
     border-radius: 4px;
 }}
 QScrollBar::handle:vertical:hover {{
-    background: #00E676;
+    background: {styles.COLOR_PRIMARY};
 }}
 """
+
+
+# Инициализируем при импорте
+load_theme()

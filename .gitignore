@@ -24,3 +24,17 @@ UPDATE.md
 IGNORE/
 farms/*
 !farms/.gitkeep
+
+# AppImage and Build artifacts
+*.AppImage
+AppRun
+
+# Logs and Local State
+unknown_errors.txt
+active_farm.txt
+image.png
+
+# User content
+avatars/*
+
+shadowgram.desktop

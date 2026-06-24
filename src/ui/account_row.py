@@ -109,7 +109,7 @@ class TelegramAccountRow(QFrame):
         # 3. Аватарка
         self.avatar_label = QLabel()
         self.avatar_label.setObjectName("AvatarLabel")
-        self.avatar_label.setFixedSize(54, 54)
+        self.avatar_label.setFixedSize(50, 50)
         self.avatar_label.setScaledContents(True)
         self.avatar_label.setCursor(Qt.CursorShape.PointingHandCursor)
         self.avatar_label.installEventFilter(self)
@@ -143,7 +143,7 @@ class TelegramAccountRow(QFrame):
         # Разделитель
         sep1 = QFrame()
         sep1.setFrameShape(QFrame.Shape.VLine)
-        sep1.setStyleSheet("color: #1A2E1A; margin: 0px 4px;")
+        sep1.setStyleSheet(f"color: {styles.COLOR_BORDER}; margin: 0px 4px;")
         self.layout_main.addWidget(sep1)
 
         # 6. Кнопки инструментов
@@ -182,7 +182,7 @@ class TelegramAccountRow(QFrame):
         # Разделитель
         sep2 = QFrame()
         sep2.setFrameShape(QFrame.Shape.VLine)
-        sep2.setStyleSheet("color: #1A2E1A; margin: 0px 4px;")
+        sep2.setStyleSheet(f"color: {styles.COLOR_BORDER}; margin: 0px 4px;")
         self.layout_main.addWidget(sep2)
 
         # 7. Главная кнопка запуска
@@ -207,7 +207,7 @@ class TelegramAccountRow(QFrame):
                     btn.setIconSize(QSize(16, 16))
         else:
             self.layout_main.setContentsMargins(15, 12, 15, 12)
-            self.avatar_label.setFixedSize(54, 54)
+            self.avatar_label.setFixedSize(50, 50)
             self.btn_launch.setFixedSize(130, 38)
             for btn_name in ["LoginBtn", "SessionBtn", "EditBtn", "DeviceBtn", "PromptBtn", "NotesBtn", "CheckBtn", "ExplorerBtn", "ClearBtn", "DeleteBtn"]:
                 btn = self.findChild(QPushButton, btn_name)
@@ -241,14 +241,14 @@ class TelegramAccountRow(QFrame):
         name_fs = 12 if self.is_compact else 14
         workdir_fs = 9 if self.is_compact else 10
         
-        self.label_name.setStyleSheet(f"font-size: {name_fs}px; font-weight: bold; color: #00E676;")
+        self.label_name.setStyleSheet(f"font-size: {name_fs}px; font-weight: bold; color: {styles.COLOR_PRIMARY};")
         
         if self.proxy_url:
-            self.label_details.setText(f"<span style='color: #4A5C4A;'>📁 {self.workdir}</span> &nbsp;|&nbsp; <span style='color: #00C853;'>🌐 {display_proxy}</span>")
+            self.label_details.setText(f"<span style='color: {styles.COLOR_TEXT_DISABLED};'>📁 {self.workdir}</span> &nbsp;|&nbsp; <span style='color: {styles.COLOR_PRIMARY_DARK};'>🌐 {display_proxy}</span>")
         else:
             self.label_details.setText(f"📁 {self.workdir}")
             
-        self.label_details.setStyleSheet(f"color: #8B9A8B; font-size: {workdir_fs}px;")
+        self.label_details.setStyleSheet(f"color: {styles.COLOR_TEXT_MUTED}; font-size: {workdir_fs}px;")
 
     def set_proxy_hidden(self, hidden):
         self.proxy_hidden = hidden
@@ -318,7 +318,7 @@ class TelegramAccountRow(QFrame):
 
     def session_check_worker(self):
         try:
-            with open(CONFIG_FILE, "r") as f: config = json.load(f)
+            config = logic._read_config(CONFIG_FILE)
             setts = config.get("settings", {})
             
             # Создаем новый цикл событий для этого потока и запускаем проверку
@@ -363,15 +363,15 @@ class TelegramAccountRow(QFrame):
                 painter.end()
                 
                 # Scale for UI display
-                display_size = 32 if getattr(self, 'is_compact', False) else 44
+                display_size = 36 if getattr(self, 'is_compact', False) else 50
                 self.avatar_label.setPixmap(rounded_pixmap.scaled(display_size, display_size, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
                 return
         
         self.avatar_label.setText("👤")
         self.avatar_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        fs = 16 if getattr(self, 'is_compact', False) else 20
-        br = 16 if getattr(self, 'is_compact', False) else 22
-        self.avatar_label.setStyleSheet(f"font-size: {fs}px; color: #00E676; background-color: #111A11; border-radius: {br}px; border: 1px solid #244024;")
+        fs = 18 if getattr(self, 'is_compact', False) else 24
+        br = 18 if getattr(self, 'is_compact', False) else 25
+        self.avatar_label.setStyleSheet(f"font-size: {fs}px; color: {styles.COLOR_PRIMARY}; background-color: {styles.COLOR_HOVER_BG}; border-radius: {br}px; border: 1px solid {styles.COLOR_BORDER_DARK};")
 
     def refresh_btn_style(self, btn):
         btn.style().unpolish(btn); btn.style().polish(btn); btn.update()
@@ -405,9 +405,8 @@ class TelegramAccountRow(QFrame):
 
     def _check_auto_clean(self):
         try:
-            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-                config = json.load(f)
-                if config.get("settings", {}).get("auto_clean_cache", False):
+            config = logic._read_config(CONFIG_FILE)
+            if config.get("settings", {}).get("auto_clean_cache", False):
                     logic.clear_cache(self.workdir)
         except Exception:
             pass

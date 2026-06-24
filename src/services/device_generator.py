@@ -4,6 +4,7 @@ from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButt
 from PyQt6.QtCore import Qt
 from src.core import logic
 from src.core.constants import CONFIG_FILE
+from src import styles
 
 class DeviceNameGeneratorService(QDialog):
     def __init__(self, parent=None):
@@ -36,7 +37,7 @@ class DeviceNameGeneratorService(QDialog):
         btn_layout.addWidget(self.btn_select_all)
 
         btn_generate = QPushButton("Сгенерировать")
-        btn_generate.setStyleSheet("background-color: #4caf50; color: white; font-weight: bold;")
+        btn_generate.setStyleSheet(f"background-color: {styles.COLOR_PRIMARY_DARK}; color: {'#000000' if styles.COLOR_PRIMARY == '#00E676' else '#FFFFFF'}; font-weight: bold;")
         btn_generate.clicked.connect(self.generate_names)
         btn_layout.addWidget(btn_generate)
 

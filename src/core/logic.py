@@ -101,10 +101,7 @@ def send_sessions_to_server(
 
 
 
-BASE_DIR = Path(__file__).parent.parent.parent.absolute()
-FARMS_DIR = BASE_DIR / "farms"
-ACTIVE_FARM_FILE = BASE_DIR / "active_farm.txt"
-CONFIG_FILE = BASE_DIR / "config.json"
+from src.core.constants import BASE_DIR, FARMS_DIR, ACTIVE_FARM_FILE, CONFIG_FILE, AVATARS_DIR
 
 def get_active_farm_name() -> str:
     """Возвращает имя текущей активной фермы"""
@@ -139,6 +136,7 @@ def init_farms():
     """Инициализация директорий ферм на старте приложения"""
     try:
         FARMS_DIR.mkdir(parents=True, exist_ok=True)
+        AVATARS_DIR.mkdir(parents=True, exist_ok=True)
         
         # Если нет файла активной фермы
         if not ACTIVE_FARM_FILE.exists():
@@ -248,24 +246,51 @@ def _read_config(config_file: Path):
             _last_config_path = config_file
             _last_mtime = mtime
             return _cached_config
-    except:
+    except Exception as e:
+        bak_file = config_file.with_suffix(".json.bak")
+        if bak_file.exists():
+            try:
+                with open(bak_file, "r", encoding="utf-8") as f:
+                    _cached_config = json.load(f)
+                    _last_config_path = config_file
+                    _last_mtime = mtime
+                    shutil.copy2(bak_file, config_file)
+                    print(f"[WARNING] Config restored from backup due to read error: {e}")
+                    return _cached_config
+            except:
+                pass
+        print(f"[ERROR] Failed to read config: {e}")
         return {"settings": {}, "accounts": []}
 
 def _write_config(config_file: Path, data):
     global _cached_config, _last_config_path, _last_mtime
-    with open(config_file, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=4, ensure_ascii=False)
+    config_file = Path(config_file)
+    dir_path = config_file.parent
+    
+    if config_file.exists():
+        try:
+            shutil.copy2(config_file, config_file.with_suffix(".json.bak"))
+        except Exception as e:
+            print(f"[WARNING] Could not create backup config file: {e}")
+            
+    with tempfile.NamedTemporaryFile("w", dir=dir_path, delete=False, encoding="utf-8") as tf:
+        json.dump(data, tf, indent=4, ensure_ascii=False)
+        temp_name = tf.name
+        
+    try:
+        os.replace(temp_name, config_file)
+    except Exception as e:
+        if os.path.exists(temp_name):
+            os.unlink(temp_name)
+        raise e
+
     _cached_config = data
     _last_config_path = config_file
     _last_mtime = config_file.stat().st_mtime
     save_active_farm_config()
 
 
-def get_free_port() -> int:
-    """Получает свободный порт для прокси-туннеля"""
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind(("", 0))
-        return s.getsockname()[1]
+from src.core.utils import get_free_port
 
 
 def export_backup(
@@ -509,8 +534,7 @@ def get_or_create_fake_hw(account_name: Optional[str]) -> Tuple[str, str, Option
     
     if account_name:
         try:
-            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-                data = json.load(f)
+            data = _read_config(CONFIG_FILE)
             
             accounts = data.get("accounts", [])
             for acc in accounts:
@@ -542,9 +566,7 @@ def get_or_create_fake_hw(account_name: Optional[str]) -> Tuple[str, str, Option
                         acc["fake_vendor"] = fake_vendor
                         acc["fake_model"] = fake_model
                         
-                        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-                            json.dump(data, f, indent=4, ensure_ascii=False)
-                        save_active_farm_config()
+                        _write_config(CONFIG_FILE, data)
                     break
         except Exception as e:
             print(f"[WARNING] Ошибка загрузки/сохранения фейкового железа: {e}")
@@ -633,13 +655,20 @@ def start_telegram(
     pipes_fds = None
     r1, w1, r2, w2 = None, None, None, None
     
-    if shutil.which("bwrap"):
+    if fake_vendor and fake_model and shutil.which("bwrap"):
         try:
             r1, w1 = os.pipe()
             r2, w2 = os.pipe()
             pipes_fds = (r1, r2)
         except Exception as pipe_e:
             print(f"[WARNING] Не удалось создать pipes для bwrap: {pipe_e}")
+            for fd in [r1, w1]:
+                if fd is not None:
+                    try:
+                        os.close(fd)
+                    except:
+                        pass
+            r1, w1, r2, w2 = None, None, None, None
             pipes_fds = None
 
     final_cmd = _build_final_command(tg_cmd, device_name, fake_vendor, fake_model, pipes_fds)
@@ -823,6 +852,58 @@ def update_device_info(
         return False
 
 
+def update_bound_channel(
+    config_file: Union[str, Path], workdir: Union[str, Path], new_channel: Optional[str]
+) -> bool:
+    """Сохранение привязанного канала для аккаунта"""
+    try:
+        config_file = Path(config_file)
+        workdir = Path(workdir)
+
+        data = _read_config(config_file)
+
+        for acc in data.get("accounts", []):
+            if Path(acc["workdir"]) == workdir:
+                acc["bound_channel"] = new_channel
+                break
+
+        _write_config(config_file, data)
+        return True
+    except Exception as e:
+        print(f"Ошибка при обновлении привязанного канала: {e}")
+        return False
+
+
+def update_account_profile_data(
+    config_file: Union[str, Path],
+    workdir: Union[str, Path],
+    first_name: Optional[str],
+    last_name: Optional[str],
+    bio: Optional[str],
+    bound_channel: Optional[str]
+) -> bool:
+    """Сохранение имени, фамилии, описания (био) и канала для аккаунта в конфигурации"""
+    try:
+        config_file = Path(config_file)
+        workdir = Path(workdir)
+
+        data = _read_config(config_file)
+
+        for acc in data.get("accounts", []):
+            if Path(acc["workdir"]) == workdir:
+                acc["first_name"] = first_name
+                acc["last_name"] = last_name
+                acc["bio"] = bio
+                acc["bound_channel"] = bound_channel
+                break
+
+        _write_config(config_file, data)
+        return True
+    except Exception as e:
+        print(f"Ошибка при обновлении профильных данных аккаунта: {e}")
+        return False
+
+
 def remove_account(config_file: Union[str, Path], workdir: Union[str, Path]) -> bool:
     """Удаление аккаунта из конфигурации"""
     try:
@@ -926,10 +1007,26 @@ def _setup_gost_proxy(
 
         import time
 
-        time.sleep(3) # Дать 3 секунды что бы запустился gost
+        port_ready = False
+        for _ in range(30):  # Максимум 3 секунды (30 * 0.1)
+            if gost_process.poll() is not None:
+                break
+            try:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.settimeout(0.05)
+                    if s.connect_ex(("127.0.0.1", local_port)) == 0:
+                        port_ready = True
+                        break
+            except:
+                pass
+            time.sleep(0.1)
 
-        if gost_process.poll() is not None:
-            print("[ERROR] gost упал.")
+        if not port_ready or gost_process.poll() is not None:
+            print("[ERROR] gost упал или порт не открылся.")
+            try:
+                gost_process.terminate()
+            except:
+                pass
             return None
 
         return gost_process

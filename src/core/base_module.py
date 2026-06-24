@@ -68,18 +68,39 @@ class BaseModule:
         self.stealth_mode = False
         try:
             from src.core.constants import CONFIG_FILE
-            import json
-            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-                config = json.load(f)
-                self.stealth_mode = config.get("settings", {}).get("stealth_mode", False)
+            from src.core.logic import _read_config
+            config = _read_config(CONFIG_FILE)
+            self.stealth_mode = config.get("settings", {}).get("stealth_mode", False)
         except Exception:
             pass
+
+        self.is_stopped = False
+        self.is_paused = False
 
     async def sleep(self, seconds: float):
         """Обертка над asyncio.sleep с поддержкой режима невидимки (+50% к задержке)"""
         if self.stealth_mode:
             seconds *= 1.5
-        await asyncio.sleep(seconds)
+        
+        if getattr(self, "is_stopped", False):
+            raise asyncio.CancelledError("Модуль остановлен пользователем")
+            
+        step = 0.2
+        elapsed = 0.0
+        while elapsed < seconds:
+            while getattr(self, "is_paused", False):
+                if getattr(self, "is_stopped", False):
+                    raise asyncio.CancelledError("Модуль остановлен пользователем")
+                await asyncio.sleep(0.5)
+
+            if getattr(self, "is_stopped", False):
+                raise asyncio.CancelledError("Модуль остановлен пользователем")
+            to_sleep = min(step, seconds - elapsed)
+            await asyncio.sleep(to_sleep)
+            elapsed += to_sleep
+            
+        if getattr(self, "is_stopped", False):
+            raise asyncio.CancelledError("Модуль остановлен пользователем")
 
     def log(self, message: str, status: str = "info") -> None:
         """Отправляет отформатированное сообщение в UI"""
@@ -96,29 +117,12 @@ class BaseModule:
         self.log_callback(formatted_msg)
 
     def _get_free_port(self) -> int:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.bind(("", 0))
-            return s.getsockname()[1]
+        from src.core.utils import get_free_port
+        return get_free_port()
 
     def _find_session_file(self) -> Optional[str]:
-        if not self.workdir:
-            return None
-
-        search_paths = [
-            self.workdir,
-            os.path.join(self.workdir, "tdata"),
-            os.path.join(self.workdir, "tdata", "user_data"),
-        ]
-
-        for path in search_paths:
-            if path and os.path.exists(path):
-                try:
-                    for f in os.listdir(path):
-                        if f.endswith(".session"):
-                            return os.path.join(path, f.replace(".session", ""))
-                except OSError:
-                    continue
-        return None
+        from src.core.utils import find_session_file
+        return find_session_file(self.workdir)
 
     async def init_client(self) -> bool:
         try:
@@ -134,7 +138,7 @@ class BaseModule:
 
             if proxy_settings:
                 self.log("Ожидание стабилизации туннеля (2 сек)...", "info")
-                await asyncio.sleep(2)
+                await self.sleep(2)
 
             self.log("Подключение к Telegram...", "info")
             success = await self._create_and_connect_client(session_path, proxy_settings)
@@ -245,8 +249,16 @@ class BaseModule:
                 system_version="Linux 6.x",
                 sleep_threshold=60
             )
-            await self.client.start()
+            # Добавляем таймаут для предотвращения вечного зависания при недоступности прокси/сети
+            await asyncio.wait_for(self.client.start(), timeout=20.0)
             return True
+        except asyncio.TimeoutError:
+            self.log("Ошибка связи: превышено время ожидания подключения (проверьте прокси или сеть)", "error")
+            try:
+                await self.client.stop()
+            except:
+                pass
+            return False
         except FloodWait as e:
             self.log(f"Флуд-вейт {e.value} сек.", "warning")
             return False

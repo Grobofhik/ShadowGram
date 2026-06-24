@@ -26,6 +26,7 @@ from src.core.module_manager import ModuleManager
 from src.modules_styles import MODULES_STYLESHEET
 from src.ui.active_tasks_window import ActiveTasksWindow
 from src.ui.scenario_window import ScenarioWindow
+from src import styles
 
 class ModulesWindow(QWidget):
     log_signal = pyqtSignal(str)
@@ -55,15 +56,15 @@ class ModulesWindow(QWidget):
         self.print_welcome_banner()
 
     def print_welcome_banner(self):
-        banner = """
-<span style='color: #4caf50; font-family: monospace; white-space: pre;'>
+        banner = f"""
+<span style='color: {styles.COLOR_PRIMARY}; font-family: monospace; white-space: pre;'>
   ██████  ██   ██  █████  ██████   ██████  ██     ██  ██████  ██████   █████  ███    ███ 
  ██       ██   ██ ██   ██ ██   ██ ██    ██ ██     ██ ██       ██   ██ ██   ██ ████  ████ 
   █████   ███████ ███████ ██   ██ ██    ██ ██  █  ██ ██   ███ ██████  ███████ ██ ████ ██ 
       ██  ██   ██ ██   ██ ██   ██ ██    ██ ██ ███ ██ ██    ██ ██   ██ ██   ██ ██  ██  ██ 
   ██████  ██   ██ ██   ██ ██████   ██████   ███ ███   ██████  ██   ██ ██   ██ ██      ██ 
 </span>
-<span style='color: #4caf50;'> --------------------------------------------------------------------------------------- </span>
+<span style='color: {styles.COLOR_PRIMARY};'> --------------------------------------------------------------------------------------- </span>
 <span style='color: #888;'> [ Платформа автоматизации ShadowGram v1.2 ] </span>
 <span style='color: #888;'> [ Система готова к работе. Выберите плагин и аккаунты. ] </span>
         """
@@ -144,7 +145,7 @@ class ModulesWindow(QWidget):
         btns_layout.addWidget(self.btn_run, 2)
         
         self.btn_scenario = QPushButton("🛠️ СЦЕНАРИЙ")
-        self.btn_scenario.setStyleSheet("background-color: #0277bd; border: 1px solid #01579b; font-weight: bold;")
+        self.btn_scenario.setStyleSheet(f"background-color: {styles.COLOR_PRIMARY_DARK}; border: 1px solid {styles.COLOR_BORDER_DARK}; color: {'#000000' if styles.COLOR_PRIMARY == '#00E676' else '#FFFFFF'}; font-weight: bold;")
         self.btn_scenario.setFixedHeight(45)
         self.btn_scenario.clicked.connect(self.open_scenario_builder)
         btns_layout.addWidget(self.btn_scenario, 1)
@@ -258,7 +259,7 @@ class ModulesWindow(QWidget):
             main_task = loop.create_task(run_all())
             self.running_tasks[task_id] = (main_task, loop)
             loop.run_until_complete(main_task)
-            self.task_log_signal.emit(task_id, "<b style='color: #00e676;'>Сессия сценариев завершена.</b>")
+            self.task_log_signal.emit(task_id, f"<b style='color: {styles.COLOR_PRIMARY};'>Сессия сценариев завершена.</b>")
         except asyncio.CancelledError:
             self.task_log_signal.emit(task_id, "<b style='color: #ff5252;'>Все процессы в этой вкладке остановлены.</b>")
         finally:
@@ -459,7 +460,7 @@ class ModulesWindow(QWidget):
             main_task = loop.create_task(run_all())
             self.running_tasks[task_id] = (main_task, loop)
             loop.run_until_complete(main_task)
-            self.task_log_signal.emit(task_id, "<b style='color: #00e676;'>Сессия задач завершена.</b>")
+            self.task_log_signal.emit(task_id, f"<b style='color: {styles.COLOR_PRIMARY};'>Сессия задач завершена.</b>")
         except asyncio.CancelledError:
             self.task_log_signal.emit(task_id, "<b style='color: #ff5252;'>Все процессы в этой вкладке остановлены.</b>")
         finally:

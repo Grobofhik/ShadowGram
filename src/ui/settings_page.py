@@ -13,6 +13,7 @@ from PyQt6.QtCore import pyqtSignal, Qt, QThread
 from src.core import logic
 from src.core.constants import CONFIG_FILE
 from src.ui.docs_window import DocsWindow
+from src import styles
 
 """
 Страница настроек приложения.
@@ -79,7 +80,7 @@ class SettingsPage(QWidget):
 
         btn_docs = QPushButton("📖 Документация")
         btn_docs.setFixedWidth(150)
-        btn_docs.setStyleSheet("background-color: #0277bd; border: 1px solid #01579b;")
+        btn_docs.setStyleSheet(f"background-color: {styles.COLOR_PRIMARY_DARK}; border: 1px solid {styles.COLOR_BORDER_DARK}; color: {'#000000' if styles.COLOR_PRIMARY == '#00E676' else '#FFFFFF'}; font-weight: bold;")
         btn_docs.clicked.connect(self.show_docs)
         header_layout.addWidget(btn_docs)
 
@@ -87,7 +88,7 @@ class SettingsPage(QWidget):
 
         label_title = QLabel("Настройки")
         label_title.setObjectName("SettingsTitle")
-        label_title.setStyleSheet("font-size: 24px; font-weight: bold; color: #4caf50;")
+        label_title.setStyleSheet(f"font-size: 24px; font-weight: bold; color: {styles.COLOR_PRIMARY};")
         main_layout.addWidget(label_title)
 
         self.tabs = QTabWidget()
@@ -184,19 +185,19 @@ class SettingsPage(QWidget):
         self.table_proxy_pool.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         self.table_proxy_pool.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
         self.table_proxy_pool.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
-        self.table_proxy_pool.setStyleSheet("""
-            QTableWidget {
-                background-color: #040604;
-                border: 1px solid #1A2E1A;
+        self.table_proxy_pool.setStyleSheet(f"""
+            QTableWidget {{
+                background-color: {styles.COLOR_CONSOLE_BG};
+                border: 1px solid {styles.COLOR_BORDER};
                 color: #B0BEC5;
-                gridline-color: #1A2E1A;
-            }
-            QHeaderView::section {
-                background-color: #0D140D;
-                color: #00E676;
+                gridline-color: {styles.COLOR_BORDER};
+            }}
+            QHeaderView::section {{
+                background-color: {styles.COLOR_ACCENT_BG};
+                color: {styles.COLOR_PRIMARY};
                 padding: 6px;
-                border: 1px solid #1A2E1A;
-            }
+                border: 1px solid {styles.COLOR_BORDER};
+            }}
         """)
         l_proxy.addWidget(self.table_proxy_pool)
         
@@ -211,7 +212,7 @@ class SettingsPage(QWidget):
         proxy_btns = QHBoxLayout()
         
         self.btn_check_pool = QPushButton("Проверить весь пул")
-        self.btn_check_pool.setStyleSheet("background-color: #0288d1; color: white;")
+        self.btn_check_pool.setStyleSheet(f"background-color: {styles.COLOR_PRIMARY_DARK}; color: {'#000000' if styles.COLOR_PRIMARY == '#00E676' else '#FFFFFF'}; font-weight: bold;")
         self.btn_check_pool.clicked.connect(self.check_proxy_pool)
         proxy_btns.addWidget(self.btn_check_pool)
         
@@ -243,19 +244,19 @@ class SettingsPage(QWidget):
         self.table_accounts_proxy.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
         self.table_accounts_proxy.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
         self.table_accounts_proxy.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
-        self.table_accounts_proxy.setStyleSheet("""
-            QTableWidget {
-                background-color: #040604;
-                border: 1px solid #1A2E1A;
+        self.table_accounts_proxy.setStyleSheet(f"""
+            QTableWidget {{
+                background-color: {styles.COLOR_CONSOLE_BG};
+                border: 1px solid {styles.COLOR_BORDER};
                 color: #B0BEC5;
-                gridline-color: #1A2E1A;
-            }
-            QHeaderView::section {
-                background-color: #0D140D;
-                color: #00E676;
+                gridline-color: {styles.COLOR_BORDER};
+            }}
+            QHeaderView::section {{
+                background-color: {styles.COLOR_ACCENT_BG};
+                color: {styles.COLOR_PRIMARY};
                 padding: 6px;
-                border: 1px solid #1A2E1A;
-            }
+                border: 1px solid {styles.COLOR_BORDER};
+            }}
         """)
         l_acc_proxy.addWidget(self.table_accounts_proxy)
         
@@ -311,6 +312,13 @@ class SettingsPage(QWidget):
         l_ui = QVBoxLayout(tab_ui)
         self.cb_compact_mode = QCheckBox("Компактный режим (уменьшенные строки аккаунтов)")
         l_ui.addWidget(self.cb_compact_mode)
+        
+        l_ui.addSpacing(10)
+        l_ui.addWidget(QLabel("Тема оформления интерфейса:", objectName="SettingLabel"))
+        self.combo_theme = QComboBox()
+        self.combo_theme.addItems(["Кибер-зеленый (Cyber Green)", "Глубокий синий (Deep Blue)"])
+        l_ui.addWidget(self.combo_theme)
+        
         l_ui.addStretch()
         self.tabs.addTab(tab_ui, "Интерфейс")
 
@@ -338,17 +346,17 @@ class SettingsPage(QWidget):
         
         l_farms.addWidget(QLabel("Текущая активная ферма:", objectName="SettingLabel"))
         self.label_active_farm = QLabel("default")
-        self.label_active_farm.setStyleSheet("font-size: 18px; font-weight: bold; color: #00E676; padding: 12px; background-color: #0D140D; border: 1px solid #1A2E1A; border-radius: 8px;")
+        self.label_active_farm.setStyleSheet(f"font-size: 18px; font-weight: bold; color: {styles.COLOR_PRIMARY}; padding: 12px; background-color: {styles.COLOR_ACCENT_BG}; border: 1px solid {styles.COLOR_BORDER}; border-radius: 8px;")
         l_farms.addWidget(self.label_active_farm)
         
         l_farms.addWidget(QLabel("Выбрать активную ферму:", objectName="SettingLabel"))
         farm_select_layout = QHBoxLayout()
         self.combo_farms = QComboBox()
-        self.combo_farms.setStyleSheet("QComboBox { background-color: #040604; border: 1px solid #1A2E1A; border-radius: 6px; padding: 8px; color: #00E676; }")
+        self.combo_farms.setStyleSheet(f"QComboBox {{ background-color: {styles.COLOR_CONSOLE_BG}; border: 1px solid {styles.COLOR_BORDER}; border-radius: 6px; padding: 8px; color: {styles.COLOR_PRIMARY}; }}")
         farm_select_layout.addWidget(self.combo_farms, 1)
         
         btn_switch_farm = QPushButton("Переключить")
-        btn_switch_farm.setStyleSheet("background-color: #0288d1; color: white; font-weight: bold; height: 35px;")
+        btn_switch_farm.setStyleSheet(f"background-color: {styles.COLOR_PRIMARY_DARK}; color: {'#000000' if styles.COLOR_PRIMARY == '#00E676' else '#FFFFFF'}; font-weight: bold; height: 35px;")
         btn_switch_farm.clicked.connect(self.switch_farm)
         farm_select_layout.addWidget(btn_switch_farm)
         l_farms.addLayout(farm_select_layout)
@@ -360,7 +368,7 @@ class SettingsPage(QWidget):
         farm_create_layout.addWidget(self.input_new_farm, 1)
         
         btn_create_farm = QPushButton("Создать")
-        btn_create_farm.setStyleSheet("background-color: #4caf50; color: white; font-weight: bold; height: 35px;")
+        btn_create_farm.setStyleSheet(f"background-color: {styles.COLOR_PRIMARY_DARK}; color: {'#000000' if styles.COLOR_PRIMARY == '#00E676' else '#FFFFFF'}; font-weight: bold; height: 35px;")
         btn_create_farm.clicked.connect(self.create_farm)
         farm_create_layout.addWidget(btn_create_farm)
         l_farms.addLayout(farm_create_layout)
@@ -372,7 +380,7 @@ class SettingsPage(QWidget):
 
         btn_save = QPushButton("💾 Сохранить настройки")
         btn_save.setFixedHeight(45)
-        btn_save.setStyleSheet("background-color: #4caf50; font-weight: bold; font-size: 14px;")
+        btn_save.setStyleSheet(f"background-color: {styles.COLOR_PRIMARY_DARK}; color: {'#000000' if styles.COLOR_PRIMARY == '#00E676' else '#FFFFFF'}; font-weight: bold; font-size: 14px;")
         btn_save.clicked.connect(self.save_settings)
         main_layout.addWidget(btn_save)
 
@@ -484,7 +492,7 @@ class SettingsPage(QWidget):
             layout.setSpacing(4)
             
             btn_edit = QPushButton("Изменить")
-            btn_edit.setStyleSheet("background-color: #0288d1; color: white; padding: 2px 6px; font-size: 11px;")
+            btn_edit.setStyleSheet(f"background-color: {styles.COLOR_PRIMARY_DARK}; color: {'#000000' if styles.COLOR_PRIMARY == '#00E676' else '#FFFFFF'}; padding: 2px 6px; font-size: 11px; font-weight: bold;")
             btn_edit.clicked.connect(self.edit_account_proxy)
             
             btn_clear = QPushButton("Удалить")
@@ -563,6 +571,8 @@ class SettingsPage(QWidget):
                 self.cb_auto_clean.setChecked(s.get("auto_clean_cache", False))
                 self.spin_log_days.setValue(s.get("log_rotation_days", 7))
                 self.cb_compact_mode.setChecked(s.get("compact_mode", False))
+                theme_val = s.get("theme", "green")
+                self.combo_theme.setCurrentIndex(1 if theme_val == "blue" else 0)
                 
                 # Proxy Pool loading
                 self.table_proxy_pool.setRowCount(0)
@@ -616,6 +626,7 @@ class SettingsPage(QWidget):
                 "auto_clean_cache": self.cb_auto_clean.isChecked(),
                 "log_rotation_days": self.spin_log_days.value(),
                 "compact_mode": self.cb_compact_mode.isChecked(),
+                "theme": "blue" if self.combo_theme.currentIndex() == 1 else "green",
                 "proxy_pool": pool_list,
                 "overwrite_proxies": self.cb_overwrite_proxies.isChecked()
             })
@@ -665,6 +676,7 @@ class SettingsPage(QWidget):
                 "auto_clean_cache": self.cb_auto_clean.isChecked(),
                 "log_rotation_days": self.spin_log_days.value(),
                 "compact_mode": self.cb_compact_mode.isChecked(),
+                "theme": "blue" if self.combo_theme.currentIndex() == 1 else "green",
                 "proxy_pool": pool_list,
                 "overwrite_proxies": self.cb_overwrite_proxies.isChecked()
             })

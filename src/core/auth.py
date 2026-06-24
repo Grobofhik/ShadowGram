@@ -64,7 +64,10 @@ class AuthWorker(QObject):
 
         try:
             self.signal_status.emit("Подключение к Telegram...")
-            await client.connect()
+            try:
+                await asyncio.wait_for(client.connect(), timeout=20.0)
+            except asyncio.TimeoutError:
+                raise Exception("Превышено время ожидания подключения (проверьте прокси или сеть)")
 
             self.signal_status.emit(f"Отправка кода на {self.phone}...")
             sent_code = await client.send_code(self.phone)

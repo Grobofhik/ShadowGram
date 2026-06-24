@@ -3,6 +3,7 @@ from PyQt6.QtCore import pyqtSignal, Qt, QSize
 from PyQt6.QtGui import QIcon
 from src.modules_styles import MODULES_STYLESHEET
 from src.core.constants import CANCEL_ICON_PATH
+from src import styles
 
 """
 Окно активных задач автоматизации.
@@ -52,7 +53,7 @@ class ActiveTasksWindow(QWidget):
             # Контрольная панель вкладки
             controls = QHBoxLayout()
             status_label = QLabel(f"Статус: Выполняется")
-            status_label.setStyleSheet("color: #00e676; font-weight: bold;")
+            status_label.setStyleSheet(f"color: {styles.COLOR_PRIMARY}; font-weight: bold;")
             controls.addWidget(status_label)
             controls.addStretch()
             

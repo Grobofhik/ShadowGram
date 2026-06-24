@@ -10,6 +10,7 @@ from datetime import datetime
 
 from src.core.constants import CONFIG_FILE, FOLDER_ICON_PATH
 from src.modules_styles import MODULES_STYLESHEET
+from src import styles
 
 class ScenarioWindow(QWidget):
     def __init__(self, parent_window, manager, selected_accounts):
@@ -47,7 +48,7 @@ class ScenarioWindow(QWidget):
         
         self.steps_list = QListWidget()
         self.steps_list.setDragDropMode(QAbstractItemView.DragDropMode.InternalMove)
-        self.steps_list.setStyleSheet("background-color: #161b16; border: 1px solid #2d382d; border-radius: 8px; padding: 5px;")
+        self.steps_list.setStyleSheet(f"background-color: {styles.COLOR_CONSOLE_BG}; border: 1px solid {styles.COLOR_BORDER}; border-radius: 8px; padding: 5px;")
         self.steps_list.model().rowsMoved.connect(self.on_rows_moved)
         left_layout.addWidget(self.steps_list, 1)
         

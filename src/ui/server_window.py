@@ -15,6 +15,7 @@ from src.core.constants import (CONFIG_FILE, START_ICON_PATH, PING_ICON_PATH,
 from src.core.module_manager import ModuleManager
 from src.modules_styles import MODULES_STYLESHEET
 from src.ui.active_tasks_window import ActiveTasksWindow
+from src import styles
 
 class ServerWindow(QWidget):
     log_signal = pyqtSignal(str)
@@ -51,15 +52,15 @@ class ServerWindow(QWidget):
         self.print_welcome_banner()
 
     def print_welcome_banner(self):
-        banner = """
-<span style='color: #4caf50; font-family: monospace; white-space: pre;'>
+        banner = f"""
+<span style='color: {styles.COLOR_PRIMARY}; font-family: monospace; white-space: pre;'>
   ███████ ███████ ██████  ██    ██ ███████ ██████  
   ██      ██      ██   ██ ██    ██ ██      ██   ██ 
   ███████ █████   ██████  ██    ██ █████   ██████  
        ██ ██      ██   ██  ██  ██  ██      ██   ██ 
   ███████ ███████ ██   ██   ████   ███████ ██   ██
 </span>
-<span style='color: #4caf50;'> --------------------------------------------------------------------------------------- </span>
+<span style='color: {styles.COLOR_PRIMARY};'> --------------------------------------------------------------------------------------- </span>
 <span style='color: #888;'> [ Модуль удаленного управления ServerGram ] </span>
 <span style='color: #888;'> [ Настройте подключение, отправьте сессии и запускайте плагины. ] </span>
         """
@@ -269,7 +270,7 @@ class ServerWindow(QWidget):
                 base_name = acc_data["name"]
                 if base_name in server_accounts:
                     cb.setText(f"✅ {base_name}")
-                    cb.setStyleSheet("color: #00e676;") # Окрашиваем в зеленый текст
+                    cb.setStyleSheet(f"color: {styles.COLOR_PRIMARY};") # Окрашиваем в акцентный цвет
                 else:
                     cb.setText(f"{base_name}")
                     cb.setStyleSheet("") # Сбрасываем стиль

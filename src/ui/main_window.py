@@ -20,10 +20,12 @@ from PyQt6.QtCore import QTimer, QEvent, Qt, QSize
 
 from src.ui.list_page import AccountListPage
 from src.ui.settings_page import SettingsPage
+from src.ui.new_modules_page import NewModulesPage
+from src import styles
 from src.core.constants import (
     SOUND_PATH, LOGO_PATH, FOLDER_ICON_PATH,
     SERVER_ICON_PATH, MODULS_ICON_PATH, 
-    NOTE_ICON_PATH, SETTINGS_ICON_PATH
+    NOTE_ICON_PATH, SETTINGS_ICON_PATH, ROCKET_ICON_PATH
 )
 
 class TelegramManager(QWidget):
@@ -39,7 +41,7 @@ class TelegramManager(QWidget):
 
     def init_ui(self):
         self.setWindowTitle("Shadowgram")
-        self.resize(1000, 750)
+        self.resize(1000, 850)
         
         main_layout = QHBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)
@@ -49,7 +51,7 @@ class TelegramManager(QWidget):
         self.sidebar = QFrame()
         self.sidebar.setObjectName("Sidebar")
         self.sidebar.setFixedWidth(270)
-        self.sidebar.setStyleSheet("QFrame#Sidebar { background-color: #0D140D; border-right: 1px solid #1A2E1A; }")
+        self.sidebar.setStyleSheet(f"QFrame#Sidebar {{ background-color: {styles.COLOR_ACCENT_BG}; border-right: 1px solid {styles.COLOR_BORDER}; }}")
         
         sidebar_layout = QVBoxLayout(self.sidebar)
         sidebar_layout.setContentsMargins(15, 20, 15, 20)
@@ -91,10 +93,14 @@ class TelegramManager(QWidget):
         self.btn_modules.clicked.connect(self.show_modules)
         sidebar_layout.addWidget(self.btn_modules)
 
+        self.btn_new_modules = self.create_nav_button(" Новые модули", ROCKET_ICON_PATH)
+        self.btn_new_modules.clicked.connect(self.show_new_modules)
+        sidebar_layout.addWidget(self.btn_new_modules)
+
         # Меню доп сервисов
         self.btn_services = self.create_nav_button(" Доп сервисы", MODULS_ICON_PATH)
         services_menu = QMenu(self)
-        services_menu.setStyleSheet("QMenu { background-color: #040604; color: #00E676; border: 1px solid #1A2E1A; } QMenu::item { padding: 8px 20px; } QMenu::item:selected { background-color: #1A2B1A; }")
+        services_menu.setStyleSheet(f"QMenu {{ background-color: {styles.COLOR_CONSOLE_BG}; color: {styles.COLOR_PRIMARY}; border: 1px solid {styles.COLOR_BORDER}; }} QMenu::item {{ padding: 8px 20px; }} QMenu::item:selected {{ background-color: {styles.COLOR_SELECT_BG}; }}")
         
         action_device_gen = services_menu.addAction("Генератор имён устройств")
         action_device_gen.triggered.connect(self.open_device_generator)
@@ -123,24 +129,27 @@ class TelegramManager(QWidget):
         
         self.acc_list_page = AccountListPage(self)
         self.settings_page = SettingsPage()
+        self.new_modules_page = NewModulesPage(self)
 
         self.settings_page.back_requested.connect(self.show_list)
         self.settings_page.settings_saved.connect(self.reload_all_windows)
 
         self.stack.addWidget(self.acc_list_page)
         self.stack.addWidget(self.settings_page)
+        self.stack.addWidget(self.new_modules_page)
 
         main_layout.addWidget(self.stack, 1) # 1 - растягивать контент
 
         self.acc_list_page.refresh_accounts()
+        self.apply_theme()
 
     def create_nav_button(self, text, icon_path):
         btn = QPushButton(text)
         btn.setIcon(QIcon(str(icon_path)))
         btn.setIconSize(QSize(20, 20))
         btn.setFixedHeight(45)
-        btn.setStyleSheet("""
-            QPushButton {
+        btn.setStyleSheet(f"""
+            QPushButton {{
                 background-color: transparent;
                 border: none;
                 text-align: left;
@@ -148,14 +157,14 @@ class TelegramManager(QWidget):
                 font-size: 14px;
                 font-weight: bold;
                 border-radius: 8px;
-            }
-            QPushButton:hover {
-                background-color: #111A11;
-                border: 1px solid #1A2E1A;
-            }
-            QPushButton::menu-indicator {
+            }}
+            QPushButton:hover {{
+                background-color: {styles.COLOR_HOVER_BG};
+                border: 1px solid {styles.COLOR_BORDER};
+            }}
+            QPushButton::menu-indicator {{
                 image: none;
-            }
+            }}
         """)
         return btn
 
@@ -169,14 +178,87 @@ class TelegramManager(QWidget):
     def show_list(self):
         self.stack.setCurrentWidget(self.acc_list_page)
 
+    def show_new_modules(self):
+        self.new_modules_page.refresh_accounts()
+        self.stack.setCurrentWidget(self.new_modules_page)
+
     def reload_all_windows(self):
+        from src import styles, modules_styles
+        from PyQt6.QtWidgets import QApplication
+        
+        # Перезагружаем тему в модулях стилей
+        styles.load_theme()
+        modules_styles.load_theme()
+        
+        # Применяем новую тему к приложению
+        app = QApplication.instance()
+        if app:
+            app.setStyleSheet(styles.STYLESHEET)
+            
+        # Применяем новые стили к sidebar и кнопкам навигации
+        self.apply_theme()
+        
+        # Пересоздаём settings_page — все inline-стили будут с новой темой
+        old_settings = self.settings_page
+        self.settings_page = SettingsPage()
+        self.settings_page.back_requested.connect(self.show_list)
+        self.settings_page.settings_saved.connect(self.reload_all_windows)
+        self.stack.addWidget(self.settings_page)
+        self.stack.removeWidget(old_settings)
+        old_settings.deleteLater()
+
+        # Пересоздаём new_modules_page — все inline-стили будут с новой темой
+        old_modules = self.new_modules_page
+        self.new_modules_page = NewModulesPage(self)
+        self.stack.addWidget(self.new_modules_page)
+        self.stack.removeWidget(old_modules)
+        old_modules.deleteLater()
+
+        # Обновляем страницу аккаунтов
         self.acc_list_page.refresh_accounts()
+        
+        # Закрываем вспомогательные окна — они тоже нужно перезапустить
         if self.modules_win is not None:
             self.modules_win.close()
             self.modules_win = None
         if self.server_win is not None:
             self.server_win.close()
             self.server_win = None
+        
+        # Показываем главную страницу
+        self.stack.setCurrentWidget(self.acc_list_page)
+
+
+    def apply_theme(self):
+        from src import styles
+        # Применяем стили к Sidebar
+        self.sidebar.setStyleSheet(f"QFrame#Sidebar {{ background-color: {styles.COLOR_ACCENT_BG}; border-right: 1px solid {styles.COLOR_BORDER}; }}")
+        
+        # Стили кнопок навигации
+        btn_style = f"""
+            QPushButton {{
+                background-color: transparent;
+                border: none;
+                text-align: left;
+                padding-left: 10px;
+                font-size: 14px;
+                font-weight: bold;
+                border-radius: 8px;
+            }}
+            QPushButton:hover {{
+                background-color: {styles.COLOR_HOVER_BG};
+                border: 1px solid {styles.COLOR_BORDER};
+            }}
+            QPushButton::menu-indicator {{
+                image: none;
+            }}
+        """
+        for btn in [self.btn_main, self.btn_create_profile, self.btn_server, self.btn_modules, self.btn_new_modules, self.btn_services, self.btn_docs, self.btn_settings]:
+            btn.setStyleSheet(btn_style)
+            
+        # Меню доп сервисов
+        self.btn_services.menu().setStyleSheet(f"QMenu {{ background-color: {styles.COLOR_CONSOLE_BG}; color: {styles.COLOR_PRIMARY}; border: 1px solid {styles.COLOR_BORDER}; }} QMenu::item {{ padding: 8px 20px; }} QMenu::item:selected {{ background-color: {styles.COLOR_SELECT_BG}; }}")
+
 
     def show_docs(self):
         self.settings_page.show_docs()
