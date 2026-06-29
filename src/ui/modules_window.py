@@ -30,14 +30,13 @@ from src.ui.active_tasks_window import ActiveTasksWindow
 from src.ui.scenario_window import ScenarioWindow
 from src import styles
 
-class ModulesWindow(QWidget):
+class ModulesPage(QWidget):
     log_signal = pyqtSignal(str)
     task_log_signal = pyqtSignal(str, str)
 
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle("ShadowGram - Plugin System")
-        self.resize(950, 750)
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        
         self.setStyleSheet(MODULES_STYLESHEET)
         
         self.manager = ModuleManager()
@@ -89,81 +88,172 @@ class ModulesWindow(QWidget):
             self.task_log_signal.emit(task_id, "<b style='color: #ff5252;'>Запрос на остановку...</b>")
             loop.call_soon_threadsafe(task.cancel)
 
+
     def init_ui(self):
         main_layout = QHBoxLayout(self)
-        main_layout.setContentsMargins(15, 15, 15, 15)
-        main_layout.setSpacing(15)
+        main_layout.setContentsMargins(20, 20, 20, 20)
+        main_layout.setSpacing(20)
         
-        left_frame = QFrame(); left_frame.setObjectName("SectionFrame")
-        left_frame.setFixedWidth(280)
+        # ЛЕВАЯ ПАНЕЛЬ: АККАУНТЫ
+        left_frame = QFrame()
+        left_frame.setObjectName("SectionFrame")
+        left_frame.setFixedWidth(320)
         left_layout = QVBoxLayout(left_frame)
-        title_l_layout = QHBoxLayout()
-        title_l_layout.addWidget(QLabel("Аккаунты", objectName="SectionTitle"))
-        title_l_layout.addStretch()
-        self.btn_active_tasks = QPushButton("🚀 АКТИВНЫЕ ЗАДАЧИ")
-        self.btn_active_tasks.setFixedWidth(160)
-        self.btn_active_tasks.setStyleSheet("background-color: #4527a0; border-color: #5e35b1; font-size: 10px;")
-        self.btn_active_tasks.clicked.connect(self.active_tasks_win.show)
-        title_l_layout.addWidget(self.btn_active_tasks)
-        left_layout.addLayout(title_l_layout)
+        left_layout.setSpacing(12)
         
-        self.scroll = QScrollArea(); self.scroll.setWidgetResizable(True)
+        header_layout = QHBoxLayout()
+        acc_title = QLabel("Аккаунты", objectName="SectionTitle")
+        header_layout.addWidget(acc_title)
+        header_layout.addStretch()
+        
+        self.btn_active_tasks = QPushButton("АКТИВНЫЕ ЗАДАЧИ")
+        self.btn_active_tasks.setStyleSheet("background-color: #6366f1; border: 1px solid #4f46e5; border-bottom: 3px solid #4338ca; font-size: 10px; border-radius: 6px; padding: 6px 12px;")
+        self.btn_active_tasks.clicked.connect(self.active_tasks_win.show)
+        header_layout.addWidget(self.btn_active_tasks)
+        left_layout.addLayout(header_layout)
+        
+        # Поиск
+        self.search_input = QLineEdit()
+        self.search_input.setPlaceholderText("Поиск аккаунта...")
+        self.search_input.textChanged.connect(self.filter_accounts)
+        left_layout.addWidget(self.search_input)
+        
+        self.scroll = QScrollArea()
+        self.scroll.setWidgetResizable(True)
         self.scroll_content = QWidget()
         self.scroll_layout = QVBoxLayout(self.scroll_content)
         self.scroll_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self.scroll_layout.setSpacing(6)
         self.checkboxes = []
         self.load_accounts()
         self.scroll.setWidget(self.scroll_content)
         left_layout.addWidget(self.scroll)
-        btn_all = QPushButton("ВЫБРАТЬ ВСЕ"); btn_all.clicked.connect(self.toggle_all); left_layout.addWidget(btn_all)
+        
+        btn_all = QPushButton("ВЫБРАТЬ ВСЕ")
+        btn_all.setObjectName("ExplorerBtn") # Использовать стиль акцентной кнопки
+        btn_all.clicked.connect(self.toggle_all)
+        left_layout.addWidget(btn_all)
+        
         main_layout.addWidget(left_frame, 1)
 
-        right_frame = QFrame(); right_frame.setObjectName("SectionFrame")
+        # ПРАВАЯ ПАНЕЛЬ: НАСТРОЙКИ
+        right_frame = QFrame()
+        right_frame.setObjectName("SectionFrame")
         right_layout = QVBoxLayout(right_frame)
-        right_layout.addWidget(QLabel("Выбор плагина", objectName="SectionTitle"))
-        plugin_select_layout = QHBoxLayout()
+        right_layout.setSpacing(16)
+        
+        plugin_header = QHBoxLayout()
+        plugin_header.addWidget(QLabel("Модуль", objectName="SectionTitle"))
+        
         self.module_combo = QComboBox()
         self.module_combo.addItems(list(self.available_plugins.keys()))
         self.module_combo.currentTextChanged.connect(self.update_params_panel)
-        plugin_select_layout.addWidget(self.module_combo, 1)
+        plugin_header.addWidget(self.module_combo, 1)
+        
         btn_refresh_plugins = QPushButton()
         btn_refresh_plugins.setIcon(get_icon(RELOAD_ICON_PATH))
-        btn_refresh_plugins.setIconSize(QSize(20, 20))
+        btn_refresh_plugins.setIconSize(QSize(16, 16))
         btn_refresh_plugins.setFixedWidth(40)
         btn_refresh_plugins.clicked.connect(self.refresh_plugins_list)
-        plugin_select_layout.addWidget(btn_refresh_plugins)
-        right_layout.addLayout(plugin_select_layout)
+        plugin_header.addWidget(btn_refresh_plugins)
+        
+        right_layout.addLayout(plugin_header)
+        
+        # Контейнер параметров
         self.params_container = QFrame()
+        self.params_container.setStyleSheet(f"QFrame {{ background-color: {styles.COLOR_BG}; border: 1px solid {styles.COLOR_BORDER}; border-radius: 8px; padding: 10px; }}")
         self.params_layout = QVBoxLayout(self.params_container)
-        self.params_layout.setContentsMargins(0, 10, 0, 10)
+        self.params_layout.setContentsMargins(10, 10, 10, 10)
+        self.params_layout.setSpacing(12)
         right_layout.addWidget(self.params_container)
         
+        # Кнопки управления
         btns_layout = QHBoxLayout()
-        self.btn_run = QPushButton(" ЗАПУСТИТЬ ПЛАГИН")
+        btns_layout.setSpacing(12)
+        
+        self.btn_run = QPushButton(" ЗАПУСК")
         self.btn_run.setIcon(get_icon(START_ICON_PATH))
         self.btn_run.setIconSize(QSize(20, 20))
         self.btn_run.setObjectName("RunModuleBtn")
         self.btn_run.clicked.connect(self.start_module_execution)
         btns_layout.addWidget(self.btn_run, 2)
         
-        self.btn_scenario = QPushButton("🛠️ СЦЕНАРИЙ")
-        self.btn_scenario.setStyleSheet(f"background-color: {styles.COLOR_PRIMARY_DARK}; border: 1px solid {styles.COLOR_BORDER_DARK}; color: {'#000000' if styles.COLOR_PRIMARY == '#00E676' else '#FFFFFF'}; font-weight: bold;")
-        self.btn_scenario.setFixedHeight(45)
+        self.btn_scenario = QPushButton("СЦЕНАРИЙ")
+        self.btn_scenario.setStyleSheet(f"background-color: {styles.COLOR_ACCENT_BG}; border: 1px solid {styles.COLOR_BORDER}; border-bottom: 3px solid {styles.COLOR_BORDER_DARK}; font-weight: bold; padding: 16px; border-radius: 10px;")
         self.btn_scenario.clicked.connect(self.open_scenario_builder)
         btns_layout.addWidget(self.btn_scenario, 1)
         
-        self.btn_monitor = QPushButton("👁️ МОНИТОРИНГ")
-        self.btn_monitor.setStyleSheet("background-color: #673ab7; border: 1px solid #512da8; font-weight: bold;")
-        self.btn_monitor.setFixedHeight(45)
+        self.btn_monitor = QPushButton("МОНИТОРИНГ")
+        self.btn_monitor.setStyleSheet(f"background-color: {styles.COLOR_ACCENT_BG}; border: 1px solid {styles.COLOR_BORDER}; border-bottom: 3px solid {styles.COLOR_BORDER_DARK}; font-weight: bold; padding: 16px; border-radius: 10px;")
         self.btn_monitor.clicked.connect(self.open_monitor_config)
         btns_layout.addWidget(self.btn_monitor, 1)
         
         right_layout.addLayout(btns_layout)
         
-        right_layout.addWidget(QLabel("Консоль плагина", objectName="SectionTitle", styleSheet="margin-top: 10px;"))
-        self.log_output = QTextEdit(); self.log_output.setObjectName("LogOutput"); self.log_output.setReadOnly(True)
+        terminal_header = QHBoxLayout()
+        terminal_title = QLabel("TERMINAL OUTPUT")
+        terminal_title.setStyleSheet("color: #475569; font-weight: bold; letter-spacing: 1px; font-size: 11px;")
+        terminal_header.addWidget(terminal_title)
+        terminal_header.addStretch()
+        # Имитация кнопок macOS
+        mac_btns = QLabel("🔴 🟡 🟢")
+        mac_btns.setStyleSheet("font-size: 10px; color: #334155;")
+        terminal_header.addWidget(mac_btns)
+        
+        right_layout.addLayout(terminal_header)
+        
+        self.log_output = QTextEdit()
+        self.log_output.setObjectName("LogOutput")
+        self.log_output.setReadOnly(True)
         right_layout.addWidget(self.log_output, 1)
+        
         main_layout.addWidget(right_frame, 2)
+
+    def filter_accounts(self, text):
+        for cb in self.checkboxes:
+            card = cb.property("card_widget")
+            if text.lower() in cb.text().lower():
+                card.show()
+            else:
+                card.hide()
+
+    def load_accounts(self):
+        self._clear_layout(self.scroll_layout)
+        self.checkboxes.clear()
+        
+        accounts = config_manager.load_config(CONFIG_FILE)
+        if not accounts:
+            no_acc = QLabel("Нет аккаунтов. Добавьте их в левом меню.")
+            no_acc.setStyleSheet("color: #94a3b8; font-style: italic;")
+            self.scroll_layout.addWidget(no_acc)
+            return
+            
+        for acc in accounts:
+            card = QFrame()
+            card.setObjectName("SectionFrame")
+            card.setStyleSheet("QFrame { background-color: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 6px; padding: 2px; } QFrame:hover { background-color: rgba(255, 255, 255, 0.07); border: 1px solid #6366f1; }")
+            
+            card_layout = QHBoxLayout(card)
+            card_layout.setContentsMargins(8, 8, 8, 8)
+            card_layout.setSpacing(10)
+            
+            avatar = QLabel("👤")
+            avatar.setStyleSheet("font-size: 16px; background: transparent; border: none;")
+            card_layout.addWidget(avatar)
+            
+            cb = QCheckBox(f"{acc['name']}")
+            cb.setStyleSheet("QCheckBox { background: transparent; border: none; font-weight: 500; font-size: 13px; } QCheckBox::indicator { width: 18px; height: 18px; border-radius: 4px; }")
+            cb.setProperty("acc_data", acc)
+            cb.stateChanged.connect(lambda st, c=cb: self.on_account_toggled(st, c))
+            
+            card_layout.addWidget(cb, 1)
+            
+            # Сохраняем карточку в cb, чтобы filter_accounts мог скрыть всю карточку
+            cb.setProperty("card_widget", card)
+            
+            self.scroll_layout.addWidget(card)
+            self.checkboxes.append(cb)
+
 
     def open_monitor_config(self):
         # Быстрый переход к плагину Мониторинга
@@ -414,7 +504,9 @@ class ModulesWindow(QWidget):
                     def log_f(msg, acc_name=a['name'], tid=task_id):
                         self.log_signal.emit(msg)
                         self.task_log_signal.emit(tid, msg)
-                        
+                    
+                    aid = a.get("api_id", 0)
+                    ah = a.get("api_hash", "")    
                     instance = plugin_class(a, aid, ah, log_f)
                     self.local_tasks[task_id]["instances"].append(instance)
                     

@@ -33,7 +33,6 @@ from src.core.constants import (
 class TelegramManager(QWidget):
     def __init__(self):
         super().__init__()
-        self.modules_win = None
         self.server_win = None
         self.init_ui()
         self.init_audio()
@@ -138,6 +137,10 @@ class TelegramManager(QWidget):
         
         self.acc_list_page = AccountListPage(self)
         self.settings_page = SettingsPage()
+        
+        from src.ui.modules_window import ModulesPage
+        self.modules_page = ModulesPage(self)
+        
         self.new_modules_page = NewModulesPage(self)
         self.table_page = AccountTablePage(self)
 
@@ -146,6 +149,7 @@ class TelegramManager(QWidget):
 
         self.stack.addWidget(self.acc_list_page)
         self.stack.addWidget(self.settings_page)
+        self.stack.addWidget(self.modules_page)
         self.stack.addWidget(self.new_modules_page)
         self.stack.addWidget(self.table_page)
 
@@ -229,13 +233,18 @@ class TelegramManager(QWidget):
         self.stack.removeWidget(old_modules)
         old_modules.deleteLater()
 
+        # Пересоздаём modules_page
+        from src.ui.modules_window import ModulesPage
+        old_old_modules = self.modules_page
+        self.modules_page = ModulesPage(self)
+        self.stack.addWidget(self.modules_page)
+        self.stack.removeWidget(old_old_modules)
+        old_old_modules.deleteLater()
+
         # Обновляем страницу аккаунтов
         self.acc_list_page.refresh_accounts()
         
         # Закрываем вспомогательные окна — они тоже нужно перезапустить
-        if self.modules_win is not None:
-            self.modules_win.close()
-            self.modules_win = None
         if self.server_win is not None:
             self.server_win.close()
             self.server_win = None
@@ -279,12 +288,8 @@ class TelegramManager(QWidget):
         self.settings_page.show_docs()
 
     def show_modules(self):
-        if self.modules_win is None:
-            from src.ui.modules_window import ModulesWindow
-            self.modules_win = ModulesWindow()
-        self.modules_win.show()
-        self.modules_win.raise_()
-        self.modules_win.activateWindow()
+        self.modules_page.load_accounts()
+        self.stack.setCurrentWidget(self.modules_page)
 
     def show_server(self):
         if self.server_win is None:
