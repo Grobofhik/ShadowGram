@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                              QTableWidget, QTableWidgetItem, QHeaderView, QInputDialog)
 from PyQt6.QtCore import pyqtSignal, Qt, QThread
 
-from src.core import logic
+from src.core.managers import proxy_manager, farm_manager, config_manager, hw_manager, process_manager, account_manager
 from src.core.constants import CONFIG_FILE
 from src.ui.docs_window import DocsWindow
 from src import styles
@@ -43,7 +43,7 @@ class ProxyCheckerWorker(QThread):
         total = len(self.proxies)
         
         for i, proxy in enumerate(self.proxies):
-            is_valid = logic.check_proxy_validity(proxy)
+            is_valid = proxy_manager.check_proxy_validity(proxy)
             if is_valid:
                 valid.append(proxy)
             else:
@@ -96,10 +96,7 @@ class SettingsPage(QWidget):
         # 1. API & AI
         tab_api = QWidget()
         l_api = QVBoxLayout(tab_api)
-        l_api.addWidget(QLabel("API ID:", objectName="SettingLabel"))
-        self.input_api_id = QLineEdit(); l_api.addWidget(self.input_api_id)
-        l_api.addWidget(QLabel("API Hash:", objectName="SettingLabel"))
-        self.input_api_hash = QLineEdit(); l_api.addWidget(self.input_api_hash)
+        # API ID and API Hash removed, they are now per-account in the profile window.
         l_api.addWidget(QLabel("AI API Ключ (по умолчанию):", objectName="SettingLabel"))
         self.input_ai_api_key = QLineEdit(); self.input_ai_api_key.setEchoMode(QLineEdit.EchoMode.Password); l_api.addWidget(self.input_ai_api_key)
         l_api.addWidget(QLabel("AI Base URL (по умолчанию):", objectName="SettingLabel"))
@@ -397,7 +394,7 @@ class SettingsPage(QWidget):
             QMessageBox.critical(self, "Ошибка", f"Не удалось открыть документацию: {e}")
 
     def add_proxy_to_table(self, proxy_str: str, status: str = "Не проверен"):
-        normalized = logic.normalize_proxy_url(proxy_str)
+        normalized = proxy_manager.normalize_proxy_url(proxy_str)
         if not normalized:
             return
         
@@ -518,7 +515,7 @@ class SettingsPage(QWidget):
                 
                 new_proxy, ok = QInputDialog.getText(self, "Изменить прокси", "Введите прокси:", text=current_val)
                 if ok:
-                    normalized = logic.normalize_proxy_url(new_proxy)
+                    normalized = proxy_manager.normalize_proxy_url(new_proxy)
                     if item_proxy:
                         item_proxy.setText(normalized)
                     else:
@@ -555,8 +552,7 @@ class SettingsPage(QWidget):
                 s = data.get("settings", {})
                 
                 # API
-                self.input_api_id.setText(str(s.get("api_id", "")))
-                self.input_api_hash.setText(s.get("api_hash", ""))
+                # API ID and API Hash are now per-account
                 self.input_ai_api_key.setText(s.get("default_ai_api_key", ""))
                 self.input_ai_base_url.setText(s.get("default_ai_base_url", "https://api.groq.com/openai/v1"))
                 self.input_ai_model_name.setText(s.get("default_ai_model_name", "llama-3.1-8b-instant"))
@@ -588,11 +584,11 @@ class SettingsPage(QWidget):
                 self.load_accounts_proxy_table(accounts)
                 
             # Farms loading
-            self.label_active_farm.setText(logic.get_active_farm_name())
+            self.label_active_farm.setText(farm_manager.get_active_farm_name())
             self.combo_farms.clear()
-            farms = logic.list_available_farms()
+            farms = farm_manager.list_available_farms()
             self.combo_farms.addItems(farms)
-            active_name = logic.get_active_farm_name()
+            active_name = farm_manager.get_active_farm_name()
             idx = self.combo_farms.findText(active_name)
             if idx >= 0:
                 self.combo_farms.setCurrentIndex(idx)
@@ -614,8 +610,6 @@ class SettingsPage(QWidget):
                     pool_list.append(item.text())
             
             data["settings"].update({
-                "api_id": int(self.input_api_id.text()) if self.input_api_id.text().isdigit() else 0, 
-                "api_hash": self.input_api_hash.text().strip(),
                 "default_ai_api_key": self.input_ai_api_key.text().strip(),
                 "default_ai_base_url": self.input_ai_base_url.text().strip(),
                 "default_ai_model_name": self.input_ai_model_name.text().strip(),
@@ -645,7 +639,7 @@ class SettingsPage(QWidget):
                             break
             
             with open(CONFIG_FILE, "w", encoding="utf-8") as f: json.dump(data, f, indent=4, ensure_ascii=False)
-            logic.save_active_farm_config()
+            farm_manager.save_active_farm_config()
             self.settings_saved.emit()
             QMessageBox.information(self, "Успех", "Настройки сохранены!")
         except Exception as e: QMessageBox.critical(self, "Ошибка", f"Не удалось сохранить: {e}")
@@ -664,8 +658,6 @@ class SettingsPage(QWidget):
                     pool_list.append(item.text())
             
             data["settings"].update({
-                "api_id": int(self.input_api_id.text()) if self.input_api_id.text().isdigit() else 0, 
-                "api_hash": self.input_api_hash.text().strip(),
                 "default_ai_api_key": self.input_ai_api_key.text().strip(),
                 "default_ai_base_url": self.input_ai_base_url.text().strip(),
                 "default_ai_model_name": self.input_ai_model_name.text().strip(),
@@ -695,7 +687,7 @@ class SettingsPage(QWidget):
                             break
             
             with open(CONFIG_FILE, "w", encoding="utf-8") as f: json.dump(data, f, indent=4, ensure_ascii=False)
-            logic.save_active_farm_config()
+            farm_manager.save_active_farm_config()
         except:
             pass
 
@@ -704,7 +696,7 @@ class SettingsPage(QWidget):
         if not target_farm:
             return
         
-        current_farm = logic.get_active_farm_name()
+        current_farm = farm_manager.get_active_farm_name()
         if target_farm == current_farm:
             return
             
@@ -716,7 +708,7 @@ class SettingsPage(QWidget):
         )
         if reply == QMessageBox.StandardButton.Yes:
             self.save_settings_silently()
-            if logic.switch_active_farm(target_farm):
+            if farm_manager.switch_active_farm(target_farm):
                 self.load_settings()
                 self.settings_saved.emit()
                 QMessageBox.information(self, "Фермы", f"Вы успешно переключились на ферму '{target_farm}'!")
@@ -729,7 +721,7 @@ class SettingsPage(QWidget):
             QMessageBox.warning(self, "Внимание", "Введите имя новой фермы!")
             return
             
-        if logic.create_new_farm(name):
+        if farm_manager.create_new_farm(name):
             self.input_new_farm.clear()
             self.load_settings()
             idx = self.combo_farms.findText(name)
@@ -829,7 +821,7 @@ class SettingsPage(QWidget):
                     updated += 1
                 
                 with open(CONFIG_FILE, "w", encoding="utf-8") as f: json.dump(data, f, indent=4, ensure_ascii=False)
-                logic.save_active_farm_config()
+                farm_manager.save_active_farm_config()
                 
                 self.load_settings()
                 QMessageBox.information(self, "Готово", f"Прокси успешно распределены по {updated} аккаунтам. Обновите список на главной.")
@@ -842,7 +834,7 @@ class SettingsPage(QWidget):
         deleted = 0
         
         try:
-            data = logic.load_config(CONFIG_FILE)
+            data = config_manager.load_config(CONFIG_FILE)
             for acc in data:
                 workdir = acc.get("workdir")
                 if not workdir or not os.path.exists(workdir): continue
@@ -871,7 +863,7 @@ class SettingsPage(QWidget):
                 total_cleaned = 0
                 
                 for acc in accounts:
-                    success, _ = logic.clear_cache(acc["workdir"])
+                    success, _ = process_manager.clear_cache(acc["workdir"])
                     if success:
                         total_cleaned += 1
                 
@@ -882,7 +874,7 @@ class SettingsPage(QWidget):
     def run_export(self):
         file_path, _ = QFileDialog.getSaveFileName(self, "Сохранить бэкап", f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip", "ZIP Files (*.zip)")
         if file_path:
-            success, msg = logic.export_backup(CONFIG_FILE, file_path)
+            success, msg = config_manager.export_backup(CONFIG_FILE, file_path)
             if success: QMessageBox.information(self, "Бэкап", msg)
             else: QMessageBox.critical(self, "Ошибка", msg)
 
@@ -891,7 +883,7 @@ class SettingsPage(QWidget):
         if file_path:
             reply = QMessageBox.warning(self, "Внимание", "Импорт перезапишет текущий список. Продолжить?", QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
             if reply == QMessageBox.StandardButton.Yes:
-                success, msg = logic.import_backup(file_path, CONFIG_FILE)
+                success, msg = config_manager.import_backup(file_path, CONFIG_FILE)
                 if success: QMessageBox.information(self, "Бэкап", msg)
                 else: QMessageBox.critical(self, "Ошибка", msg)
 

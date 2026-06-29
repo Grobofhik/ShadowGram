@@ -5,6 +5,7 @@ import asyncio
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QCheckBox, QInputDialog, QMessageBox, QWidget
 from PyQt6.QtGui import QPixmap, QPainter, QPainterPath, QCursor, QIcon
 from PyQt6.QtCore import Qt, pyqtSignal, QEvent, QEasingCurve, QPropertyAnimation, QParallelAnimationGroup, QSize
+from src.ui.icon_cache import get_icon
 
 """
 Виджет отдельной строки аккаунта в списке.
@@ -32,7 +33,7 @@ from PyQt6.QtCore import Qt, pyqtSignal, QEvent, QEasingCurve, QPropertyAnimatio
 - check_status: периодическая проверка активности процесса
 """
 
-from src.core import logic
+from src.core.managers import proxy_manager, farm_manager, config_manager, hw_manager, process_manager, account_manager
 from src.modules import session_checker
 from src import styles
 from src.core.constants import (
@@ -43,13 +44,6 @@ from src.core.constants import (
 )
 
 
-_ICON_CACHE = {}
-
-def get_cached_icon(path_str):
-    path_str = str(path_str)
-    if path_str not in _ICON_CACHE:
-        _ICON_CACHE[path_str] = QIcon(path_str)
-    return _ICON_CACHE[path_str]
 
 class TelegramAccountRow(QFrame):
 
@@ -158,14 +152,14 @@ class TelegramAccountRow(QFrame):
             (ROCKET_ICON_PATH, "PromptBtn", self.edit_prompt, "AI Промпт для аккаунта"),
             (NOTE_ICON_PATH, "NotesBtn", self.edit_notes, "Заметки"),
             (PROXY_ICON_PATH, "CheckBtn", self.run_proxy_check, "Проверить прокси"),
-            (FOLDER_ICON_PATH, "ExplorerBtn", lambda: logic.open_explorer(self.workdir), "Открыть папку"),
+            (FOLDER_ICON_PATH, "ExplorerBtn", lambda: process_manager.open_explorer(self.workdir), "Открыть папку"),
             (CASH_ICON_PATH, "ClearBtn", self.clear_account_cache, "Чистка кэша"),
             (DELETE_ICON_PATH, "DeleteBtn", self.confirm_delete, "Удалить")
         ]
 
         for icon_path, obj_name, slot, tip in btns:
             btn = QPushButton()
-            btn.setIcon(get_cached_icon(icon_path))
+            btn.setIcon(get_icon(icon_path))
             btn.setIconSize(QSize(20, 20))
             btn.setObjectName(obj_name)
             btn.setFixedSize(38, 38)
@@ -188,7 +182,7 @@ class TelegramAccountRow(QFrame):
         # 7. Главная кнопка запуска
         self.btn_launch = QPushButton("Запустить")
         self.btn_launch.setObjectName("LaunchBtn")
-        self.btn_launch.setIcon(QIcon(str(START_ICON_PATH)))
+        self.btn_launch.setIcon(get_icon(START_ICON_PATH))
         self.btn_launch.setIconSize(QSize(18, 18))
         self.btn_launch.setFixedSize(130, 38)
         self.btn_launch.clicked.connect(self.toggle_telegram)
@@ -220,12 +214,22 @@ class TelegramAccountRow(QFrame):
 
     def open_login_window(self):
         from src.ui.login_window import LoginWindow
-        account_data = {
-            "name": self.name,
-            "workdir": self.workdir,
-            "proxy_url": self.proxy_url,
-            "device_name": self.device_name
-        }
+        from src.core.managers import config_manager
+        
+        config = config_manager._read_config(CONFIG_FILE)
+        account_data = None
+        for acc in config.get("accounts", []):
+            if acc.get("workdir") == self.workdir:
+                account_data = acc
+                break
+                
+        if not account_data:
+            account_data = {
+                "name": self.name,
+                "workdir": self.workdir,
+                "proxy_url": self.proxy_url,
+                "device_name": self.device_name
+            }
         self.login_win = LoginWindow(account_data, self)
         if self.login_win.exec():
             self.run_session_check()
@@ -258,7 +262,7 @@ class TelegramAccountRow(QFrame):
         new_prompt, ok = QInputDialog.getMultiLineText(self, "AI Промпт", "Укажите индивидуальный промпт для этого аккаунта:", text=self.ai_prompt or "")
         if ok:
             new_prompt = new_prompt.strip() or None
-            if logic.update_prompt(CONFIG_FILE, self.workdir, new_prompt):
+            if account_manager.update_prompt(CONFIG_FILE, self.workdir, new_prompt):
                 self.ai_prompt = new_prompt
                 self.btn_prompt.setProperty("status", "success" if new_prompt else "default")
                 self.refresh_btn_style(self.btn_prompt)
@@ -267,7 +271,7 @@ class TelegramAccountRow(QFrame):
         new_proxy, ok = QInputDialog.getText(self, "Изменить прокси", "HTTP Proxy:", text=self.proxy_url or "")
         if ok:
             new_proxy = new_proxy.strip() or None
-            if logic.update_proxy(CONFIG_FILE, self.workdir, new_proxy):
+            if account_manager.update_proxy(CONFIG_FILE, self.workdir, new_proxy):
                 self.proxy_url = new_proxy
                 self.update_label_text()
                 self.btn_check.setVisible(bool(self.proxy_url))
@@ -277,7 +281,7 @@ class TelegramAccountRow(QFrame):
         new_name, ok = QInputDialog.getText(self, "Имя устройства", "Hostname:", text=self.device_name or "")
         if ok:
             new_name = new_name.strip() or f"PC-{self.name}"
-            if logic.update_device_info(CONFIG_FILE, self.workdir, new_name):
+            if account_manager.update_device_info(CONFIG_FILE, self.workdir, new_name):
                 self.device_name = new_name
                 self.btn_session.setToolTip(f"Устройство: {self.device_name}")
 
@@ -285,27 +289,27 @@ class TelegramAccountRow(QFrame):
         new_notes, ok = QInputDialog.getMultiLineText(self, "Заметки", "Текст:", text=self.notes or "")
         if ok:
             new_notes = new_notes.strip() or None
-            if logic.update_notes(CONFIG_FILE, self.workdir, new_notes):
+            if account_manager.update_notes(CONFIG_FILE, self.workdir, new_notes):
                 self.notes = new_notes
 
     def confirm_delete(self):
-        if logic.is_process_running(self.tg_process):
+        if process_manager.is_process_running(self.tg_process):
             QMessageBox.warning(self, "Ошибка", "Нельзя удалить запущенный профиль!")
             return
         reply = QMessageBox.question(self, "Удаление", f"Удалить '{self.name}'?", QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
         if reply == QMessageBox.StandardButton.Yes:
-            if logic.remove_account(CONFIG_FILE, self.workdir): self.account_removed.emit()
+            if account_manager.remove_account(CONFIG_FILE, self.workdir): self.account_removed.emit()
 
     def clear_account_cache(self):
-        if logic.is_process_running(self.tg_process): return
-        success, msg = logic.clear_cache(self.workdir)
+        if process_manager.is_process_running(self.tg_process): return
+        success, msg = process_manager.clear_cache(self.workdir)
         QMessageBox.information(self, "Очистка", f"{self.name}: {msg}")
 
     def run_proxy_check(self):
         self.btn_check.setProperty("status", "checking")
         self.refresh_btn_style(self.btn_check)
         self.btn_check.setEnabled(False)
-        threading.Thread(target=lambda: self.proxy_check_finished.emit(logic.check_proxy_validity(self.proxy_url)), daemon=True).start()
+        threading.Thread(target=lambda: self.proxy_check_finished.emit(proxy_manager.check_proxy_validity(self.proxy_url)), daemon=True).start()
 
     def on_proxy_check_finished(self, is_valid):
         self.btn_check.setProperty("status", "success" if is_valid else "error")
@@ -318,8 +322,15 @@ class TelegramAccountRow(QFrame):
 
     def session_check_worker(self):
         try:
-            config = logic._read_config(CONFIG_FILE)
-            setts = config.get("settings", {})
+            config = config_manager._read_config(CONFIG_FILE)
+            
+            # Find the account and its api credentials
+            api_id, api_hash = 0, ""
+            for acc in config.get("accounts", []):
+                if acc.get("workdir") == self.workdir:
+                    api_id = acc.get("api_id", 0)
+                    api_hash = acc.get("api_hash", "")
+                    break
             
             # Создаем новый цикл событий для этого потока и запускаем проверку
             loop = asyncio.new_event_loop()
@@ -327,8 +338,8 @@ class TelegramAccountRow(QFrame):
             status, msg = loop.run_until_complete(
                 session_checker.check_account(
                     self.workdir, 
-                    setts.get("api_id"), 
-                    setts.get("api_hash"), 
+                    api_id, 
+                    api_hash, 
                     self.proxy_url,
                     self.device_name
                 )
@@ -344,7 +355,23 @@ class TelegramAccountRow(QFrame):
         st = "alive" if status == "Alive" else "banned" if status in ["Banned", "Unauthorized"] else "error" if status == "Error" else "default"
         self.btn_session.setProperty("status", st)
         self.refresh_btn_style(self.btn_session)
-        if status == "Alive": self.load_avatar()
+        if status == "Alive": 
+            self.load_avatar()
+            
+        if getattr(self, 'profile_window', None) and self.profile_window.isVisible():
+            from src.core.managers import config_manager
+            config = config_manager._read_config(CONFIG_FILE)
+            for acc in config.get("accounts", []):
+                if acc.get("workdir") == self.workdir:
+                    self.profile_window.account_data = acc
+                    self.profile_window.populate_data()
+                    
+                    if status == "Alive" and self.avatar_label.pixmap() and not self.avatar_label.pixmap().isNull():
+                        self.profile_window.avatar_label.setPixmap(self.avatar_label.pixmap().scaled(
+                            90, 90, Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.SmoothTransformation
+                        ))
+                    self.profile_window.status_label.setText(message)
+                    break
 
     def load_avatar(self):
         avatar_path = os.path.join(self.workdir, "avatar.jpg")
@@ -382,9 +409,34 @@ class TelegramAccountRow(QFrame):
             elif event.type() == QEvent.Type.Leave: self.hide_note_popup()
         elif hasattr(self, 'avatar_label') and obj == self.avatar_label:
             if event.type() == QEvent.Type.MouseButtonPress:
-                self.run_session_check()
+                self.open_account_profile()
                 return True
         return super().eventFilter(obj, event)
+
+    def open_account_profile(self):
+        from src.ui.account_profile_window import AccountProfileWindow
+        from src.core.managers import config_manager
+        
+        config = config_manager._read_config(CONFIG_FILE)
+        account_data = None
+        for acc in config.get("accounts", []):
+            if acc.get("workdir") == self.workdir:
+                account_data = acc
+                break
+                
+        if not account_data:
+            account_data = {
+                "name": self.name,
+                "workdir": self.workdir,
+                "proxy_url": self.proxy_url,
+                "device_name": self.device_name,
+                "notes": self.notes,
+                "ai_prompt": self.ai_prompt,
+                "phone": self.name
+            }
+            
+        self.profile_window = AccountProfileWindow(account_data, self)
+        self.profile_window.exec()
 
     def show_note_popup(self):
         if not hasattr(self, 'popup_label'):
@@ -405,18 +457,18 @@ class TelegramAccountRow(QFrame):
 
     def _check_auto_clean(self):
         try:
-            config = logic._read_config(CONFIG_FILE)
+            config = config_manager._read_config(CONFIG_FILE)
             if config.get("settings", {}).get("auto_clean_cache", False):
-                    logic.clear_cache(self.workdir)
+                    process_manager.clear_cache(self.workdir)
         except Exception:
             pass
 
     def toggle_telegram(self):
-        if not logic.is_process_running(self.tg_process):
-            self.tg_process, self.gost_process = logic.start_telegram(self.workdir, self.proxy_url, self.device_name, account_name=self.name)
+        if not process_manager.is_process_running(self.tg_process):
+            self.tg_process, self.gost_process = process_manager.start_telegram(self.workdir, self.proxy_url, self.device_name, account_name=self.name)
             if self.tg_process: self.update_status(True)
         else:
-            if logic.stop_telegram(self.tg_process, self.gost_process):
+            if process_manager.stop_telegram(self.tg_process, self.gost_process):
                 self.tg_process = self.gost_process = None
                 self.update_status(False)
                 self._check_auto_clean()
@@ -425,13 +477,13 @@ class TelegramAccountRow(QFrame):
         self.status_label.setText("Запущен" if is_running else "Остановлен")
         self.status_label.setObjectName("StatusRunning" if is_running else "StatusStopped")
         self.btn_launch.setText("Закрыть" if is_running else "Запустить")
-        self.btn_launch.setIcon(get_cached_icon(CANCEL_ICON_PATH if is_running else START_ICON_PATH))
+        self.btn_launch.setIcon(get_icon(CANCEL_ICON_PATH if is_running else START_ICON_PATH))
         self.btn_launch.setStyleSheet("background-color: #FF5252; color: #000000; font-weight: bold;" if is_running else "")
         self.status_label.style().unpolish(self.status_label); self.status_label.style().polish(self.status_label)
 
     def check_status(self):
-        if self.tg_process and not logic.is_process_running(self.tg_process):
-            logic.stop_telegram(self.tg_process, self.gost_process)
+        if self.tg_process and not process_manager.is_process_running(self.tg_process):
+            process_manager.stop_telegram(self.tg_process, self.gost_process)
             self.tg_process = self.gost_process = None
             self.update_status(False)
             self._check_auto_clean()

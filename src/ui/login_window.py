@@ -2,7 +2,7 @@ from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
                              QPushButton, QLineEdit, QStackedWidget, QMessageBox)
 from PyQt6.QtCore import Qt, QThread
 from src.core.auth import AuthWorker
-from src.core import logic
+from src.core.managers import proxy_manager, farm_manager, config_manager, hw_manager, process_manager, account_manager
 from src.core.constants import CONFIG_FILE
 import json
 import os
@@ -21,11 +21,8 @@ class LoginWindow(QDialog):
 
     def load_api_keys(self):
         try:
-            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-                config = json.load(f)
-                settings = config.get("settings", {})
-                self.api_id = int(settings.get("api_id", 0))
-                self.api_hash = settings.get("api_hash", "")
+            self.api_id = int(self.account_data.get("api_id", 0))
+            self.api_hash = self.account_data.get("api_hash", "")
         except Exception:
             self.api_id = 0
             self.api_hash = ""
@@ -91,7 +88,7 @@ class LoginWindow(QDialog):
             return
             
         if not self.api_id or not self.api_hash:
-            QMessageBox.warning(self, "Ошибка", "API ID и API Hash не настроены в настройках!")
+            QMessageBox.warning(self, "Ошибка", "API ID и API Hash не настроены для этого аккаунта! Откройте профиль аккаунта (нажав на аватарку) и укажите их в режиме редактирования.")
             return
 
         workdir = self.account_data.get("workdir")

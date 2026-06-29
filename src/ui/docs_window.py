@@ -1,3 +1,4 @@
+from src.ui.icon_cache import get_icon
 import os
 import markdown
 from PyQt6.QtWidgets import (
@@ -75,11 +76,11 @@ class DocsWindow(QWidget):
         main_h_layout.addWidget(content_area, 1)
 
     def setup_navigation(self):
-        folder_icon = QIcon(str(FOLDER_ICON_PATH))
-        home_icon = QIcon(str(LOGO_PATH))
-        server_icon = QIcon(str(SERVER_ICON_PATH))
-        module_icon = QIcon(str(MODULS_ICON_PATH))
-        settings_icon = QIcon(str(SETTINGS_ICON_PATH))
+        folder_icon = get_icon(FOLDER_ICON_PATH)
+        home_icon = get_icon(LOGO_PATH)
+        server_icon = get_icon(SERVER_ICON_PATH)
+        module_icon = get_icon(MODULS_ICON_PATH)
+        settings_icon = get_icon(SETTINGS_ICON_PATH)
 
         def create_selectable_item(parent, name, path, icon=None):
             item = QTreeWidgetItem(parent, [name])

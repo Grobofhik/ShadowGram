@@ -1,3 +1,4 @@
+from src.ui.icon_cache import get_icon
 import json
 import threading
 import time
@@ -9,7 +10,7 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
 from PyQt6.QtGui import QIcon
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QSize
 
-from src.core import logic
+from src.core.managers import proxy_manager, farm_manager, config_manager, hw_manager, process_manager, account_manager
 from src.core.constants import (CONFIG_FILE, START_ICON_PATH, PING_ICON_PATH, 
                                RELOAD_ICON_PATH, ROCKET_ICON_PATH, SAVE_ICON_PATH)
 from src.core.module_manager import ModuleManager
@@ -117,13 +118,13 @@ class ServerWindow(QWidget):
         
         conn_layout = QHBoxLayout()
         btn_save_settings = QPushButton(" Сохранить")
-        btn_save_settings.setIcon(QIcon(str(SAVE_ICON_PATH)))
+        btn_save_settings.setIcon(get_icon(SAVE_ICON_PATH))
         btn_save_settings.setIconSize(QSize(20, 20))
         btn_save_settings.clicked.connect(self.save_settings)
         conn_layout.addWidget(btn_save_settings)
         
         self.btn_ping = QPushButton(" Ping")
-        self.btn_ping.setIcon(QIcon(str(PING_ICON_PATH)))
+        self.btn_ping.setIcon(get_icon(PING_ICON_PATH))
         self.btn_ping.setIconSize(QSize(20, 20))
         self.btn_ping.clicked.connect(self.ping_server)
         conn_layout.addWidget(self.btn_ping)
@@ -165,7 +166,7 @@ class ServerWindow(QWidget):
         header_layout.addWidget(QLabel("Выбор плагина", objectName="SectionTitle"))
         header_layout.addStretch()
         self.btn_active_tasks = QPushButton(" АКТИВНЫЕ ЗАДАЧИ")
-        self.btn_active_tasks.setIcon(QIcon(str(ROCKET_ICON_PATH)))
+        self.btn_active_tasks.setIcon(get_icon(ROCKET_ICON_PATH))
         self.btn_active_tasks.setIconSize(QSize(20, 20))
         self.btn_active_tasks.setFixedWidth(160)
         self.btn_active_tasks.setStyleSheet("background-color: #4527a0; border-color: #5e35b1; font-size: 10px;")
@@ -179,7 +180,7 @@ class ServerWindow(QWidget):
         self.module_combo.currentTextChanged.connect(self.update_params_panel)
         plugin_select_layout.addWidget(self.module_combo, 1)
         btn_refresh_plugins = QPushButton("")
-        btn_refresh_plugins.setIcon(QIcon(str(RELOAD_ICON_PATH)))
+        btn_refresh_plugins.setIcon(get_icon(RELOAD_ICON_PATH))
         btn_refresh_plugins.setIconSize(QSize(16, 16))
         btn_refresh_plugins.setFixedWidth(40)
         btn_refresh_plugins.clicked.connect(self.refresh_plugins_list)
@@ -192,7 +193,7 @@ class ServerWindow(QWidget):
         right_layout.addWidget(self.params_container)
         
         self.btn_run = QPushButton(" ЗАПУСТИТЬ НА СЕРВЕРЕ")
-        self.btn_run.setIcon(QIcon(str(START_ICON_PATH)))
+        self.btn_run.setIcon(get_icon(START_ICON_PATH))
         self.btn_run.setIconSize(QSize(20, 20))
         self.btn_run.setObjectName("RunModuleBtn")
         self.btn_run.clicked.connect(self.start_module_execution)
@@ -227,7 +228,7 @@ class ServerWindow(QWidget):
                 "server_port": self.input_server_port.text().strip()
             }
             with open(CONFIG_FILE, "w", encoding="utf-8") as f: json.dump(data, f, indent=4, ensure_ascii=False)
-            logic.save_active_farm_config()
+            farm_manager.save_active_farm_config()
             QMessageBox.information(self, "Успех", "Настройки сохранены!")
         except Exception as e: QMessageBox.critical(self, "Ошибка", f"Не удалось сохранить: {e}")
 
@@ -293,7 +294,7 @@ class ServerWindow(QWidget):
             param_layout = QHBoxLayout()
             param_layout.addWidget(QLabel(f"{param['label']}:"))
             if param['type'] == 'file':
-                le = QLineEdit(); btn = QPushButton(); btn.setIcon(QIcon(str(FOLDER_ICON_PATH))); btn.setIconSize(QSize(20, 20)); btn.setFixedWidth(40)
+                le = QLineEdit(); btn = QPushButton(); btn.setIcon(get_icon(FOLDER_ICON_PATH)); btn.setIconSize(QSize(20, 20)); btn.setFixedWidth(40)
                 btn.clicked.connect(lambda ch, l=le: self.browse_file(l))
                 param_layout.addWidget(le); param_layout.addWidget(btn); self.param_widgets[param['name']] = le
             elif param['type'] == 'text':
@@ -314,7 +315,7 @@ class ServerWindow(QWidget):
         if fp: le.setText(fp)
 
     def load_accounts(self):
-        for acc in logic.load_config(CONFIG_FILE):
+        for acc in config_manager.load_config(CONFIG_FILE):
             cb = QCheckBox(f"{acc['name']}")
             cb.setProperty("acc_data", acc)
             cb.stateChanged.connect(lambda st, c=cb: self.on_account_toggled(st, c))
@@ -384,12 +385,12 @@ class ServerWindow(QWidget):
         def _task():
             zip_path = tempfile.mktemp(suffix=".zip")
             try:
-                succ_pack, msg_pack = logic.pack_selected_sessions(CONFIG_FILE, sel_workdirs, zip_path)
+                succ_pack, msg_pack = account_manager.pack_selected_sessions(CONFIG_FILE, sel_workdirs, zip_path)
                 if not succ_pack:
                     self.server_send_finished.emit(False, msg_pack)
                     return
                 
-                succ_send, msg_send = logic.send_sessions_to_server(zip_path, ip, port)
+                succ_send, msg_send = account_manager.send_sessions_to_server(zip_path, ip, port)
                 self.server_send_finished.emit(succ_send, msg_send)
             finally:
                 if os.path.exists(zip_path):

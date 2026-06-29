@@ -4,6 +4,7 @@ from PyQt6.QtGui import QIcon
 from src.modules_styles import MODULES_STYLESHEET
 from src.core.constants import CANCEL_ICON_PATH
 from src import styles
+from src.ui.icon_cache import get_icon
 
 """
 Окно активных задач автоматизации.
@@ -58,7 +59,7 @@ class ActiveTasksWindow(QWidget):
             controls.addStretch()
             
             btn_stop = QPushButton(" ОСТАНОВИТЬ")
-            btn_stop.setIcon(QIcon(str(CANCEL_ICON_PATH)))
+            btn_stop.setIcon(get_icon(CANCEL_ICON_PATH))
             btn_stop.setIconSize(QSize(20, 20))
             btn_stop.setObjectName("DeleteBtn") # Используем красный стиль
             btn_stop.setFixedWidth(160)

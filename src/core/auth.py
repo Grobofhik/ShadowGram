@@ -52,14 +52,20 @@ class AuthWorker(QObject):
         os.makedirs(self.workdir, exist_ok=True)
         session_name = "account" # default name inside workdir
         
+        from src.core.constants import CONFIG_FILE
+        from src.core.managers.account_manager import get_hardware_profile
+        hw_profile = get_hardware_profile(CONFIG_FILE, self.workdir)
+
         client = Client(
             name=session_name,
             api_id=self.api_id,
             api_hash=self.api_hash,
             workdir=self.workdir,
             proxy=self.proxy,
-            device_model=self.device_name,
-            system_version="Arch Linux"
+            device_model=hw_profile.get("device_model", "PC 64bit"),
+            system_version=hw_profile.get("system_version", "Windows 10"),
+            app_version=hw_profile.get("app_version", "4.8.4 x64"),
+            lang_code=hw_profile.get("lang_code", "en"),
         )
 
         try:

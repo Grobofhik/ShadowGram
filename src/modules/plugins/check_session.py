@@ -26,8 +26,13 @@ class SessionCheckPlugin(BaseModule):
             
             # Если есть фото — качаем его
             await self._download_avatar(me)
+            
+            # Проверяем спамблок
+            self.log("Проверяю ограничения через @SpamBot...", "info")
+            from src.modules.session_checker import _check_spamblock
+            spamblock_status = await _check_spamblock(self.client)
                 
-            self.log(f"Статус: АКТИВЕН (@{me.username or me.id})", "success")
+            self.log(f"Статус: АКТИВЕН (@{me.username or me.id}) | {spamblock_status}", "success")
             
         except UserDeactivated:
             self.log("Аккаунт в БАНЕ (Deactivated)", "error")

@@ -178,7 +178,7 @@ class SmartCommenterPlugin(BaseModule):
         
         # Загрузим дефолтные глобальные настройки AI
         from src.core.constants import CONFIG_FILE
-        from src.core.logic import _read_config
+        from src.core.managers.config_manager import _read_config
         
         global_defaults = {}
         try:

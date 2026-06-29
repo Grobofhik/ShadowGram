@@ -1,6 +1,23 @@
 import sys
 import json
 from pathlib import Path
+import asyncio
+
+# Custom Event Loop Policy to suppress database closure errors from background update tasks in Hydrogram/Pyrogram
+class SilencedEventLoopPolicy(asyncio.DefaultEventLoopPolicy):
+    def new_event_loop(self):
+        loop = super().new_event_loop()
+        def handle_exception(loop, context):
+            exception = context.get("exception")
+            if exception and ("closed database" in str(exception) or "Cannot operate on a closed database" in str(exception)):
+                # Silence background updates sqlite db close errors
+                return
+            loop.default_exception_handler(context)
+        loop.set_exception_handler(handle_exception)
+        return loop
+
+asyncio.set_event_loop_policy(SilencedEventLoopPolicy())
+
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtGui import QFontDatabase
 from PyQt6.QtCore import QObject, QEvent, Qt
@@ -74,7 +91,7 @@ def init_config() -> None:
 def main() -> None:
     """Основная функция запуска приложения"""
     _setup_python_path()
-    from src.core.logic import init_farms
+    from src.core.managers.farm_manager import init_farms
     from src import styles
 
     init_farms()

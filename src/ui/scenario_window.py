@@ -1,3 +1,4 @@
+from src.ui.icon_cache import get_icon
 import json
 import os
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
@@ -138,7 +139,7 @@ class ScenarioWindow(QWidget):
             p_name = param.get('name')
 
             if p_type == 'file':
-                le = QLineEdit(); btn = QPushButton(); btn.setIcon(QIcon(str(FOLDER_ICON_PATH))); btn.setIconSize(QSize(20, 20)); btn.setFixedWidth(40)
+                le = QLineEdit(); btn = QPushButton(); btn.setIcon(get_icon(FOLDER_ICON_PATH)); btn.setIconSize(QSize(20, 20)); btn.setFixedWidth(40)
                 btn.clicked.connect(lambda ch, l=le: self.browse_file(l))
                 param_layout.addWidget(le); param_layout.addWidget(btn); self.param_widgets[p_name] = le
             elif p_type in ['text', 'number']:

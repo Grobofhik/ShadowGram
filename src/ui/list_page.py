@@ -4,6 +4,7 @@ from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButt
 from PyQt6.QtGui import QPixmap, QIcon
 from PyQt6.QtCore import Qt, pyqtSignal, QPropertyAnimation, QEasingCurve, QParallelAnimationGroup, QSize, QTimer
 import json
+from src.ui.icon_cache import get_icon
 
 """
 Страница списка аккаунтов.
@@ -28,8 +29,9 @@ import json
 - open_create_profile_dialog: открытие диалога создания профиля
 """
 
-from src.core import logic
+from src.core.managers import proxy_manager, farm_manager, config_manager, hw_manager, process_manager, account_manager
 from src import styles
+from src.core.logger import logger
 from src.ui.account_row import TelegramAccountRow
 from src.core.constants import (
     CONFIG_FILE, ICON_PATH, LOGO_PATH, SUCCESS_ICON_PATH, 
@@ -64,7 +66,7 @@ class CreateProfileDialog(QDialog):
         
         btn_br = QPushButton()
         btn_br.setFixedWidth(40)
-        btn_br.setIcon(QIcon(str(FOLDER_ICON_PATH)))
+        btn_br.setIcon(get_icon(FOLDER_ICON_PATH))
         btn_br.setIconSize(QSize(20, 20))
         btn_br.clicked.connect(self.browse_directory)
         path_l.addWidget(btn_br)
@@ -76,13 +78,23 @@ class CreateProfileDialog(QDialog):
         proxy_l.addWidget(self.input_proxy)
         
         self.btn_check_creation_proxy = QPushButton()
-        self.btn_check_creation_proxy.setIcon(QIcon(str(NEW_PROXY_ICON_PATH)))
+        self.btn_check_creation_proxy.setIcon(get_icon(NEW_PROXY_ICON_PATH))
         self.btn_check_creation_proxy.setIconSize(QSize(22, 22))
         self.btn_check_creation_proxy.setObjectName("CheckBtn")
         self.btn_check_creation_proxy.setFixedWidth(40)
         self.btn_check_creation_proxy.clicked.connect(self.run_creation_proxy_check)
         proxy_l.addWidget(self.btn_check_creation_proxy)
         layout.addLayout(proxy_l)
+        
+        api_l = QHBoxLayout()
+        self.input_api_id = QLineEdit()
+        self.input_api_id.setPlaceholderText("API ID (опционально)")
+        api_l.addWidget(self.input_api_id)
+        
+        self.input_api_hash = QLineEdit()
+        self.input_api_hash.setPlaceholderText("API Hash (опционально)")
+        api_l.addWidget(self.input_api_hash)
+        layout.addLayout(api_l)
 
         btn_add = QPushButton("Создать")
         btn_add.setObjectName("LaunchBtn")
@@ -100,7 +112,7 @@ class CreateProfileDialog(QDialog):
         if not text:
             self.input_path.clear()
             return
-        farm_dir = logic.get_active_farm_dir()
+        farm_dir = farm_manager.get_active_farm_dir()
         suggested_path = farm_dir / "accounts" / text
         self.input_path.setText(str(suggested_path))
 
@@ -115,7 +127,7 @@ class CreateProfileDialog(QDialog):
         self.btn_check_creation_proxy.style().unpolish(self.btn_check_creation_proxy)
         self.btn_check_creation_proxy.style().polish(self.btn_check_creation_proxy)
         self.btn_check_creation_proxy.setEnabled(False)
-        threading.Thread(target=lambda: self.parent().creation_proxy_check_finished.emit(logic.check_proxy_validity(p_url)), daemon=True).start()
+        threading.Thread(target=lambda: self.parent().creation_proxy_check_finished.emit(proxy_manager.check_proxy_validity(p_url)), daemon=True).start()
 
     def set_proxy_status(self, is_valid):
         self.btn_check_creation_proxy.setEnabled(True)
@@ -129,15 +141,20 @@ class CreateProfileDialog(QDialog):
         name = self.input_name.text().strip()
         path = self.input_path.text().strip()
         proxy = self.input_proxy.text().strip() or None
+        api_id = self.input_api_id.text().strip() or None
+        api_hash = self.input_api_hash.text().strip() or None
+        
         if not name or not path:
             QMessageBox.warning(self, "Ошибка", "Заполните имя и путь!")
             return
-        if logic.add_account(CONFIG_FILE, name, path, proxy):
+        if account_manager.add_account(CONFIG_FILE, name, path, proxy, api_id=api_id, api_hash=api_hash):
             if hasattr(self.parent(), "refresh_accounts"):
                 self.parent().refresh_accounts()
             self.input_name.clear()
             self.input_path.clear()
             self.input_proxy.clear()
+            self.input_api_id.clear()
+            self.input_api_hash.clear()
             self.btn_check_creation_proxy.setProperty("status", "default")
             self.btn_check_creation_proxy.style().unpolish(self.btn_check_creation_proxy)
             self.btn_check_creation_proxy.style().polish(self.btn_check_creation_proxy)
@@ -178,22 +195,22 @@ class AccountListPage(QWidget):
         for btn_text, slot in [(" Запустить", self.bulk_launch), (" Остановить", self.bulk_stop), (" Проверить", self.bulk_check_proxy), (" Кэш", self.bulk_clear_cache)]:
             btn = QPushButton(btn_text)
             if btn_text == " Запустить":
-                btn.setIcon(QIcon(str(SUCCESS_ICON_PATH)))
+                btn.setIcon(get_icon(SUCCESS_ICON_PATH))
                 btn.setIconSize(QSize(20, 20))
             elif btn_text == " Остановить":
-                btn.setIcon(QIcon(str(CANCEL_ICON_PATH)))
+                btn.setIcon(get_icon(CANCEL_ICON_PATH))
                 btn.setIconSize(QSize(20, 20))
             elif btn_text == " Проверить":
-                btn.setIcon(QIcon(str(PROXY_ICON_PATH)))
+                btn.setIcon(get_icon(PROXY_ICON_PATH))
                 btn.setIconSize(QSize(20, 20))
             elif btn_text == " Кэш":
-                btn.setIcon(QIcon(str(CASH_ICON_PATH)))
+                btn.setIcon(get_icon(CASH_ICON_PATH))
                 btn.setIconSize(QSize(22, 22))
             btn.clicked.connect(slot)
             toolbar.addWidget(btn)
             
         self.btn_toggle_proxies = QPushButton()
-        self.btn_toggle_proxies.setIcon(QIcon(str(VIEV_ICON_PATH)))
+        self.btn_toggle_proxies.setIcon(get_icon(VIEV_ICON_PATH))
         self.btn_toggle_proxies.setIconSize(QSize(24, 24))
         self.btn_toggle_proxies.setFixedWidth(45)
         self.btn_toggle_proxies.setToolTip("Показать/Скрыть все прокси")
@@ -253,12 +270,12 @@ class AccountListPage(QWidget):
         self.rows = []
         
         try:
-            data = logic._read_config(CONFIG_FILE)
+            data = config_manager._read_config(CONFIG_FILE)
             self.is_compact_mode = data.get("settings", {}).get("compact_mode", False)
         except Exception:
             self.is_compact_mode = False
         
-        self._accounts_to_load = logic.load_config(CONFIG_FILE)
+        self._accounts_to_load = config_manager.load_config(CONFIG_FILE)
         if self._accounts_to_load:
             self._load_timer = QTimer(self)
             self._load_timer.timeout.connect(self._load_next_batch)
@@ -296,7 +313,7 @@ class AccountListPage(QWidget):
         if self.is_animating: return
         
         try:
-            data = logic._read_config(CONFIG_FILE)
+            data = config_manager._read_config(CONFIG_FILE)
             accounts = data.get("accounts", [])
             
             idx = -1
@@ -311,11 +328,11 @@ class AccountListPage(QWidget):
             if 0 <= new_idx < len(accounts):
                 accounts[idx], accounts[new_idx] = accounts[new_idx], accounts[idx]
                 data["accounts"] = accounts
-                logic._write_config(CONFIG_FILE, data)
+                config_manager._write_config(CONFIG_FILE, data)
                 self.animate_swap(idx, new_idx)
                 
         except Exception as e:
-            print(f"Ошибка перемещения: {e}")
+            logger.error(f"Ошибка перемещения: {e}")
 
     def animate_swap(self, idx1, idx2):
         self.is_animating = True
@@ -377,7 +394,7 @@ class AccountListPage(QWidget):
         except:
             delay = 2
 
-        self._launch_queue = [r for r in self.rows if r.checkbox.isChecked() and not logic.is_process_running(r.tg_process)]
+        self._launch_queue = [r for r in self.rows if r.checkbox.isChecked() and not process_manager.is_process_running(r.tg_process)]
         self._launch_delay = delay * 1000
         self._process_launch_queue()
 
@@ -390,7 +407,7 @@ class AccountListPage(QWidget):
 
     def bulk_stop(self):
         for r in self.rows:
-            if r.checkbox.isChecked() and logic.is_process_running(r.tg_process): r.toggle_telegram()
+            if r.checkbox.isChecked() and process_manager.is_process_running(r.tg_process): r.toggle_telegram()
 
     def bulk_check_proxy(self):
         for r in self.rows:
@@ -399,7 +416,7 @@ class AccountListPage(QWidget):
     def bulk_clear_cache(self):
         cleared = 0
         for r in self.rows:
-            if r.checkbox.isChecked() and not logic.is_process_running(r.tg_process):
-                logic.clear_cache(r.workdir)
+            if r.checkbox.isChecked() and not process_manager.is_process_running(r.tg_process):
+                process_manager.clear_cache(r.workdir)
                 cleared += 1
         QMessageBox.information(self, "Очистка кэша", f"Очищен кэш у {cleared} аккаунтов.")

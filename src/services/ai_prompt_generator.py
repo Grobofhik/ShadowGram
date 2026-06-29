@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
                              QPushButton, QLineEdit, QListWidget, QMessageBox, 
                              QTextEdit, QProgressBar, QComboBox)
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
-from src.core import logic
+from src.core.managers import proxy_manager, farm_manager, config_manager, hw_manager, process_manager, account_manager
 from src.core.constants import CONFIG_FILE
 from src import styles
 
@@ -79,7 +79,7 @@ class PromptGeneratorWorker(QThread):
                     data = response.json()
                     generated_prompt = data['choices'][0]['message']['content'].strip()
                     
-                    if logic.update_prompt(CONFIG_FILE, acc['workdir'], generated_prompt):
+                    if account_manager.update_prompt(CONFIG_FILE, acc['workdir'], generated_prompt):
                         updated_count += 1
                         self.log_update.emit(f"✓ Успешно для {acc['name']}")
                 else:
@@ -194,7 +194,7 @@ class AIPromptGeneratorService(QDialog):
         layout.addLayout(bottom_layout)
 
     def load_accounts(self):
-        self.accounts = logic.load_config(CONFIG_FILE)
+        self.accounts = config_manager.load_config(CONFIG_FILE)
         for acc in self.accounts:
             self.list_widget.addItem(acc['name'])
 

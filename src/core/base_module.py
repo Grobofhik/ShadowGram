@@ -45,6 +45,10 @@ class BaseModule:
     # По дефолту от 3 до 6 часов.
     CYCLE_DELAY: Tuple[int, int] = (10800, 21600)
 
+    # Глобальная блокировка для синхронизации действий между аккаунтами
+    _global_action_lock: Optional[asyncio.Lock] = None
+    _last_global_action_time: float = 0.0
+
     def __init__(
         self,
         account_data: Dict[str, Any],
@@ -68,7 +72,7 @@ class BaseModule:
         self.stealth_mode = False
         try:
             from src.core.constants import CONFIG_FILE
-            from src.core.logic import _read_config
+            from src.core.managers.config_manager import _read_config
             config = _read_config(CONFIG_FILE)
             self.stealth_mode = config.get("settings", {}).get("stealth_mode", False)
         except Exception:
@@ -101,6 +105,34 @@ class BaseModule:
             
         if getattr(self, "is_stopped", False):
             raise asyncio.CancelledError("Модуль остановлен пользователем")
+
+    @classmethod
+    def _get_global_lock(cls) -> asyncio.Lock:
+        if cls._global_action_lock is None:
+            cls._global_action_lock = asyncio.Lock()
+        return cls._global_action_lock
+
+    async def wait_global_delay(self, min_seconds: int = 40, max_seconds: int = 80) -> None:
+        """
+        Синхронизирует аккаунты: гарантирует, что между вызовами этой функции 
+        с разных аккаунтов пройдет от min_seconds до max_seconds случайного времени.
+        Полезно для предотвращения одновременного спама от разных сессий.
+        """
+        import random
+        
+        lock = self._get_global_lock()
+        
+        async with lock:
+            now = time.time()
+            target_delay = random.uniform(min_seconds, max_seconds)
+            elapsed = now - BaseModule._last_global_action_time
+            
+            if elapsed < target_delay:
+                wait_time = target_delay - elapsed
+                self.log(f"Глобальная пауза безопасности: {wait_time:.1f} сек...", "warning")
+                await self.sleep(wait_time)
+            
+            BaseModule._last_global_action_time = time.time()
 
     def log(self, message: str, status: str = "info") -> None:
         """Отправляет отформатированное сообщение в UI"""
@@ -187,7 +219,7 @@ class BaseModule:
         
         is_socks = self.proxy_url.startswith("socks5://") or self.proxy_url.startswith("socks4://")
         if is_socks:
-            from src.core.logic import parse_proxy_url
+            from src.core.managers.proxy_manager import parse_proxy_url
             proxy_info = parse_proxy_url(self.proxy_url)
             if proxy_info:
                 self.log(f"Использую SOCKS прокси напрямую: {proxy_info['hostname']}:{proxy_info['port']}", "info")
@@ -239,14 +271,20 @@ class BaseModule:
         except: pass
         
         try:
+            from src.core.constants import CONFIG_FILE
+            from src.core.managers.account_manager import get_hardware_profile
+            hw_profile = get_hardware_profile(CONFIG_FILE, os.path.dirname(session_path))
+            
             self.client = Client(
                 name=os.path.basename(session_path),
                 api_id=int(self.api_id),
                 api_hash=self.api_hash,
                 workdir=os.path.dirname(session_path),
                 proxy=proxy_settings,
-                device_model=self.device_name,
-                system_version="Linux 6.x",
+                device_model=hw_profile.get("device_model", "PC 64bit"),
+                system_version=hw_profile.get("system_version", "Windows 10"),
+                app_version=hw_profile.get("app_version", "4.8.4 x64"),
+                lang_code=hw_profile.get("lang_code", "en"),
                 sleep_threshold=60
             )
             # Добавляем таймаут для предотвращения вечного зависания при недоступности прокси/сети

@@ -3,6 +3,7 @@ import subprocess
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QStackedWidget, QFrame, QLabel, QPushButton, QMenu
 from PyQt6.QtGui import QPixmap, QIcon
 from PyQt6.QtCore import QTimer, QEvent, Qt, QSize
+from src.ui.icon_cache import get_icon
 
 """
 Главный контроллер интерфейса приложения.
@@ -21,6 +22,7 @@ from PyQt6.QtCore import QTimer, QEvent, Qt, QSize
 from src.ui.list_page import AccountListPage
 from src.ui.settings_page import SettingsPage
 from src.ui.new_modules_page import NewModulesPage
+from src.ui.table_page import AccountTablePage
 from src import styles
 from src.core.constants import (
     SOUND_PATH, LOGO_PATH, FOLDER_ICON_PATH,
@@ -97,6 +99,10 @@ class TelegramManager(QWidget):
         self.btn_new_modules.clicked.connect(self.show_new_modules)
         sidebar_layout.addWidget(self.btn_new_modules)
 
+        self.btn_table = self.create_nav_button(" Таблица (Excel)", NOTE_ICON_PATH)
+        self.btn_table.clicked.connect(self.show_table)
+        sidebar_layout.addWidget(self.btn_table)
+
         # Меню доп сервисов
         self.btn_services = self.create_nav_button(" Доп сервисы", MODULS_ICON_PATH)
         services_menu = QMenu(self)
@@ -107,6 +113,9 @@ class TelegramManager(QWidget):
 
         action_prompt_gen = services_menu.addAction("Генератор AI Промптов")
         action_prompt_gen.triggered.connect(self.open_prompt_generator)
+
+        action_mass_creator = services_menu.addAction("Массовое создание профилей")
+        action_mass_creator.triggered.connect(self.open_mass_profile_creator)
         
         self.btn_services.setMenu(services_menu)
         sidebar_layout.addWidget(self.btn_services)
@@ -130,6 +139,7 @@ class TelegramManager(QWidget):
         self.acc_list_page = AccountListPage(self)
         self.settings_page = SettingsPage()
         self.new_modules_page = NewModulesPage(self)
+        self.table_page = AccountTablePage(self)
 
         self.settings_page.back_requested.connect(self.show_list)
         self.settings_page.settings_saved.connect(self.reload_all_windows)
@@ -137,6 +147,7 @@ class TelegramManager(QWidget):
         self.stack.addWidget(self.acc_list_page)
         self.stack.addWidget(self.settings_page)
         self.stack.addWidget(self.new_modules_page)
+        self.stack.addWidget(self.table_page)
 
         main_layout.addWidget(self.stack, 1) # 1 - растягивать контент
 
@@ -145,7 +156,7 @@ class TelegramManager(QWidget):
 
     def create_nav_button(self, text, icon_path):
         btn = QPushButton(text)
-        btn.setIcon(QIcon(str(icon_path)))
+        btn.setIcon(get_icon(icon_path))
         btn.setIconSize(QSize(20, 20))
         btn.setFixedHeight(45)
         btn.setStyleSheet(f"""
@@ -181,6 +192,10 @@ class TelegramManager(QWidget):
     def show_new_modules(self):
         self.new_modules_page.refresh_accounts()
         self.stack.setCurrentWidget(self.new_modules_page)
+
+    def show_table(self):
+        self.table_page.refresh_data()
+        self.stack.setCurrentWidget(self.table_page)
 
     def reload_all_windows(self):
         from src import styles, modules_styles
@@ -253,7 +268,7 @@ class TelegramManager(QWidget):
                 image: none;
             }}
         """
-        for btn in [self.btn_main, self.btn_create_profile, self.btn_server, self.btn_modules, self.btn_new_modules, self.btn_services, self.btn_docs, self.btn_settings]:
+        for btn in [self.btn_main, self.btn_create_profile, self.btn_server, self.btn_modules, self.btn_new_modules, self.btn_table, self.btn_services, self.btn_docs, self.btn_settings]:
             btn.setStyleSheet(btn_style)
             
         # Меню доп сервисов
@@ -287,6 +302,11 @@ class TelegramManager(QWidget):
 
     def open_prompt_generator(self):
         self.acc_list_page.open_prompt_generator()
+
+    def open_mass_profile_creator(self):
+        from src.services.mass_profile_creator import MassProfileCreatorService
+        service = MassProfileCreatorService(self)
+        service.exec()
 
     def sync_status(self):
         for r in self.acc_list_page.rows:

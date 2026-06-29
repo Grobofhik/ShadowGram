@@ -47,6 +47,9 @@ class FollowerPlugin(BaseModule):
                     # Очищаем ссылку от лишних символов, если юзер случайно их скопировал
                     clean_link = link.replace(" ", "")
                     
+                    # Глобальная задержка между аккаунтами (защита от спама)
+                    await self.wait_global_delay(min_seconds=40, max_seconds=80)
+                    
                     chat = await self.client.join_chat(clean_link)
                     self.log(f"✅ Успешно вступил в чат: {chat.title}", "success")
                     

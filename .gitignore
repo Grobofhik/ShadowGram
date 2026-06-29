@@ -32,7 +32,10 @@ AppRun
 # Logs and Local State
 unknown_errors.txt
 active_farm.txt
-image.png
+emails.txt
+accounts.csv
+Webshare*.txt
+*.bak
 
 # User content
 avatars/*

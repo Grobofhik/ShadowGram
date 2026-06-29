@@ -1,3 +1,4 @@
+from src.ui.icon_cache import get_icon
 import os
 import shutil
 import json
@@ -10,7 +11,7 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                              QTabWidget, QTableWidget, QTableWidgetItem, QHeaderView)
 from PyQt6.QtGui import QPixmap, QIcon, QPainter, QPainterPath, QColor, QPen
 from PyQt6.QtCore import Qt, pyqtSignal, QThread, QSize, pyqtProperty, QEasingCurve, QPropertyAnimation
-from src.core import logic
+from src.core.managers import proxy_manager, farm_manager, config_manager, hw_manager, process_manager, account_manager
 from src.core.constants import CONFIG_FILE, ROCKET_ICON_PATH, FOLDER_ICON_PATH, SUCCESS_ICON_PATH, CANCEL_ICON_PATH
 from src.modules.plugins.smart_warmer import SmartWarmerPlugin
 from src.modules.plugins.smart_commenter import SmartCommenterPlugin
@@ -261,7 +262,7 @@ class MassAvatarUpdateWorker(QThread):
             if proxy_url:
                 is_socks = proxy_url.startswith("socks5://") or proxy_url.startswith("socks4://")
                 if is_socks:
-                    from src.core.logic import parse_proxy_url
+                    from src.core.managers.proxy_manager import parse_proxy_url
                     proxy_settings = parse_proxy_url(proxy_url)
                 else:
                     from src.modules.session_checker import _setup_proxy
@@ -270,14 +271,20 @@ class MassAvatarUpdateWorker(QThread):
                         self.log_signal.emit(f"[{acc['name']}] Ошибка прокси-туннеля!", "error")
                         return
 
+            from src.core.constants import CONFIG_FILE
+            from src.core.managers.account_manager import get_hardware_profile
+            hw_profile = get_hardware_profile(CONFIG_FILE, str(session_file.parent))
+
             client = Client(
                 name=session_file.stem,
-                api_id=int(self.api_id),
-                api_hash=self.api_hash,
+                api_id=int(acc.get("api_id", 0)),
+                api_hash=acc.get("api_hash", ""),
                 workdir=str(session_file.parent),
                 proxy=proxy_settings,
-                device_model=device_name or "PC",
-                system_version="Linux"
+                device_model=hw_profile.get("device_model", "PC 64bit"),
+                system_version=hw_profile.get("system_version", "Windows 10"),
+                app_version=hw_profile.get("app_version", "4.8.4 x64"),
+                lang_code=hw_profile.get("lang_code", "en"),
             )
             
             try:
@@ -412,7 +419,7 @@ class CommentingExecutionWorker(QThread):
                     self.log_signal.emit(acc_name, msg)
                 
                 self.status_signal.emit(acc_name, "Запуск...")
-                plugin = SmartCommenterPlugin(acc, self.api_id, self.api_hash, log_cb)
+                plugin = SmartCommenterPlugin(acc, acc.get("api_id", 0), acc.get("api_hash", ""), log_cb)
                 plugin.is_paused = self._is_paused
                 
                 def status_cb(status_str):
@@ -865,7 +872,7 @@ class CommentingControlWindow(QDialog):
             with open(CONFIG_FILE, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=4, ensure_ascii=False)
                 
-            logic.save_active_farm_config()
+            farm_manager.save_active_farm_config()
             
             if hasattr(self.parent, "refresh_accounts"):
                 self.parent.refresh_accounts()
@@ -955,7 +962,7 @@ class ProfileOperationWorker(QThread):
             self.log_signal.emit("Настройка прокси...", "info")
             is_socks = proxy_url.startswith("socks5://") or proxy_url.startswith("socks4://")
             if is_socks:
-                from src.core.logic import parse_proxy_url
+                from src.core.managers.proxy_manager import parse_proxy_url
                 proxy_settings = parse_proxy_url(proxy_url)
             else:
                 from src.modules.session_checker import _setup_proxy
@@ -966,14 +973,20 @@ class ProfileOperationWorker(QThread):
                     return
 
         self.log_signal.emit("Подключение к Telegram через Hydrogram...", "info")
+        from src.core.constants import CONFIG_FILE
+        from src.core.managers.account_manager import get_hardware_profile
+        hw_profile = get_hardware_profile(CONFIG_FILE, str(session_file.parent))
+
         self.client = Client(
             name=session_file.stem,
-            api_id=int(self.api_id),
-            api_hash=self.api_hash,
+            api_id=int(self.acc.get("api_id", 0)),
+            api_hash=self.acc.get("api_hash", ""),
             workdir=str(session_file.parent),
             proxy=proxy_settings,
-            device_model=device_name or "PC",
-            system_version="Linux"
+            device_model=hw_profile.get("device_model", "PC 64bit"),
+            system_version=hw_profile.get("system_version", "Windows 10"),
+            app_version=hw_profile.get("app_version", "4.8.4 x64"),
+            lang_code=hw_profile.get("lang_code", "en"),
         )
         
         try:
@@ -1207,7 +1220,7 @@ class WarmerExecutionWorker(QThread):
                     # Отправляем логи в общий UI с пометкой аккаунта
                     self.log_signal.emit(msg, "info")
                 
-                plugin = SmartWarmerPlugin(acc, self.api_id, self.api_hash, log_cb)
+                plugin = SmartWarmerPlugin(acc, acc.get("api_id", 0), acc.get("api_hash", ""), log_cb)
                 plugin.selected_accounts = self.accounts
                 self.instances.append(plugin)
                 try:
@@ -2158,7 +2171,7 @@ class NewModulesPage(QWidget):
         title_layout.addWidget(self.acc_combo)
 
         btn_refresh = QPushButton()
-        btn_refresh.setIcon(QIcon(str(FOLDER_ICON_PATH)))
+        btn_refresh.setIcon(get_icon(FOLDER_ICON_PATH))
         btn_refresh.setIconSize(QSize(16, 16))
         btn_refresh.setFixedSize(30, 30)
         btn_refresh.clicked.connect(self.refresh_accounts)
@@ -2780,7 +2793,7 @@ class NewModulesPage(QWidget):
         title_layout.addWidget(self.acc_combo)
 
         btn_refresh = QPushButton()
-        btn_refresh.setIcon(QIcon(str(FOLDER_ICON_PATH)))
+        btn_refresh.setIcon(get_icon(FOLDER_ICON_PATH))
         btn_refresh.setIconSize(QSize(16, 16))
         btn_refresh.setFixedSize(30, 30)
         btn_refresh.clicked.connect(self.refresh_accounts)
@@ -3850,7 +3863,7 @@ class NewModulesPage(QWidget):
             with open(CONFIG_FILE, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=4, ensure_ascii=False)
             
-            logic.save_active_farm_config()
+            farm_manager.save_active_farm_config()
             self.refresh_accounts()
             self.append_log("Все настройки нейрокомментирования сохранены в конфигурацию.", "success")
         except Exception as e:
@@ -3870,9 +3883,9 @@ class NewModulesPage(QWidget):
             self.distribute_channels_evenly()
             self.save_commenting_settings_locally()
             
-        api_id, api_hash = self.get_api_credentials()
-        if not api_id or not api_hash:
-            QMessageBox.critical(self, "Ошибка", "В настройках приложения не заполнены API ID или API Hash!")
+        missing_apis = [acc.get("name") for acc in block_accounts if not acc.get("api_id") or not acc.get("api_hash")]
+        if missing_apis:
+            QMessageBox.critical(self, "Ошибка", f"У следующих аккаунтов не заполнены API ID/Hash:\n{', '.join(missing_apis)}")
             return
             
         # Загрузим глобальные дефолтные настройки для проверки валидности
@@ -3958,7 +3971,7 @@ class NewModulesPage(QWidget):
         self.acc_combo.blockSignals(True)
         self.acc_combo.clear()
         
-        self.all_accounts = logic.load_config(CONFIG_FILE)
+        self.all_accounts = config_manager.load_config(CONFIG_FILE)
         self.accounts_map = {acc["name"]: acc for acc in self.all_accounts}
         
         self.acc_combo.addItems(list(self.accounts_map.keys()))
@@ -4179,7 +4192,7 @@ class NewModulesPage(QWidget):
             is_running = False
             for row in getattr(self.mgr.acc_list_page, "rows", []):
                 if row.name == acc["name"] and row.workdir == acc["workdir"]:
-                    if logic.is_process_running(row.tg_process):
+                    if process_manager.is_process_running(row.tg_process):
                         is_running = True
                     break
             
@@ -4205,7 +4218,7 @@ class NewModulesPage(QWidget):
             is_running = False
             for row in getattr(self.mgr.acc_list_page, "rows", []):
                 if row.name == acc["name"] and row.workdir == acc["workdir"]:
-                    if logic.is_process_running(row.tg_process):
+                    if process_manager.is_process_running(row.tg_process):
                         is_running = True
                     break
             item_frame = self.create_selector_item_row(acc, is_running, to_selected=False)
@@ -4318,7 +4331,7 @@ class NewModulesPage(QWidget):
             is_running = False
             for row in getattr(self.mgr.acc_list_page, "rows", []):
                 if row.name == acc["name"] and row.workdir == acc["workdir"]:
-                    if logic.is_process_running(row.tg_process):
+                    if process_manager.is_process_running(row.tg_process):
                         is_running = True
                     break
             
@@ -4424,9 +4437,9 @@ class NewModulesPage(QWidget):
             QMessageBox.warning(self, "Внимание", "Аккаунт не выбран!")
             return
         
-        api_id, api_hash = self.get_api_credentials()
+        api_id, api_hash = acc_data.get("api_id"), acc_data.get("api_hash")
         if not api_id or not api_hash:
-            QMessageBox.critical(self, "Ошибка", "В настройках не заполнены API ID или API Hash!")
+            QMessageBox.critical(self, "Ошибка", f"В профиле аккаунта {acc_name} не заполнены API ID или API Hash!")
             return
             
         acc_data = self.accounts_map[acc_name]
@@ -4462,7 +4475,7 @@ class NewModulesPage(QWidget):
                 acc_name = self.acc_combo.currentText()
                 if acc_name in self.accounts_map:
                     acc_data = self.accounts_map[acc_name]
-                    logic.update_bound_channel(CONFIG_FILE, acc_data["workdir"], message)
+                    account_manager.update_bound_channel(CONFIG_FILE, acc_data["workdir"], message)
                     acc_data["bound_channel"] = message
                     self.append_log(f"Канал {message} успешно создан и привязан к текущему профилю аккаунта.", "success")
                     self.update_channel_section_visibility()
@@ -4520,7 +4533,7 @@ class NewModulesPage(QWidget):
             acc_data["bio"] = bio
             
             # Обновление в config.json
-            logic.update_account_profile_data(
+            account_manager.update_account_profile_data(
                 CONFIG_FILE,
                 acc_data["workdir"],
                 first_name,
@@ -4578,10 +4591,12 @@ class NewModulesPage(QWidget):
             QMessageBox.warning(self, "Внимание", "Не выбрано ни одного аккаунта для установки аватарок!")
             return
 
-        api_id, api_hash = self.get_api_credentials()
-        if not api_id or not api_hash:
-            QMessageBox.critical(self, "Ошибка", "В настройках не заполнены API ID или API Hash!")
+        missing_apis = [acc.get("name") for acc in self.selected_accounts if not acc.get("api_id") or not acc.get("api_hash")]
+        if missing_apis:
+            QMessageBox.critical(self, "Ошибка", f"У следующих аккаунтов не заполнены API ID/Hash:\n{', '.join(missing_apis)}")
             return
+            
+        api_id, api_hash = 0, ""
 
         from src.core.constants import BASE_DIR
         avatars_dir = BASE_DIR / "avatars"
@@ -4652,7 +4667,7 @@ class NewModulesPage(QWidget):
         acc_data["bio"] = bio
         acc_data["bound_channel"] = channel
         
-        logic.update_account_profile_data(CONFIG_FILE, acc_data["workdir"], first_name, last_name, bio, channel)
+        account_manager.update_account_profile_data(CONFIG_FILE, acc_data["workdir"], first_name, last_name, bio, channel)
         self.update_channel_section_visibility()
         
         # 3. Сохраним тумблеры и ссылки на чаты
@@ -4846,7 +4861,7 @@ class NewModulesPage(QWidget):
             with open(CONFIG_FILE, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=4, ensure_ascii=False)
             
-            logic.save_active_farm_config()
+            farm_manager.save_active_farm_config()
             self.refresh_accounts()
         except Exception as e:
             self.append_log(f"Не удалось записать настройки в файл: {e}", "error")
@@ -4880,10 +4895,12 @@ class NewModulesPage(QWidget):
             QMessageBox.warning(self, "Внимание", "Выберите хотя бы один аккаунт в списке справа для запуска прогрева!")
             return
             
-        api_id, api_hash = self.get_api_credentials()
-        if not api_id or not api_hash:
-            QMessageBox.critical(self, "Ошибка", "В настройках приложения не заполнены API ID или API Hash!")
+        missing_apis = [acc.get("name") for acc in self.selected_accounts if not acc.get("api_id") or not acc.get("api_hash")]
+        if missing_apis:
+            QMessageBox.critical(self, "Ошибка", f"У следующих аккаунтов не заполнены API ID/Hash:\n{', '.join(missing_apis)}")
             return
+            
+        api_id, api_hash = 0, ""
             
         chat_links = self.input_warmup_chats.toPlainText().strip()
         if not chat_links:
