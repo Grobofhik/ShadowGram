@@ -76,6 +76,10 @@ def _write_config(config_file: Path, data):
     _last_config_path = config_file
     _last_mtime = config_file.stat().st_mtime
     save_active_farm_config()
+    
+    # Зеркалируем данные в SQLite для дашборда и аналитики
+    from src.core.managers.db_manager import mirror_to_sqlite
+    mirror_to_sqlite(config_file, data)
 
 
 def export_backup(

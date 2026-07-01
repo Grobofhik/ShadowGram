@@ -51,6 +51,7 @@ class TelegramAccountRow(QFrame):
     session_check_finished = pyqtSignal(str, str)
     account_removed = pyqtSignal()
     move_requested = pyqtSignal(QFrame, int)
+    status_cache = {}  # Кэш статусов сессий в памяти
 
     def __init__(self, name, workdir, proxy_url=None, notes=None, device_name=None, ai_prompt=None):
         super().__init__()
@@ -355,8 +356,15 @@ class TelegramAccountRow(QFrame):
         st = "alive" if status == "Alive" else "banned" if status in ["Banned", "Unauthorized"] else "error" if status == "Error" else "default"
         self.btn_session.setProperty("status", st)
         self.refresh_btn_style(self.btn_session)
+        TelegramAccountRow.status_cache[self.workdir] = message
         if status == "Alive": 
             self.load_avatar()
+            
+        if hasattr(self, 'profile_window') and self.profile_window:
+            try:
+                self.profile_window.status_label.setText(f"Status: {message}")
+            except Exception:
+                pass
             
         if getattr(self, 'profile_window', None) and self.profile_window.isVisible():
             from src.core.managers import config_manager

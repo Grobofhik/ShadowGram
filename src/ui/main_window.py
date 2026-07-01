@@ -23,23 +23,36 @@ from src.ui.list_page import AccountListPage
 from src.ui.settings_page import SettingsPage
 from src.ui.new_modules_page import NewModulesPage
 from src.ui.table_page import AccountTablePage
+from src.ui.docs_window import DocsPage
 from src import styles
 from src.core.constants import (
     SOUND_PATH, LOGO_PATH, FOLDER_ICON_PATH,
     SERVER_ICON_PATH, MODULS_ICON_PATH, 
-    NOTE_ICON_PATH, SETTINGS_ICON_PATH, ROCKET_ICON_PATH
+    NOTE_ICON_PATH, SETTINGS_ICON_PATH, ROCKET_ICON_PATH,
+    SEARCH_ICON_PATH, USERS_ICON_PATH
 )
 
 class TelegramManager(QWidget):
     def __init__(self):
         super().__init__()
-        self.modules_win = None
-        self.server_win = None
         self.init_ui()
         self.init_audio()
+        self.setup_tray()
         self.timer = QTimer()
         self.timer.timeout.connect(self.sync_status)
         self.timer.start(1000)
+
+    def clear_nav_selection(self):
+        self.btn_dashboard.setChecked(False)
+        self.btn_accounts.setChecked(False)
+        self.btn_modules.setChecked(False)
+        self.btn_settings.setChecked(False)
+        self.btn_docs.setChecked(False)
+
+    def show_dashboard(self):
+        self.clear_nav_selection()
+        self.btn_dashboard.setChecked(True)
+        self.stack.setCurrentWidget(self.dashboard_page)
 
     def init_ui(self):
         self.setWindowTitle("Shadowgram")
@@ -56,8 +69,8 @@ class TelegramManager(QWidget):
         self.sidebar.setStyleSheet(f"QFrame#Sidebar {{ background-color: {styles.COLOR_ACCENT_BG}; border-right: 1px solid {styles.COLOR_BORDER}; }}")
         
         sidebar_layout = QVBoxLayout(self.sidebar)
-        sidebar_layout.setContentsMargins(15, 20, 15, 20)
-        sidebar_layout.setSpacing(10)
+        sidebar_layout.setContentsMargins(10, 30, 10, 30)
+        sidebar_layout.setSpacing(15)
 
         # Логотип и заголовок
         logo_layout = QHBoxLayout()
@@ -79,11 +92,12 @@ class TelegramManager(QWidget):
         sidebar_layout.addSpacing(10)
 
         # Навигационные кнопки
-        self.btn_main = self.create_nav_button(" Главная", FOLDER_ICON_PATH)
-        self.btn_main.clicked.connect(self.show_list)
-        sidebar_layout.addWidget(self.btn_main)
+        self.btn_accounts = self.create_nav_button(" Аккаунты", USERS_ICON_PATH)
+        self.btn_accounts.clicked.connect(self.show_list)
+        self.btn_accounts.setChecked(True)
+        sidebar_layout.addWidget(self.btn_accounts)
 
-        self.btn_create_profile = self.create_nav_button(" Создать профиль", FOLDER_ICON_PATH) # Можно заменить иконку
+        self.btn_create_profile = self.create_nav_button(" Создать профиль", FOLDER_ICON_PATH)
         self.btn_create_profile.clicked.connect(self.open_create_profile)
         sidebar_layout.addWidget(self.btn_create_profile)
 
@@ -95,29 +109,21 @@ class TelegramManager(QWidget):
         self.btn_modules.clicked.connect(self.show_modules)
         sidebar_layout.addWidget(self.btn_modules)
 
-        self.btn_new_modules = self.create_nav_button(" Новые модули", ROCKET_ICON_PATH)
+        self.btn_new_modules = self.create_nav_button(" Новые Модули", MODULS_ICON_PATH)
         self.btn_new_modules.clicked.connect(self.show_new_modules)
         sidebar_layout.addWidget(self.btn_new_modules)
+        
+        self.btn_dashboard = self.create_nav_button(" Дашборд", SEARCH_ICON_PATH)
+        self.btn_dashboard.clicked.connect(self.show_dashboard)
+        sidebar_layout.addWidget(self.btn_dashboard)
 
-        self.btn_table = self.create_nav_button(" Таблица (Excel)", NOTE_ICON_PATH)
+        self.btn_table = self.create_nav_button(" Табличный Вид", NOTE_ICON_PATH)
         self.btn_table.clicked.connect(self.show_table)
         sidebar_layout.addWidget(self.btn_table)
 
         # Меню доп сервисов
         self.btn_services = self.create_nav_button(" Доп сервисы", MODULS_ICON_PATH)
-        services_menu = QMenu(self)
-        services_menu.setStyleSheet(f"QMenu {{ background-color: {styles.COLOR_CONSOLE_BG}; color: {styles.COLOR_PRIMARY}; border: 1px solid {styles.COLOR_BORDER}; }} QMenu::item {{ padding: 8px 20px; }} QMenu::item:selected {{ background-color: {styles.COLOR_SELECT_BG}; }}")
-        
-        action_device_gen = services_menu.addAction("Генератор имён устройств")
-        action_device_gen.triggered.connect(self.open_device_generator)
-
-        action_prompt_gen = services_menu.addAction("Генератор AI Промптов")
-        action_prompt_gen.triggered.connect(self.open_prompt_generator)
-
-        action_mass_creator = services_menu.addAction("Массовое создание профилей")
-        action_mass_creator.triggered.connect(self.open_mass_profile_creator)
-        
-        self.btn_services.setMenu(services_menu)
+        self.btn_services.clicked.connect(self.show_services)
         sidebar_layout.addWidget(self.btn_services)
 
         sidebar_layout.addStretch()
@@ -136,18 +142,37 @@ class TelegramManager(QWidget):
         # Стек с основным контентом
         self.stack = QStackedWidget(self)
         
+        from src.ui.dashboard_page import DashboardPage
+        self.dashboard_page = DashboardPage(self)
         self.acc_list_page = AccountListPage(self)
         self.settings_page = SettingsPage()
+        
+        from src.ui.modules_window import ModulesPage
+        from src.ui.server_window import ServerPage
+        from src.ui.services_page import ServicesPage
+        
+        self.services_page = ServicesPage(self)
+        self.modules_page = ModulesPage(self)
+        self.server_page = ServerPage(self)
+        
         self.new_modules_page = NewModulesPage(self)
         self.table_page = AccountTablePage(self)
+        self.docs_page = DocsPage()
 
         self.settings_page.back_requested.connect(self.show_list)
         self.settings_page.settings_saved.connect(self.reload_all_windows)
+        self.settings_page.docs_requested.connect(self.show_docs)
+        self.docs_page.back_requested.connect(self.show_list)
 
+        self.stack.addWidget(self.dashboard_page)
         self.stack.addWidget(self.acc_list_page)
         self.stack.addWidget(self.settings_page)
+        self.stack.addWidget(self.services_page)
+        self.stack.addWidget(self.modules_page)
+        self.stack.addWidget(self.server_page)
         self.stack.addWidget(self.new_modules_page)
         self.stack.addWidget(self.table_page)
+        self.stack.addWidget(self.docs_page)
 
         main_layout.addWidget(self.stack, 1) # 1 - растягивать контент
 
@@ -184,7 +209,88 @@ class TelegramManager(QWidget):
 
     def show_settings(self):
         self.settings_page.load_settings()
-        self.stack.setCurrentWidget(self.settings_page)
+        self.switch_page(self.settings_page)
+        self.update_nav_buttons(self.btn_settings)
+
+    def show_services(self):
+        self.switch_page(self.services_page)
+        self.update_nav_buttons(self.btn_services)
+
+    def update_nav_buttons(self, active_btn):
+        self.clear_nav_selection()
+        active_btn.setChecked(True)
+
+    def switch_page(self, page):
+        self.stack.setCurrentWidget(page)
+
+    def setup_tray(self):
+        from PyQt6.QtWidgets import QSystemTrayIcon, QMenu
+        from PyQt6.QtGui import QIcon
+        
+        self.tray_icon = QSystemTrayIcon(self)
+        # Try to load app icon if exists, otherwise use default
+        try:
+            self.tray_icon.setIcon(QIcon("src/assets/icon.png"))
+        except:
+            self.tray_icon.setIcon(QIcon.fromTheme("applications-internet"))
+            
+        tray_menu = QMenu()
+        restore_action = tray_menu.addAction("Развернуть")
+        restore_action.triggered.connect(self.showNormal)
+        quit_action = tray_menu.addAction("Выход")
+        quit_action.triggered.connect(self.close)
+        
+        self.tray_icon.setContextMenu(tray_menu)
+        self.tray_icon.show()
+
+    def notify_user(self, title: str, message: str, is_error: bool = False):
+        try:
+            import json, os
+            from src.core.constants import CONFIG_FILE
+            
+            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                s = data.get("settings", {})
+                
+            if is_error and not s.get("notify_bans", True):
+                return
+            if not is_error and not s.get("notify_finished", True):
+                return
+                
+            from PyQt6.QtWidgets import QSystemTrayIcon
+            icon_type = QSystemTrayIcon.MessageIcon.Critical if is_error else QSystemTrayIcon.MessageIcon.Information
+            self.tray_icon.showMessage(title, message, icon_type, 3000)
+            
+            if s.get("sound_alerts", True):
+                from PyQt6.QtWidgets import QApplication
+                QApplication.beep()
+        except:
+            pass
+
+    def closeEvent(self, event):
+        try:
+            import json, os, datetime
+            from src.core.constants import CONFIG_FILE
+            from src.core.managers import config_manager
+            
+            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                s = data.get("settings", {})
+                
+            if s.get("auto_backup", False):
+                os.makedirs("backups", exist_ok=True)
+                backup_path = f"backups/backup_auto_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
+                config_manager.export_backup(CONFIG_FILE, backup_path)
+                
+            if s.get("auto_clean_cache", False):
+                from src.core.managers import process_manager
+                accounts = data.get("accounts", [])
+                for acc in accounts:
+                    process_manager.clear_cache(acc.get("workdir", ""))
+        except Exception as e:
+            print(f"[DEBUG] Error during close event: {e}")
+            
+        super().closeEvent(event)
 
     def show_list(self):
         self.stack.setCurrentWidget(self.acc_list_page)
@@ -229,16 +335,32 @@ class TelegramManager(QWidget):
         self.stack.removeWidget(old_modules)
         old_modules.deleteLater()
 
-        # Обновляем страницу аккаунтов
-        self.acc_list_page.refresh_accounts()
+        # Пересоздаём modules_page
+        from src.ui.modules_window import ModulesPage
+        old_old_modules = self.modules_page
+        self.modules_page = ModulesPage(self)
+        self.stack.addWidget(self.modules_page)
+        self.stack.removeWidget(old_old_modules)
+        old_old_modules.deleteLater()
+
+        # Пересоздаём server_page
+        from src.ui.server_window import ServerPage
+        old_server = self.server_page
+        self.server_page = ServerPage(self)
+        self.stack.addWidget(self.server_page)
+        self.stack.removeWidget(old_server)
+        old_server.deleteLater()
         
-        # Закрываем вспомогательные окна — они тоже нужно перезапустить
-        if self.modules_win is not None:
-            self.modules_win.close()
-            self.modules_win = None
-        if self.server_win is not None:
-            self.server_win.close()
-            self.server_win = None
+        # Пересоздаём docs_page
+        old_docs = self.docs_page
+        self.docs_page = DocsPage()
+        self.docs_page.back_requested.connect(self.show_list)
+        self.stack.addWidget(self.docs_page)
+        self.stack.removeWidget(old_docs)
+        old_docs.deleteLater()
+
+        # Восстанавливаем текущую страницу аккаунтов
+        self.acc_list_page.refresh_accounts()
         
         # Показываем главную страницу
         self.stack.setCurrentWidget(self.acc_list_page)
@@ -268,45 +390,107 @@ class TelegramManager(QWidget):
                 image: none;
             }}
         """
-        for btn in [self.btn_main, self.btn_create_profile, self.btn_server, self.btn_modules, self.btn_new_modules, self.btn_table, self.btn_services, self.btn_docs, self.btn_settings]:
+        for btn in [self.btn_dashboard, self.btn_accounts, self.btn_create_profile, self.btn_server, self.btn_modules, self.btn_new_modules, self.btn_table, self.btn_services, self.btn_docs, self.btn_settings]:
             btn.setStyleSheet(btn_style)
-            
-        # Меню доп сервисов
-        self.btn_services.menu().setStyleSheet(f"QMenu {{ background-color: {styles.COLOR_CONSOLE_BG}; color: {styles.COLOR_PRIMARY}; border: 1px solid {styles.COLOR_BORDER}; }} QMenu::item {{ padding: 8px 20px; }} QMenu::item:selected {{ background-color: {styles.COLOR_SELECT_BG}; }}")
 
 
     def show_docs(self):
-        self.settings_page.show_docs()
+        self.stack.setCurrentWidget(self.docs_page)
 
     def show_modules(self):
-        if self.modules_win is None:
-            from src.ui.modules_window import ModulesWindow
-            self.modules_win = ModulesWindow()
-        self.modules_win.show()
-        self.modules_win.raise_()
-        self.modules_win.activateWindow()
+        self.modules_page.load_accounts()
+        self.stack.setCurrentWidget(self.modules_page)
 
     def show_server(self):
-        if self.server_win is None:
-            from src.ui.server_window import ServerWindow
-            self.server_win = ServerWindow()
-        self.server_win.show()
-        self.server_win.raise_()
-        self.server_win.activateWindow()
+        self.stack.setCurrentWidget(self.server_page)
 
     def open_create_profile(self):
         self.acc_list_page.open_create_profile_dialog()
 
+    def _embed_service_page(self, widget_instance, title="Доп сервис"):
+        from PyQt6.QtWidgets import QWidget, QVBoxLayout, QPushButton, QLabel, QHBoxLayout
+        from PyQt6.QtCore import Qt
+        from src import styles
+        
+        container = QWidget()
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(0, 0, 0, 0)
+        
+        header_widget = QWidget()
+        header_widget.setStyleSheet(f"background-color: {styles.COLOR_CONSOLE_BG}; border-bottom: 1px solid {styles.COLOR_BORDER};")
+        header_layout = QHBoxLayout(header_widget)
+        header_layout.setContentsMargins(20, 15, 20, 15)
+        
+        btn_back = QPushButton("⬅ Назад к сервисам")
+        btn_back.setStyleSheet(f"""
+            QPushButton {{
+                background-color: transparent;
+                color: {styles.COLOR_TEXT_MAIN};
+                border: 1px solid {styles.COLOR_BORDER};
+                border-radius: 6px;
+                padding: 8px 15px;
+                font-weight: bold;
+            }}
+            QPushButton:hover {{
+                background-color: {styles.COLOR_HOVER_BG};
+                color: {styles.COLOR_PRIMARY};
+                border-color: {styles.COLOR_PRIMARY};
+            }}
+        """)
+        btn_back.clicked.connect(self.show_services)
+        header_layout.addWidget(btn_back)
+        
+        lbl_title = QLabel(title)
+        lbl_title.setStyleSheet(f"font-size: 18px; font-weight: bold; color: {styles.COLOR_TEXT_MAIN}; margin-left: 15px; border: none;")
+        header_layout.addWidget(lbl_title)
+        header_layout.addStretch()
+        
+        layout.addWidget(header_widget)
+        
+        content_wrapper = QWidget()
+        content_wrapper_layout = QVBoxLayout(content_wrapper)
+        content_wrapper_layout.setContentsMargins(20, 20, 20, 20)
+        
+        from PyQt6.QtWidgets import QDialog
+        if isinstance(widget_instance, QDialog):
+            widget_instance.setWindowFlags(Qt.WindowType.Widget)
+            
+        content_wrapper_layout.addWidget(widget_instance)
+        
+        layout.addWidget(content_wrapper, 1)
+        
+        self.stack.addWidget(container)
+        self.switch_page(container)
+
     def open_device_generator(self):
-        self.acc_list_page.open_device_generator()
+        from src.services.device_generator import DeviceNameGeneratorService
+        service = DeviceNameGeneratorService(self)
+        self._embed_service_page(service, "Генератор имён устройств")
+
+    def open_api_generator(self):
+        from src.ui.api_generator_window import ApiGeneratorWindow
+        service = ApiGeneratorWindow(self)
+        self._embed_service_page(service, "Генератор API ID/HASH")
 
     def open_prompt_generator(self):
-        self.acc_list_page.open_prompt_generator()
+        from src.services.ai_prompt_generator import AIPromptGeneratorService
+        service = AIPromptGeneratorService(self)
+        self._embed_service_page(service, "Генератор AI Промптов")
 
     def open_mass_profile_creator(self):
         from src.services.mass_profile_creator import MassProfileCreatorService
         service = MassProfileCreatorService(self)
-        service.exec()
+        self._embed_service_page(service, "Массовое создание профилей")
+
+    def open_tdata_converter(self):
+        from src.ui.tdata_converter_window import TDataConverterWindow
+        service = TDataConverterWindow(self)
+        self._embed_service_page(service, "Конвертер TData")
+
+    def update_sidebar_icons(self):
+        for r in self.acc_list_page.rows:
+            if r.tg_process is not None:
+                r.check_status()
 
     def sync_status(self):
         for r in self.acc_list_page.rows:

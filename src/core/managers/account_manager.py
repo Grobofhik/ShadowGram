@@ -111,6 +111,22 @@ def add_account(
             "device_name": device_name,
         }
         
+        if not api_id or not api_hash:
+            settings = data.get("settings", {})
+            def_api_id = settings.get("default_tg_api_id", "")
+            def_api_hash = settings.get("default_tg_api_hash", "")
+            if not api_id and def_api_id:
+                api_id = def_api_id
+            if not api_hash and def_api_hash:
+                api_hash = def_api_hash
+                
+            # Если ключи всё еще пустые (или 0), присваиваем динамические от оф. клиентов!
+            if not api_id or not api_hash or str(api_id) == "0":
+                from src.core.managers.api_manager import get_dynamic_api_credentials
+                creds = get_dynamic_api_credentials(str(workdir))
+                api_id = creds["api_id"]
+                api_hash = creds["api_hash"]
+
         if api_id:
             account_record["api_id"] = api_id
         if api_hash:
@@ -413,3 +429,17 @@ def move_account_in_list(
         return False
 
 
+
+def update_privacy_guard(config_file: Union[str, Path], workdir: Union[str, Path], is_guarded: bool) -> bool:
+    try:
+        data = _read_config(config_file)
+        workdir_str = str(Path(workdir).absolute())
+        for acc in data.get("accounts", []):
+            if str(Path(acc["workdir"]).absolute()) == workdir_str:
+                acc["privacy_guard"] = is_guarded
+                _write_config(config_file, data)
+                return True
+        return False
+    except Exception as e:
+        logger.error(f"Failed to update privacy_guard for {workdir}: {e}")
+        return False

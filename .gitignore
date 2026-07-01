@@ -35,9 +35,21 @@ active_farm.txt
 emails.txt
 accounts.csv
 Webshare*.txt
+# Backups & Archives
 *.bak
+*.zip
+*.tar.gz
+*.rar
+backups/
+
+# Databases
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
 
 # User content
 avatars/*
+!avatars/.gitkeep
 
 shadowgram.desktop

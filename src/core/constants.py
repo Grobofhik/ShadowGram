@@ -116,6 +116,7 @@ PING_ICON_PATH: Final = ThemeIconPath("ping_icon.png")
 RELOAD_ICON_PATH: Final = ThemeIconPath("reload_icon.png")
 ROCKET_ICON_PATH: Final = ThemeIconPath("rocket_icon.png")
 SAVE_ICON_PATH: Final = ThemeIconPath("save_icon.png")
+USERS_ICON_PATH: Final = ThemeIconPath("folder_icon.png")
 
 # Другие ресурсы
 SOUND_PATH: Final[Path] = RESOURCE_DIR / "sounds" / "Nuya.mp3"

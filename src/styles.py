@@ -15,20 +15,28 @@ from src.core.constants import CONFIG_FILE
 FONT_NAME = "Monocraft"
 TITLE_FONT_NAME = "alagard-12px-unicode"
 
-# Глобальные переменные палитры (будут перезаписываться в load_theme)
-COLOR_PRIMARY = "#00E676"
-COLOR_PRIMARY_DARK = "#00C853"
-COLOR_BG = "#080C08"
-COLOR_ACCENT_BG = "#0D140D"
-COLOR_BORDER = "#1A2E1A"
-COLOR_BORDER_LIGHT = "#142114"
-COLOR_BORDER_DARK = "#244024"
-COLOR_TEXT_MUTED = "#8B9A8B"
-COLOR_TEXT_DISABLED = "#4A5C4A"
-COLOR_HOVER_BG = "#111A11"
-COLOR_SELECT_BG = "#1A2B1A"
+# Глобальные переменные палитры
+COLOR_PRIMARY = "#10B981"
+COLOR_PRIMARY_DARK = "#059669"
+COLOR_PRIMARY_LIGHT = "#34D399"
+COLOR_BG = "#060906"
+COLOR_ACCENT_BG = "#0E140E"
+COLOR_BORDER = "#1E2B1E"
+COLOR_BORDER_LIGHT = "#2A3C2A"
+COLOR_BORDER_DARK = "#121A12"
+COLOR_TEXT_MAIN = "#F8FAFC"
+COLOR_TEXT_MUTED = "#94A3B8"
+COLOR_TEXT_DISABLED = "#475569"
+COLOR_HOVER_BG = "#151F15"
+COLOR_SELECT_BG = "#1A261A"
 COLOR_CONSOLE_BG = "#040604"
-COLOR_SCROLL_HANDLE = "#1A2E1A"
+COLOR_SCROLL_HANDLE = "#1E2B1E"
+
+# Акценты статусов
+COLOR_SUCCESS = "#10B981"
+COLOR_WARNING = "#F59E0B"
+COLOR_DANGER = "#EF4444"
+COLOR_INFO = "#3B82F6"
 
 CHEVRON_RIGHT = ""
 CHEVRON_DOWN = ""
@@ -39,17 +47,17 @@ DOCS_STYLESHEET = ""
 
 def get_svg_icon(points, color):
     """Генерация base64 SVG иконки шеврона с нужным цветом"""
-    # Заменяем # на %23 во внутреннем SVG, но так как кодируем в base64, можно писать цвет напрямую
     svg = f'<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="{points}"></polyline></svg>'
     return "data:image/svg+xml;base64," + base64.b64encode(svg.encode('utf-8')).decode('utf-8')
 
 
 def load_theme(theme_name=None):
     """Считывает тему и пересобирает глобальные стили"""
-    global COLOR_PRIMARY, COLOR_PRIMARY_DARK, COLOR_BG, COLOR_ACCENT_BG
-    global COLOR_BORDER, COLOR_BORDER_LIGHT, COLOR_BORDER_DARK, COLOR_TEXT_MUTED
+    global COLOR_PRIMARY, COLOR_PRIMARY_DARK, COLOR_PRIMARY_LIGHT, COLOR_BG, COLOR_ACCENT_BG
+    global COLOR_BORDER, COLOR_BORDER_LIGHT, COLOR_BORDER_DARK, COLOR_TEXT_MAIN, COLOR_TEXT_MUTED
     global COLOR_TEXT_DISABLED, COLOR_HOVER_BG, COLOR_SELECT_BG, COLOR_CONSOLE_BG
-    global COLOR_SCROLL_HANDLE, CHEVRON_RIGHT, CHEVRON_DOWN, STYLESHEET, DOCS_STYLESHEET
+    global COLOR_SCROLL_HANDLE, COLOR_SUCCESS, COLOR_WARNING, COLOR_DANGER, COLOR_INFO
+    global CHEVRON_RIGHT, CHEVRON_DOWN, STYLESHEET, DOCS_STYLESHEET
     
     if not theme_name:
         theme_name = "green"
@@ -62,414 +70,552 @@ def load_theme(theme_name=None):
         except Exception:
             pass
             
-    # Update current theme in constants
     from src.core import constants
     constants.CURRENT_THEME = theme_name
             
     if theme_name == "blue":
-        # Синяя тема с голубыми элементами
-        COLOR_PRIMARY = "#00B0FF"
-        COLOR_PRIMARY_DARK = "#0091EA"
-        COLOR_BG = "#08080C"
-        COLOR_ACCENT_BG = "#0D0D14"
-        COLOR_BORDER = "#1A1A2E"
-        COLOR_BORDER_LIGHT = "#141421"
-        COLOR_BORDER_DARK = "#242440"
-        COLOR_TEXT_MUTED = "#8B8B9A"
-        COLOR_TEXT_DISABLED = "#4A4A5C"
-        COLOR_HOVER_BG = "#11111A"
-        COLOR_SELECT_BG = "#1A1A2B"
-        COLOR_CONSOLE_BG = "#040406"
-        COLOR_SCROLL_HANDLE = "#1A1A2E"
+        # Blue Theme (Ultra Modern Premium)
+        COLOR_PRIMARY = "#3B82F6"
+        COLOR_PRIMARY_DARK = "#2563EB"
+        COLOR_PRIMARY_LIGHT = "#60A5FA"
+        COLOR_BG = "#05080E"
+        COLOR_ACCENT_BG = "#0B111D"
+        COLOR_HOVER_BG = "#111A2C"
+        COLOR_SELECT_BG = "#17233B"
+        COLOR_CONSOLE_BG = "#030509"
+        COLOR_BORDER = "#1E293B"
+        COLOR_BORDER_LIGHT = "#334155"
+        COLOR_BORDER_DARK = "#0F172A"
+        COLOR_TEXT_MAIN = "#F8FAFC"
+        COLOR_TEXT_MUTED = "#94A3B8"
+        COLOR_TEXT_DISABLED = "#475569"
+        COLOR_SCROLL_HANDLE = "#1E293B"
     else:
-        # Зеленая кибер-тема по умолчанию
-        COLOR_PRIMARY = "#00E676"
-        COLOR_PRIMARY_DARK = "#00C853"
-        COLOR_BG = "#080C08"
-        COLOR_ACCENT_BG = "#0D140D"
-        COLOR_BORDER = "#1A2E1A"
-        COLOR_BORDER_LIGHT = "#142114"
-        COLOR_BORDER_DARK = "#244024"
-        COLOR_TEXT_MUTED = "#8B9A8B"
-        COLOR_TEXT_DISABLED = "#4A5C4A"
-        COLOR_HOVER_BG = "#111A11"
-        COLOR_SELECT_BG = "#1A2B1A"
+        # Green Theme (Ultra Modern Premium)
+        COLOR_PRIMARY = "#10B981"
+        COLOR_PRIMARY_DARK = "#059669"
+        COLOR_PRIMARY_LIGHT = "#34D399"
+        COLOR_BG = "#060906"
+        COLOR_ACCENT_BG = "#0E140E"
+        COLOR_HOVER_BG = "#151F15"
+        COLOR_SELECT_BG = "#1A261A"
         COLOR_CONSOLE_BG = "#040604"
-        COLOR_SCROLL_HANDLE = "#1A2E1A"
+        COLOR_BORDER = "#1E2B1E"
+        COLOR_BORDER_LIGHT = "#2A3C2A"
+        COLOR_BORDER_DARK = "#121A12"
+        COLOR_TEXT_MAIN = "#F8FAFC"
+        COLOR_TEXT_MUTED = "#94A3B8"
+        COLOR_TEXT_DISABLED = "#475569"
+        COLOR_SCROLL_HANDLE = "#1E2B1E"
+
+    # Status Colors 
+    COLOR_SUCCESS = "#10B981"
+    COLOR_WARNING = "#F59E0B"
+    COLOR_DANGER = "#EF4444"
+    COLOR_INFO = "#3B82F6"
 
     CHEVRON_RIGHT = get_svg_icon("9 18 15 12 9 6", COLOR_PRIMARY)
     CHEVRON_DOWN = get_svg_icon("6 9 12 15 18 9", COLOR_PRIMARY)
 
-    # Строим основной STYLESHEET
+    def hex_to_rgba(hex_code, alpha):
+        hex_code = hex_code.lstrip('#')
+        r = int(hex_code[0:2], 16)
+        g = int(hex_code[2:4], 16)
+        b = int(hex_code[4:6], 16)
+        return f"rgba({r}, {g}, {b}, {alpha})"
+
+    BTN_DANGER_BG = hex_to_rgba(COLOR_DANGER, 0.08)
+    BTN_DANGER_HOVER = hex_to_rgba(COLOR_DANGER, 0.15)
+    BTN_DANGER_PRESSED = hex_to_rgba(COLOR_DANGER, 0.25)
+    
+    BTN_WARNING_BG = hex_to_rgba(COLOR_WARNING, 0.08)
+    BTN_SUCCESS_BG = hex_to_rgba(COLOR_PRIMARY, 0.08)
+
+    # QSS doesn't support shadows on generic widgets well, but we simulate depth with top/bottom border nuances
+    # Very subtle linear gradients create a "glass" or "premium" feel.
+    GRADIENT_BG = f"qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 {COLOR_BG}, stop:1 {COLOR_CONSOLE_BG})"
+    GRADIENT_ACCENT = f"qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 {COLOR_ACCENT_BG}, stop:1 {COLOR_BG})"
+    GRADIENT_BTN = f"qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 {COLOR_HOVER_BG}, stop:1 {COLOR_ACCENT_BG})"
+
     STYLESHEET = f"""
 QWidget {{
     background-color: {COLOR_BG};
-    color: #E0E0E0;
+    color: {COLOR_TEXT_MAIN};
     font-size: 13px;
     font-family: '{FONT_NAME}', 'Segoe UI', sans-serif;
 }}
 
 QToolTip {{
     background-color: {COLOR_ACCENT_BG};
-    color: {COLOR_PRIMARY};
-    border: 1px solid {COLOR_BORDER};
+    color: {COLOR_PRIMARY_LIGHT};
+    border: 1px solid {COLOR_PRIMARY_DARK};
     border-radius: 6px;
-    padding: 6px;
-    font-size: 11px;
+    padding: 8px 10px;
+    font-size: 12px;
     font-family: '{FONT_NAME}';
 }}
 
 QScrollArea {{
     border: none;
-    background-color: {COLOR_BG};
+    background-color: transparent;
 }}
 
 QWidget#ScrollContent {{
-    background-color: {COLOR_BG};
+    background-color: transparent;
 }}
 
+/* Account Cards */
 QFrame#AccountRow {{
-    background-color: {COLOR_ACCENT_BG};
+    background-color: {GRADIENT_ACCENT};
     border: 1px solid {COLOR_BORDER};
-    border-radius: 12px;
-    margin: 4px 0px;
+    border-top: 1px solid {COLOR_BORDER_LIGHT};
+    border-radius: 10px;
+    margin: 6px 2px;
 }}
 
 QFrame#AccountRow:hover {{
-    border: 1px solid {COLOR_PRIMARY};
+    border: 1px solid {COLOR_BORDER_LIGHT};
+    border-left: 3px solid {COLOR_PRIMARY};
     background-color: {COLOR_HOVER_BG};
 }}
 
+/* General Buttons (Tactile and Premium) */
 QPushButton {{
-    background-color: {COLOR_HOVER_BG};
-    color: {COLOR_PRIMARY};
-    border: 1px solid {COLOR_BORDER_DARK};
+    background-color: {GRADIENT_BTN};
+    color: {COLOR_TEXT_MAIN};
+    border: 1px solid {COLOR_BORDER};
+    border-bottom: 2px solid {COLOR_BORDER_DARK};
     padding: 8px 16px;
-    border-radius: 8px;
-    font-weight: normal;
+    border-radius: 6px;
+    font-weight: bold;
+    outline: none;
 }}
 
 QPushButton:hover {{
-    background-color: {COLOR_SELECT_BG};
-    border-color: {COLOR_PRIMARY};
-    color: #FFFFFF;
+    background-color: {COLOR_HOVER_BG};
+    border: 1px solid {COLOR_BORDER_LIGHT};
+    border-bottom: 2px solid {COLOR_BORDER};
+    color: {COLOR_PRIMARY_LIGHT};
 }}
 
 QPushButton:pressed {{
-    background-color: {COLOR_BG};
-    border-color: {COLOR_PRIMARY_DARK};
+    background-color: {COLOR_SELECT_BG};
+    border: 1px solid {COLOR_BORDER_DARK};
+    border-top: 2px solid {COLOR_BORDER_DARK};
+    color: {COLOR_PRIMARY};
+    padding-top: 9px;
+    padding-bottom: 7px;
 }}
 
 QPushButton:disabled {{
     background-color: {COLOR_BG};
     color: {COLOR_TEXT_DISABLED};
-    border: 1px solid {COLOR_BORDER_LIGHT};
+    border: 1px solid {COLOR_BORDER_DARK};
+    border-bottom: 1px solid {COLOR_BORDER_DARK};
 }}
 
+/* Primary Buttons (Launch) */
 QPushButton#LaunchBtn {{
-    background-color: {COLOR_PRIMARY_DARK};
-    color: {f"#000000" if COLOR_PRIMARY == "#00E676" else "#FFFFFF"};
-    border: none;
-    border-radius: 8px;
-    font-weight: normal;
+    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 {COLOR_PRIMARY}, stop:1 {COLOR_PRIMARY_DARK});
+    color: #FFFFFF;
+    border: 1px solid {COLOR_PRIMARY_DARK};
+    border-bottom: 2px solid #047857;
+    border-radius: 6px;
+    font-weight: bold;
 }}
 
 QPushButton#LaunchBtn:hover {{
-    background-color: {COLOR_PRIMARY};
+    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 {COLOR_PRIMARY_LIGHT}, stop:1 {COLOR_PRIMARY});
+    border: 1px solid {COLOR_PRIMARY_LIGHT};
+    border-bottom: 2px solid {COLOR_PRIMARY_DARK};
 }}
 
-QPushButton#ExplorerBtn {{ background-color: #0D2136; border-color: #153E6B; color: #58A6FF; }}
-QPushButton#ExplorerBtn:hover {{ background-color: #153E6B; border-color: #58A6FF; color: #FFFFFF; }}
-
-QPushButton#EditBtn, QPushButton#NotesBtn, QPushButton#CheckBtn {{ 
-    background-color: {COLOR_HOVER_BG}; 
-    border: 1px solid {COLOR_BORDER_DARK};
+QPushButton#LaunchBtn:pressed {{
+    background-color: {COLOR_PRIMARY_DARK};
+    border: 1px solid #047857;
+    border-top: 2px solid #047857;
+    color: {COLOR_TEXT_MAIN};
+    padding-top: 9px;
+    padding-bottom: 7px;
 }}
-QPushButton#EditBtn:hover, QPushButton#NotesBtn:hover, QPushButton#CheckBtn:hover {{ 
-    background-color: {COLOR_SELECT_BG}; 
-    border-color: {COLOR_PRIMARY};
+
+/* Secondary Buttons */
+QPushButton#ExplorerBtn {{ 
+    background-color: {hex_to_rgba(COLOR_INFO, 0.08)}; 
+    border: 1px solid {hex_to_rgba(COLOR_INFO, 0.3)}; 
+    border-bottom: 2px solid {hex_to_rgba(COLOR_INFO, 0.5)};
+    color: {COLOR_PRIMARY_LIGHT if theme_name == "blue" else "#93C5FD"}; 
+}}
+QPushButton#ExplorerBtn:hover {{ 
+    background-color: {hex_to_rgba(COLOR_INFO, 0.15)}; 
+    border-color: {COLOR_INFO}; 
+    color: #FFFFFF;
+}}
+QPushButton#ExplorerBtn:pressed {{ 
+    background-color: {hex_to_rgba(COLOR_INFO, 0.25)}; 
+    border-top: 2px solid {hex_to_rgba(COLOR_INFO, 0.5)};
+    border-bottom: 1px solid {hex_to_rgba(COLOR_INFO, 0.3)};
+    padding-top: 9px; padding-bottom: 7px;
 }}
 
 QPushButton#DeviceBtn {{ 
-    background-color: #1A1A2E; 
-    border: 1px solid #2D2D5E;
+    background-color: {hex_to_rgba("#A855F7", 0.08)}; 
+    border: 1px solid {hex_to_rgba("#A855F7", 0.3)}; 
+    border-bottom: 2px solid {hex_to_rgba("#A855F7", 0.5)};
+    color: #D8B4FE;
 }}
 QPushButton#DeviceBtn:hover {{ 
-    background-color: #2D2D5E; 
-    border-color: #8250DF;
+    background-color: {hex_to_rgba("#A855F7", 0.15)}; 
+    border-color: #A855F7;
+    color: #FFFFFF;
+}}
+QPushButton#DeviceBtn:pressed {{ 
+    background-color: {hex_to_rgba("#A855F7", 0.25)}; 
+    border-top: 2px solid {hex_to_rgba("#A855F7", 0.5)};
+    border-bottom: 1px solid {hex_to_rgba("#A855F7", 0.3)};
+    padding-top: 9px; padding-bottom: 7px;
 }}
 
+/* Danger Buttons */
 QPushButton#DeleteBtn {{ 
-    background-color: #2E1111; 
-    border: 1px solid #5E2424;
+    background-color: {BTN_DANGER_BG}; 
+    border: 1px solid {hex_to_rgba(COLOR_DANGER, 0.3)};
+    border-bottom: 2px solid {hex_to_rgba(COLOR_DANGER, 0.5)};
+    color: {COLOR_DANGER};
 }}
 QPushButton#DeleteBtn:hover {{ 
-    background-color: #5E2424; 
-    border-color: #FF5252;
+    background-color: {BTN_DANGER_HOVER}; 
+    border-color: {COLOR_DANGER}; 
+    color: #FFFFFF;
+}}
+QPushButton#DeleteBtn:pressed {{ 
+    background-color: {BTN_DANGER_PRESSED}; 
+    border-top: 2px solid {hex_to_rgba(COLOR_DANGER, 0.5)};
+    border-bottom: 1px solid {hex_to_rgba(COLOR_DANGER, 0.3)};
+    padding-top: 9px; padding-bottom: 7px;
 }}
 
+/* Status Indicator Buttons */
 QPushButton#CheckBtn[status="success"], QPushButton#SessionBtn[status="alive"] {{ 
-    background-color: {"rgba(0, 230, 118, 0.1)" if COLOR_PRIMARY == "#00E676" else "rgba(0, 176, 255, 0.1)"}; 
-    border-color: {COLOR_PRIMARY};
+    background-color: {BTN_SUCCESS_BG}; 
+    border: 1px solid {hex_to_rgba(COLOR_PRIMARY, 0.4)};
+    border-bottom: 2px solid {hex_to_rgba(COLOR_PRIMARY, 0.6)};
+    color: {COLOR_PRIMARY_LIGHT};
 }}
 QPushButton#CheckBtn[status="error"], QPushButton#SessionBtn[status="banned"] {{ 
-    background-color: rgba(255, 82, 82, 0.1); 
-    border-color: #FF5252;
+    background-color: {BTN_DANGER_BG}; 
+    border: 1px solid {hex_to_rgba(COLOR_DANGER, 0.4)};
+    border-bottom: 2px solid {hex_to_rgba(COLOR_DANGER, 0.6)};
+    color: {COLOR_DANGER};
 }}
 QPushButton#CheckBtn[status="checking"] {{ 
-    background-color: rgba(255, 193, 7, 0.1); 
-    border-color: #FFC107;
+    background-color: {BTN_WARNING_BG}; 
+    border: 1px solid {hex_to_rgba(COLOR_WARNING, 0.4)};
+    border-bottom: 2px solid {hex_to_rgba(COLOR_WARNING, 0.6)};
+    color: {COLOR_WARNING};
 }}
 
+/* Session Button Default */
 QPushButton#SessionBtn {{ 
-    background-color: #1A1423; 
-    border: 1px solid #3B2D4A; 
+    background-color: {COLOR_ACCENT_BG}; 
+    border: 1px solid {COLOR_BORDER}; 
+    border-bottom: 2px solid {COLOR_BORDER_DARK};
 }}
 QPushButton#SessionBtn:hover {{ 
-    background-color: #3B2D4A; 
-    border-color: #B388FF;
+    background-color: {COLOR_HOVER_BG}; 
+    border-color: {COLOR_BORDER_LIGHT};
+}}
+QPushButton#SessionBtn:pressed {{ 
+    padding-top: 9px; padding-bottom: 7px;
+    border-top: 2px solid {COLOR_BORDER_DARK};
+    border-bottom: 1px solid {COLOR_BORDER};
 }}
 
+/* Icon Only Buttons (Move) */
 QPushButton#MoveBtn {{
     background-color: transparent;
     border: none;
     color: {COLOR_TEXT_DISABLED};
-    font-size: 10px;
-    padding: 2px;
+    font-size: 14px;
+    padding: 4px;
 }}
 QPushButton#MoveBtn:hover {{
-    color: {COLOR_PRIMARY};
+    color: {COLOR_PRIMARY_LIGHT};
+    background-color: {hex_to_rgba(COLOR_PRIMARY, 0.1)};
+    border-radius: 4px;
+}}
+QPushButton#MoveBtn:pressed {{
+    color: {COLOR_PRIMARY_DARK};
+    background-color: {hex_to_rgba(COLOR_PRIMARY, 0.2)};
+    padding-top: 5px; padding-bottom: 3px;
 }}
 
+/* Tab Widget & Bar (Segmented Control Style) */
 QTabWidget::pane {{
     border: 1px solid {COLOR_BORDER};
     background-color: {COLOR_ACCENT_BG};
-    border-radius: 8px;
+    border-radius: 12px;
     top: -1px;
+    padding: 10px;
 }}
 
 QTabBar::tab {{
-    background-color: {COLOR_BG};
+    background-color: transparent;
     color: {COLOR_TEXT_MUTED};
-    padding: 8px 18px;
+    padding: 8px 24px;
     border: 1px solid transparent;
-    border-bottom: 2px solid {COLOR_BORDER};
-    font-weight: normal;
-    border-top-left-radius: 8px;
-    border-top-right-radius: 8px;
-    margin-right: 2px;
+    font-weight: bold;
+    border-radius: 20px; 
+    margin: 4px;
 }}
 
 QTabBar::tab:hover {{
     background-color: {COLOR_HOVER_BG};
-    color: #E0E0E0;
+    color: {COLOR_TEXT_MAIN};
 }}
 
 QTabBar::tab:selected {{
-    color: {COLOR_PRIMARY};
-    background-color: {COLOR_ACCENT_BG};
-    border: 1px solid {COLOR_BORDER};
-    border-bottom: 2px solid {COLOR_PRIMARY};
+    color: #FFFFFF;
+    background-color: {hex_to_rgba(COLOR_PRIMARY, 0.15)};
+    border: 1px solid {hex_to_rgba(COLOR_PRIMARY, 0.4)};
 }}
 
+/* Inputs */
 QLineEdit, QSpinBox, QTextEdit {{
     background-color: {COLOR_CONSOLE_BG};
     border: 1px solid {COLOR_BORDER};
-    border-radius: 6px;
-    padding: 8px;
-    color: {COLOR_PRIMARY};
-    selection-background-color: {COLOR_BORDER_LIGHT};
+    border-bottom: 2px solid {COLOR_BORDER};
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: {COLOR_TEXT_MAIN};
+    selection-background-color: {COLOR_PRIMARY_DARK};
+    selection-color: #FFFFFF;
+}}
+
+QLineEdit:hover, QSpinBox:hover, QTextEdit:hover {{
+    border: 1px solid {COLOR_BORDER_LIGHT};
+    border-bottom: 2px solid {COLOR_BORDER_LIGHT};
 }}
 
 QLineEdit:focus, QSpinBox:focus, QTextEdit:focus {{
     border: 1px solid {COLOR_PRIMARY};
-    background-color: {COLOR_HOVER_BG};
+    border-bottom: 2px solid {COLOR_PRIMARY_LIGHT};
+    background-color: {COLOR_BG};
+}}
+
+QLineEdit:disabled, QTextEdit:disabled {{
+    background-color: {COLOR_BG};
+    color: {COLOR_TEXT_DISABLED};
+    border: 1px solid {COLOR_BORDER_DARK};
+    border-bottom: 1px solid {COLOR_BORDER_DARK};
 }}
 
 QSpinBox::up-button, QSpinBox::down-button {{
     width: 0px;
 }}
 
+/* ComboBox */
 QComboBox {{
     background-color: {COLOR_CONSOLE_BG};
     border: 1px solid {COLOR_BORDER};
-    border-radius: 6px;
-    padding: 6px 12px;
-    color: #E0E0E0;
+    border-bottom: 2px solid {COLOR_BORDER};
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: {COLOR_TEXT_MAIN};
 }}
 
-QComboBox:hover, QComboBox:focus {{
+QComboBox:hover {{
+    border: 1px solid {COLOR_BORDER_LIGHT};
+    border-bottom: 2px solid {COLOR_BORDER_LIGHT};
+}}
+
+QComboBox:focus {{
     border: 1px solid {COLOR_PRIMARY};
+    border-bottom: 2px solid {COLOR_PRIMARY_LIGHT};
 }}
 
 QComboBox::drop-down {{
     subcontrol-origin: padding;
     subcontrol-position: top right;
-    width: 25px;
+    width: 35px;
     border-left: none;
 }}
 
 QComboBox::down-arrow {{
     image: url({CHEVRON_DOWN});
-    width: 10px;
-    height: 10px;
+    width: 14px;
+    height: 14px;
 }}
 
 QComboBox QAbstractItemView {{
     background-color: {COLOR_ACCENT_BG};
     border: 1px solid {COLOR_BORDER};
-    border-radius: 6px;
-    selection-background-color: {COLOR_SELECT_BG};
-    selection-color: {COLOR_PRIMARY};
-    color: #E0E0E0;
+    border-radius: 8px;
+    selection-background-color: {hex_to_rgba(COLOR_PRIMARY, 0.15)};
+    selection-color: {COLOR_PRIMARY_LIGHT};
+    color: {COLOR_TEXT_MAIN};
     outline: none;
+    padding: 6px;
 }}
 
+/* Typography */
 QLabel#Title {{
     color: {COLOR_PRIMARY};
-    font-size: 26px;
-    font-weight: normal;
+    font-size: 28px;
+    font-weight: bold;
     font-family: '{TITLE_FONT_NAME}';
-    letter-spacing: 2px;
-    text-shadow: {"0px 0px 10px rgba(0, 230, 118, 0.5)" if COLOR_PRIMARY == "#00E676" else "0px 0px 10px rgba(0, 176, 255, 0.5)"};
+    letter-spacing: 3px;
 }}
 
 QLabel#SettingLabel {{
     color: {COLOR_TEXT_MUTED};
-    font-weight: normal;
-    margin-top: 10px;
-    font-size: 13px;
+    font-weight: bold;
+    margin-top: 14px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
 }}
 
+/* Images & Avatars */
 QLabel#AvatarLabel {{
-    background-color: transparent;
+    background-color: {COLOR_CONSOLE_BG};
     border: 2px solid {COLOR_BORDER};
     border-radius: 25px;
 }}
 
 QLabel#AvatarLabel:hover {{
-    border: 2px solid {COLOR_PRIMARY};
-}}
-
-QLabel#NotePopup {{
+    border: 2px solid {COLOR_PRIMARY_LIGHT};
     background-color: {COLOR_ACCENT_BG};
-    color: #E0E0E0;
-    border: 1px solid {COLOR_PRIMARY};
-    border-radius: 8px;
-    padding: 12px;
-    font-size: 12px;
-    font-family: '{FONT_NAME}';
 }}
 
+/* Badges */
 QLabel#StatusRunning {{ 
-    color: {f"#000000" if COLOR_PRIMARY == "#00E676" else "#FFFFFF"}; 
-    font-weight: normal;
+    color: #FFFFFF;
+    font-weight: bold;
     font-size: 11px;
-    background-color: {COLOR_PRIMARY};
-    padding: 4px 10px;
-    border-radius: 6px;
+    background-color: {COLOR_PRIMARY_DARK};
+    padding: 5px 14px;
+    border-radius: 12px;
 }}
 
 QLabel#StatusStopped {{ 
     color: {COLOR_TEXT_MUTED}; 
     font-size: 11px;
-    font-weight: normal;
-    background-color: {COLOR_HOVER_BG};
-    padding: 4px 10px;
-    border-radius: 6px;
-    border: 1px solid {COLOR_BORDER_DARK};
-}}
-
-QFrame#CreateSection {{
-    background-color: {COLOR_ACCENT_BG};
-    border: 1px solid {COLOR_BORDER};
+    font-weight: bold;
+    background-color: {COLOR_BG};
+    padding: 5px 14px;
     border-radius: 12px;
-    padding: 20px;
-    margin-top: 10px;
+    border: 1px solid {COLOR_BORDER};
 }}
 
+/* Containers */
+QFrame#CreateSection {{
+    background-color: {GRADIENT_ACCENT};
+    border: 1px solid {COLOR_BORDER};
+    border-top: 1px solid {COLOR_BORDER_LIGHT};
+    border-radius: 14px;
+    padding: 28px;
+    margin-top: 16px;
+}}
+
+/* Scrollbars */
 QScrollBar:vertical {{
     border: none;
-    background: {COLOR_BG};
-    width: 8px;
-    margin: 0px;
-    border-radius: 4px;
+    background: transparent;
+    width: 12px;
+    margin: 2px;
 }}
 QScrollBar::handle:vertical {{
-    background: {COLOR_SCROLL_HANDLE};
-    min-height: 30px;
-    border-radius: 4px;
+    background: {COLOR_BORDER};
+    border-radius: 6px;
+    min-height: 40px;
 }}
 QScrollBar::handle:vertical:hover {{
-    background: {COLOR_PRIMARY};
+    background: {COLOR_BORDER_LIGHT};
 }}
-QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
-    height: 0px;
+QScrollBar::handle:vertical:pressed {{
+    background: {COLOR_PRIMARY_DARK};
 }}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height: 0px; }}
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{ background: none; }}
 
 QScrollBar:horizontal {{
     border: none;
-    background: {COLOR_BG};
-    height: 8px;
-    margin: 0px;
-    border-radius: 4px;
+    background: transparent;
+    height: 12px;
+    margin: 2px;
 }}
 QScrollBar::handle:horizontal {{
-    background: {COLOR_SCROLL_HANDLE};
-    min-width: 30px;
-    border-radius: 4px;
+    background: {COLOR_BORDER};
+    min-width: 40px;
+    border-radius: 6px;
 }}
 QScrollBar::handle:horizontal:hover {{
-    background: {COLOR_PRIMARY};
+    background: {COLOR_BORDER_LIGHT};
 }}
-QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{
-    width: 0px;
+QScrollBar::handle:horizontal:pressed {{
+    background: {COLOR_PRIMARY_DARK};
 }}
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{ width: 0px; }}
+QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {{ background: none; }}
 
+/* Checkboxes */
 QCheckBox {{
-    spacing: 8px;
-    color: #E0E0E0;
+    spacing: 12px;
+    color: {COLOR_TEXT_MAIN};
     font-weight: normal;
+    font-size: 14px;
 }}
 
 QCheckBox::indicator {{
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
     border: 2px solid {COLOR_BORDER};
-    border-radius: 5px;
+    border-bottom: 3px solid {COLOR_BORDER};
+    border-radius: 6px;
     background-color: {COLOR_CONSOLE_BG};
 }}
 
 QCheckBox::indicator:hover {{
-    border-color: {COLOR_PRIMARY};
+    border-color: {COLOR_PRIMARY_DARK};
+    border-bottom-color: {COLOR_PRIMARY_DARK};
+    background-color: {COLOR_BG};
 }}
 
 QCheckBox::indicator:checked {{
     background-color: {COLOR_PRIMARY_DARK};
-    border-color: {COLOR_PRIMARY_DARK};
+    border: 2px solid {COLOR_PRIMARY_DARK};
+    border-bottom: 3px solid {COLOR_PRIMARY_DARK};
     image: url({CHEVRON_DOWN});
 }}
 
+QCheckBox::indicator:checked:hover {{
+    background-color: {COLOR_PRIMARY};
+    border-color: {COLOR_PRIMARY};
+    border-bottom-color: {COLOR_PRIMARY};
+}}
+
+/* Progress Bar */
 QProgressBar {{
     border: 1px solid {COLOR_BORDER};
-    border-radius: 6px;
+    border-radius: 8px;
     background-color: {COLOR_CONSOLE_BG};
     text-align: center;
-    color: white;
-    font-weight: normal;
+    color: {COLOR_TEXT_MAIN};
+    font-weight: bold;
+    height: 16px;
 }}
 
 QProgressBar::chunk {{
-    background-color: {COLOR_PRIMARY};
-    border-radius: 5px;
+    background-color: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 {COLOR_PRIMARY_DARK}, stop:1 {COLOR_PRIMARY_LIGHT});
+    border-radius: 6px;
 }}
 """
 
-    # Строим DOCS_STYLESHEET
     DOCS_STYLESHEET = f"""
-QWidget#DocsWindow {{
+QWidget#DocsPage {{
     background-color: {COLOR_BG};
-    color: #E0E0E0;
+    color: {COLOR_TEXT_MAIN};
 }}
 
 QFrame#DocsSidebar {{
@@ -479,10 +625,11 @@ QFrame#DocsSidebar {{
 
 QLabel#DocsSidebarTitle {{
     color: {COLOR_PRIMARY};
-    font-weight: normal;
+    font-weight: bold;
     font-size: 15px;
-    letter-spacing: 1px;
-    padding-bottom: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding-bottom: 16px;
     border-bottom: 1px solid {COLOR_BORDER};
 }}
 
@@ -490,25 +637,26 @@ QTreeWidget#DocsTree {{
     background-color: transparent;
     border: none;
     outline: none;
-    color: #E0E0E0;
-    font-size: 13px;
+    color: {COLOR_TEXT_MAIN};
+    font-size: 14px;
 }}
 
 QTreeWidget#DocsTree::item {{
-    padding: 8px 4px;
-    border-radius: 6px;
-    margin-bottom: 2px;
+    padding: 10px 8px;
+    border-radius: 8px;
+    margin-bottom: 4px;
 }}
 
 QTreeWidget#DocsTree::item:hover {{
     background-color: {COLOR_HOVER_BG};
+    color: {COLOR_PRIMARY_LIGHT};
 }}
 
 QTreeWidget#DocsTree::item:selected {{
-    background-color: {"rgba(0, 230, 118, 0.1)" if COLOR_PRIMARY == "#00E676" else "rgba(0, 176, 255, 0.1)"};
+    background-color: {hex_to_rgba(COLOR_PRIMARY, 0.1)};
     color: {COLOR_PRIMARY};
-    font-weight: normal;
-    border: {"1px solid rgba(0, 230, 118, 0.3)" if COLOR_PRIMARY == "#00E676" else "1px solid rgba(0, 176, 255, 0.3)"};
+    font-weight: bold;
+    border-left: 3px solid {COLOR_PRIMARY};
 }}
 
 QTreeWidget#DocsTree::branch:has-children:!has-siblings:closed,
@@ -522,29 +670,37 @@ QTreeWidget#DocsTree::branch:open:has-children:has-siblings {{
 }}
 
 QPushButton#DocsCloseBtn {{
-    background-color: {COLOR_HOVER_BG};
+    background-color: {COLOR_ACCENT_BG};
     border: 1px solid {COLOR_BORDER};
+    border-bottom: 2px solid {COLOR_BORDER_DARK};
     border-radius: 8px;
-    color: #E0E0E0;
-    font-weight: normal;
+    color: {COLOR_TEXT_MAIN};
+    font-weight: bold;
+    padding: 10px;
 }}
 
 QPushButton#DocsCloseBtn:hover {{
-    background-color: #2E1111;
-    border-color: #FF5252;
-    color: #FF5252;
+    background-color: {BTN_DANGER_BG};
+    border-color: {COLOR_DANGER};
+    border-bottom-color: {COLOR_DANGER};
+    color: {COLOR_DANGER};
+}}
+QPushButton#DocsCloseBtn:pressed {{
+    background-color: {BTN_DANGER_PRESSED};
+    border-top: 2px solid {COLOR_DANGER};
+    border-bottom: 1px solid {COLOR_DANGER};
+    padding-top: 11px; padding-bottom: 9px;
 }}
 
 QTextBrowser#DocsBrowser {{
     background-color: {COLOR_BG};
-    color: #E0E0E0;
-    font-size: 15px;
+    color: {COLOR_TEXT_MAIN};
+    font-size: 16px;
     border: none;
-    padding: 40px;
+    padding: 50px;
     font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+    line-height: 1.8;
 }}
 """
 
-
-# Загружаем тему по умолчанию при импорте
 load_theme()
