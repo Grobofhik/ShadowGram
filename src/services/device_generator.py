@@ -1,6 +1,7 @@
 import random
 import string
-from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QLineEdit, QListWidget, QMessageBox
+from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, 
+                             QPushButton, QLineEdit, QListWidget, QMessageBox, QFrame)
 from PyQt6.QtCore import Qt
 from src.core.managers import proxy_manager, farm_manager, config_manager, hw_manager, process_manager, account_manager
 from src.core.constants import CONFIG_FILE
@@ -10,38 +11,104 @@ class DeviceNameGeneratorService(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Генератор имён устройств")
-        self.setFixedSize(350, 480)
+        self.setStyleSheet(f"background-color: {styles.COLOR_BG}; color: {styles.COLOR_TEXT_MAIN};")
         self.all_selected = False
         self.init_ui()
         self.load_accounts()
 
     def init_ui(self):
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(15)
 
-        info_label = QLabel("Выберите аккаунты, которым нужно\nсгенерировать новые имена устройств:")
-        info_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(info_label)
+        card = QFrame()
+        card.setStyleSheet(f"QFrame {{ background-color: {styles.COLOR_BG}; border: 1px solid {styles.COLOR_BORDER}; border-radius: 10px; }}")
+        card_layout = QVBoxLayout(card)
+        card_layout.setContentsMargins(20, 20, 20, 20)
+        card_layout.setSpacing(15)
+
+        info_label = QLabel("Выберите аккаунты, которым нужно сгенерировать новые имена устройств. Это поможет сделать ваши сессии уникальными для Telegram.")
+        info_label.setWordWrap(True)
+        info_label.setStyleSheet(f"color: {styles.COLOR_TEXT_MUTED}; font-size: 14px; border: none;")
+        card_layout.addWidget(info_label)
 
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("Поиск аккаунта...")
+        self.search_input.setStyleSheet(f"""
+            QLineEdit {{
+                background-color: {styles.COLOR_CONSOLE_BG};
+                color: {styles.COLOR_TEXT_MAIN};
+                border: 1px solid {styles.COLOR_BORDER};
+                border-radius: 6px;
+                padding: 10px;
+                font-size: 14px;
+            }}
+            QLineEdit:focus {{
+                border: 1px solid {styles.COLOR_PRIMARY};
+            }}
+        """)
         self.search_input.textChanged.connect(self.filter_accounts)
-        layout.addWidget(self.search_input)
+        card_layout.addWidget(self.search_input)
 
         self.list_widget = QListWidget()
-        self.list_widget.setSelectionMode(QListWidget.SelectionMode.MultiSelection)
-        layout.addWidget(self.list_widget)
+        self.list_widget.setSelectionMode(QListWidget.SelectionMode.ExtendedSelection)
+        self.list_widget.setStyleSheet(f"""
+            QListWidget {{
+                background-color: {styles.COLOR_CONSOLE_BG}; 
+                border: 1px solid {styles.COLOR_BORDER}; 
+                border-radius: 8px; 
+                padding: 10px;
+                font-size: 14px;
+            }}
+            QListWidget::item {{
+                padding: 5px;
+            }}
+            QListWidget::item:selected {{
+                background-color: {styles.COLOR_PRIMARY_DARK};
+                color: #FFFFFF;
+                border-radius: 4px;
+            }}
+        """)
+        card_layout.addWidget(self.list_widget)
 
         btn_layout = QHBoxLayout()
-        self.btn_select_all = QPushButton("Выбрать все")
+        self.btn_select_all = QPushButton("✅ Выбрать все")
+        self.btn_select_all.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {styles.COLOR_HOVER_BG};
+                color: {styles.COLOR_TEXT_MAIN};
+                border: 1px solid {styles.COLOR_BORDER};
+                border-radius: 6px;
+                padding: 10px 20px;
+                font-weight: bold;
+            }}
+            QPushButton:hover {{
+                background-color: {styles.COLOR_BORDER};
+            }}
+        """)
         self.btn_select_all.clicked.connect(self.toggle_select_all)
         btn_layout.addWidget(self.btn_select_all)
 
-        btn_generate = QPushButton("Сгенерировать")
-        btn_generate.setStyleSheet(f"background-color: {styles.COLOR_PRIMARY_DARK}; color: {'#000000' if styles.COLOR_PRIMARY == '#00E676' else '#FFFFFF'}; font-weight: bold;")
+        btn_generate = QPushButton("🚀 Сгенерировать")
+        btn_generate.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {styles.COLOR_PRIMARY};
+                color: #000000;
+                border: none;
+                border-radius: 6px;
+                padding: 10px 20px;
+                font-weight: bold;
+                font-size: 14px;
+            }}
+            QPushButton:hover {{
+                background-color: {styles.COLOR_PRIMARY_LIGHT};
+            }}
+        """)
         btn_generate.clicked.connect(self.generate_names)
         btn_layout.addWidget(btn_generate)
 
-        layout.addLayout(btn_layout)
+        card_layout.addLayout(btn_layout)
+        layout.addWidget(card)
 
     def load_accounts(self):
         self.accounts = config_manager.load_config(CONFIG_FILE)
@@ -64,7 +131,7 @@ class DeviceNameGeneratorService(QDialog):
         if self.all_selected:
             self.btn_select_all.setText("Снять выделение")
         else:
-            self.btn_select_all.setText("Выбрать все")
+            self.btn_select_all.setText("✅ Выбрать все")
 
     def generate_random_device_name(self):
         return hw_manager.generate_random_device_name()
@@ -85,4 +152,3 @@ class DeviceNameGeneratorService(QDialog):
                     updated_count += 1
 
         QMessageBox.information(self, "Успех", f"Успешно обновлено {updated_count} имён устройств.")
-        self.accept()

@@ -2685,6 +2685,11 @@ class NewModulesPage(QWidget):
         self.btn_run_warmup.setObjectName("ApplyBtn")
         self.btn_run_warmup.clicked.connect(self.start_automatic_warmup)
         warmup_control_layout.addWidget(self.btn_run_warmup)
+        
+        self.btn_schedule_warmup = QPushButton("⏰ Запланировать")
+        self.btn_schedule_warmup.clicked.connect(self.schedule_warmup)
+        warmup_control_layout.addWidget(self.btn_schedule_warmup)
+        
         self.btn_stop_warmup = QPushButton("⏹️ Остановить прогрев")
         self.btn_stop_warmup.clicked.connect(self.stop_automatic_warmup)
         warmup_control_layout.addWidget(self.btn_stop_warmup)
@@ -2959,6 +2964,11 @@ class NewModulesPage(QWidget):
         self.btn_run_commenting.setObjectName("ApplyBtn")
         self.btn_run_commenting.clicked.connect(self.start_neurocommenting)
         control_layout.addWidget(self.btn_run_commenting)
+        
+        self.btn_schedule_commenting = QPushButton("⏰ Запланировать")
+        self.btn_schedule_commenting.clicked.connect(self.schedule_neurocommenting)
+        control_layout.addWidget(self.btn_schedule_commenting)
+        
         layout_launch.addLayout(control_layout)
 
         # Консоль
@@ -3873,6 +3883,42 @@ class NewModulesPage(QWidget):
         self.save_commenting_settings_locally()
         QMessageBox.information(self, "Успех", "Настройки комментирования успешно сохранены!")
 
+    def schedule_warmup(self):
+        from src.ui.schedule_dialog import ScheduleDialog
+        from src.core.scheduler import global_scheduler
+        
+        dialog = ScheduleDialog("Авто-прогрев", self)
+        if dialog.exec():
+            # Запускаем один раз сразу и добавляем в расписание
+            self.start_automatic_warmup()
+            
+            job_id = global_scheduler.add_job(
+                func=self.start_automatic_warmup,
+                trigger='interval',
+                minutes=dialog.interval_minutes,
+                id='warmup_job',
+                replace_existing=True
+            )
+            if job_id:
+                QMessageBox.information(self, "Успех", f"Авто-прогрев добавлен в расписание (каждые {dialog.interval_minutes} мин).")
+
+    def schedule_neurocommenting(self):
+        from src.ui.schedule_dialog import ScheduleDialog
+        from src.core.scheduler import global_scheduler
+        
+        dialog = ScheduleDialog("Нейрокомментинг", self)
+        if dialog.exec():
+            self.start_neurocommenting()
+            job_id = global_scheduler.add_job(
+                func=self.start_neurocommenting,
+                trigger='interval',
+                minutes=dialog.interval_minutes,
+                id='commenting_job',
+                replace_existing=True
+            )
+            if job_id:
+                QMessageBox.information(self, "Успех", f"Нейрокомментинг добавлен в расписание (каждые {dialog.interval_minutes} мин).")
+
     def start_neurocommenting(self):
         if not self.selected_accounts:
             QMessageBox.warning(self, "Внимание", "Выберите хотя бы один аккаунт в списке справа для запуска нейрокомментирования!")
@@ -3912,6 +3958,7 @@ class NewModulesPage(QWidget):
                 
         self.btn_run_commenting.setEnabled(False)
         self.btn_run_commenting.setText("⌛ Выполняется комментирование...")
+        self.btn_schedule_commenting.setEnabled(False)
         
         selected_names_str = ", ".join(a["name"] for a in self.selected_accounts)
         self.append_log(f"Запуск сессии нейрокомментирования для аккаунтов: {selected_names_str}...", "warning")
@@ -3923,6 +3970,7 @@ class NewModulesPage(QWidget):
     def on_commenting_finished(self):
         self.btn_run_commenting.setEnabled(True)
         self.btn_run_commenting.setText("💬 Запустить нейрокомментинг")
+        self.btn_schedule_commenting.setEnabled(True)
         self.append_log("Сессия автоматического нейрокомментирования завершена.", "success")
         QMessageBox.information(self, "Успех", "Сессия нейрокомментирования выбранных аккаунтов успешно завершена!")
 
@@ -4615,6 +4663,7 @@ class NewModulesPage(QWidget):
 
         self.btn_run_warmup.setEnabled(False)
         self.btn_save_warmup.setEnabled(False)
+        self.btn_schedule_warmup.setEnabled(False)
         
         self.append_log(f"Начало массовой установки случайных аватарок для {len(self.selected_accounts)} аккаунтов...", "info")
         
@@ -4624,6 +4673,7 @@ class NewModulesPage(QWidget):
         def on_finished():
             self.btn_run_warmup.setEnabled(True)
             self.btn_save_warmup.setEnabled(True)
+            self.btn_schedule_warmup.setEnabled(True)
             self.append_log("Массовая установка аватарок успешно завершена!", "success")
             QMessageBox.information(self, "Успех", "Массовая установка аватарок завершена!")
             

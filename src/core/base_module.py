@@ -69,6 +69,19 @@ class BaseModule:
         self.gost_process: Optional[subprocess.Popen] = None
         self.local_port: Optional[int] = None
         
+    def record_analytics(self, action: str, details: str = ""):
+        """Записывает событие аналитики в базу данных."""
+        try:
+            from src.core.managers.farm_manager import get_active_farm_name
+            from src.core.managers.db_manager import log_analytics_action
+            from src.core.constants import FARMS_DIR
+            farm_name = get_active_farm_name()
+            if farm_name and self.workdir:
+                config_file = FARMS_DIR / farm_name / "config.json"
+                log_analytics_action(config_file, str(self.workdir), action, details)
+        except Exception:
+            pass
+        
         self.stealth_mode = False
         try:
             from src.core.constants import CONFIG_FILE
@@ -147,6 +160,9 @@ class BaseModule:
 
         formatted_msg = f"<span style='color: {color};'>{prefix} {message}</span>"
         self.log_callback(formatted_msg)
+        
+        if "Глобальная пауза" not in message:
+            self.record_analytics("log_" + status, message)
 
     def _get_free_port(self) -> int:
         from src.core.utils import get_free_port

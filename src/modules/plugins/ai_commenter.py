@@ -11,7 +11,7 @@ class AICommenter(BaseModule):
     
     PARAMS = [
         {"name": "channel_url", "type": "text", "label": "Ссылка на канал (@username или https://t.me/...)"},
-        {"name": "api_key", "type": "text", "label": "Ваш API ключ (например, от Groq или OpenRouter)"},
+        {"name": "api_key", "type": "text", "label": "API ключ (Оставьте пустым для режима Spintax {a|b})"},
         {"name": "api_base_url", "type": "text", "label": "Base URL API (например: https://api.groq.com/openai/v1)"},
         {"name": "model_name", "type": "text", "label": "Название модели (например: llama-3.1-8b-instant)"},
         {"name": "posts_count", "type": "text", "label": "Сколько последних постов обработать (например: 3)"},
@@ -20,6 +20,16 @@ class AICommenter(BaseModule):
     
     START_DELAY = (1, 15)
     IS_CYCLIC = False
+
+    def _parse_spintax(self, text: str) -> str:
+        import re
+        while True:
+            match = re.search(r'\{([^{}]*)\}', text)
+            if not match:
+                break
+            choices = match.group(1).split('|')
+            text = text[:match.start()] + random.choice(choices) + text[match.end():]
+        return text
 
     async def _generate_comment(self, post_text: str, system_prompt: str, api_key: str, api_url: str, model_name: str) -> str:
         """Обращение к OpenAI-совместимому API для генерации текста"""
@@ -80,9 +90,15 @@ class AICommenter(BaseModule):
             self.log("У этого аккаунта нет индивидуального AI промпта! Использую стандартный.", "warning")
             system_prompt = "Напиши короткий, позитивный и естественный комментарий (от 2 до 8 слов) на пост пользователя. Без хештегов, без приветствий."
 
+        # Если API ключ не указан, мы переходим в режим Spintax (используя текст промпта как спинтакс)
+        use_spintax = False
         if not api_key:
-            self.log("Ошибка: API ключ не указан.", "error")
-            return
+            if "{" in system_prompt and "}" in system_prompt:
+                self.log("API ключ не указан. Включаю режим Spintax (генерация без нейросети).", "info")
+                use_spintax = True
+            else:
+                self.log("Ошибка: API ключ не указан, а в промпте нет Spintax синтаксиса.", "error")
+                return
 
         try:
             chat = await self.client.get_chat(channel_url)
@@ -106,8 +122,11 @@ class AICommenter(BaseModule):
                     # Читаем пост (имитация)
                     await self.sleep(random.uniform(2.0, 5.0))
                     
-                    self.log(f"Генерирую комментарий для поста ID: {msg.id}...", "info")
-                    comment_text = await self._generate_comment(msg.text or msg.caption or "", system_prompt, api_key, api_base_url, model_name)
+                    if not use_spintax:
+                        self.log(f"Генерирую комментарий для поста ID: {msg.id}...", "info")
+                        comment_text = await self._generate_comment(msg.text or msg.caption or "", system_prompt, api_key, api_base_url, model_name)
+                    else:
+                        comment_text = self._parse_spintax(system_prompt)
                     
                     if comment_text:
                         try:
@@ -117,6 +136,17 @@ class AICommenter(BaseModule):
                             # Получаем системное сообщение из привязанной группы комментариев
                             discussion_msg = await self.client.get_discussion_message(chat.id, msg.id)
                             
+                            # Имитация печатания (human typing emulation)
+                            typing_time = min(len(comment_text) / 5.0, 10.0) # 5 символов в секунду, максимум 10 сек
+                            from hydrogram import enums
+                            
+                            try:
+                                await self.client.send_chat_action(discussion_msg.chat.id, enums.ChatAction.TYPING)
+                                await self.sleep(typing_time)
+                            except Exception as typing_err:
+                                # Игнорируем ошибки при отправке статуса печатает
+                                await self.sleep(typing_time)
+                            
                             try:
                                 await discussion_msg.reply(comment_text)
                             except RPCError as e:
@@ -124,11 +154,14 @@ class AICommenter(BaseModule):
                                     self.log("Требуется вступление в группу комментариев. Вступаем...", "warning")
                                     await self.client.join_chat(discussion_msg.chat.id)
                                     await self.sleep(random.uniform(2.0, 5.0))
+                                    await self.client.send_chat_action(discussion_msg.chat.id, enums.ChatAction.TYPING)
+                                    await self.sleep(typing_time)
                                     await discussion_msg.reply(comment_text)
                                 else:
                                     raise e
                             
                             self.log(f"💬 Отправлено: '{comment_text}'", "success")
+                            self.record_analytics("comment_success", f"Коммент на пост {msg.id}")
                             
                             # Большая пауза после комментария
                             await self.sleep(random.uniform(10.0, 30.0))
@@ -146,5 +179,7 @@ class AICommenter(BaseModule):
 
         except FloodWait as e:
             self.log(f"Лимит запросов Telegram, нужно подождать {e.value} сек.", "error")
+            self.record_analytics("error", f"FloodWait: {e.value}s")
         except Exception as e:
             self.log(f"Ошибка при работе: {e}", "error")
+            self.record_analytics("error", str(e))

@@ -83,14 +83,14 @@ async def _check_spamblock(client: Any) -> str:
                         "абсолютно свободен" in text_lower or 
                         "ограничения не наложены" in text_lower or
                         "каких-либо ограничений" in text_lower):
-                        return "Спамблок: Отсутствует"
+                        return "Отсутствует"
                     else:
                         # Попробуем вытащить первую значимую строчку
                         lines = [line.strip() for line in text.split("\n") if line.strip()]
                         for line in lines:
                             if "ограничен" in line.lower() or "limit" in line.lower() or "блокиров" in line.lower():
-                                return f"Спамблок: {line}"
-                        return "Спамблок: Ограничен (см. диалог со @SpamBot)"
+                                return "SPAM BLOCK"
+                        return "SPAM BLOCK"
         
         # Если новое сообщение не пришло, проверим последнее сообщение в истории
         async for message in client.get_chat_history("SpamBot", limit=3):
@@ -101,12 +101,12 @@ async def _check_spamblock(client: Any) -> str:
                     "свободен от каких-либо ограничений" in text_lower or 
                     "абсолютно свободен" in text_lower or 
                     "каких-либо ограничений" in text_lower):
-                    return "Спамблок: Отсутствует"
-                return "Спамблок: Возможно активен"
+                    return "Отсутствует"
+                return "SPAM BLOCK"
         
-        return "Спамблок: Нет ответа от @SpamBot"
+        return "Нет ответа от @SpamBot"
     except Exception as e:
-        return f"Спамблок: Ошибка проверки ({e})"
+        return "Ошибка проверки"
 
 
 async def check_account(

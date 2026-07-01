@@ -1,5 +1,6 @@
 from src.core.base_module import BaseModule
 from hydrogram import raw, enums
+from src.core.managers.account_manager import update_privacy_guard
 
 """
 Модуль «Privacy Guard» (Защита приватности).
@@ -58,8 +59,9 @@ class PrivacyGuardPlugin(BaseModule):
                     rules=[raw.types.InputPrivacyValueAllowContacts()]
                 )
             )
-
-            self.log("Все настройки приватности успешно применены!", "success")
+            
+            update_privacy_guard(self.config_file, self.workdir, True)
+            self.log("Приватность успешно настроена!", "success")
             
         except Exception as e:
             self.log(f"Ошибка настройки: {e}", "error")

@@ -6,7 +6,7 @@ import os
 import random
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                              QPushButton, QScrollArea, QCheckBox, QComboBox, 
-                             QTextEdit, QFrame, QMessageBox, QFileDialog, QLineEdit)
+                             QTextEdit, QFrame, QMessageBox, QFileDialog, QLineEdit, QTabWidget)
 from PyQt6.QtGui import QIcon
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QSize
 from datetime import datetime
@@ -27,7 +27,7 @@ from src.core.constants import CONFIG_FILE, START_ICON_PATH, RELOAD_ICON_PATH, F
 from src.core.module_manager import ModuleManager
 from src.modules_styles import MODULES_STYLESHEET
 from src.ui.active_tasks_window import ActiveTasksWindow
-from src.ui.scenario_window import ScenarioWindow
+from src.ui.smart_orchestrator_window import SmartOrchestratorWindow
 from src import styles
 
 class ModulesPage(QWidget):
@@ -137,9 +137,17 @@ class ModulesPage(QWidget):
         main_layout.addWidget(left_frame, 1)
 
         # ПРАВАЯ ПАНЕЛЬ: НАСТРОЙКИ
-        right_frame = QFrame()
-        right_frame.setObjectName("SectionFrame")
-        right_layout = QVBoxLayout(right_frame)
+        # ПРАВАЯ ПАНЕЛЬ: НАСТРОЙКИ
+        self.right_tabs = QTabWidget()
+        self.right_tabs.setObjectName("SectionFrame")
+        self.right_tabs.setStyleSheet("""
+            QTabWidget::pane { border: 1px solid #1e293b; border-radius: 8px; background-color: #0f172a; } 
+            QTabBar::tab { background: #1e293b; color: #94a3b8; padding: 10px 20px; border-top-left-radius: 8px; border-top-right-radius: 8px; margin-right: 2px; } 
+            QTabBar::tab:selected { background: #0f172a; color: #6366f1; font-weight: bold; border: 1px solid #1e293b; border-bottom-color: #0f172a; }
+        """)
+        
+        tab_single = QWidget()
+        right_layout = QVBoxLayout(tab_single)
         right_layout.setSpacing(16)
         
         plugin_header = QHBoxLayout()
@@ -178,11 +186,7 @@ class ModulesPage(QWidget):
         self.btn_run.clicked.connect(self.start_module_execution)
         btns_layout.addWidget(self.btn_run, 2)
         
-        self.btn_scenario = QPushButton("СЦЕНАРИЙ")
-        self.btn_scenario.setStyleSheet(f"background-color: {styles.COLOR_ACCENT_BG}; border: 1px solid {styles.COLOR_BORDER}; border-bottom: 3px solid {styles.COLOR_BORDER_DARK}; font-weight: bold; padding: 16px; border-radius: 10px;")
-        self.btn_scenario.clicked.connect(self.open_scenario_builder)
-        btns_layout.addWidget(self.btn_scenario, 1)
-        
+        # btn_scenario was removed
         self.btn_monitor = QPushButton("МОНИТОРИНГ")
         self.btn_monitor.setStyleSheet(f"background-color: {styles.COLOR_ACCENT_BG}; border: 1px solid {styles.COLOR_BORDER}; border-bottom: 3px solid {styles.COLOR_BORDER_DARK}; font-weight: bold; padding: 16px; border-radius: 10px;")
         self.btn_monitor.clicked.connect(self.open_monitor_config)
@@ -207,7 +211,16 @@ class ModulesPage(QWidget):
         self.log_output.setReadOnly(True)
         right_layout.addWidget(self.log_output, 1)
         
-        main_layout.addWidget(right_frame, 2)
+        self.right_tabs.addTab(tab_single, "Одиночный запуск")
+        
+        # Добавляем Оркестратор как вторую вкладку
+        self.orchestrator_widget = SmartOrchestratorWindow(
+            get_accounts_callback=lambda: [c.property("acc_data") for c in self.checkboxes if c.isChecked()],
+            manager=self.manager
+        )
+        self.right_tabs.addTab(self.orchestrator_widget, "🎭 Умный Оркестратор")
+        
+        main_layout.addWidget(self.right_tabs, 2)
 
     def filter_accounts(self, text):
         for cb in self.checkboxes:
@@ -270,7 +283,7 @@ class ModulesPage(QWidget):
             QMessageBox.warning(self, "Внимание", "Сначала выберите аккаунты для сценария!")
             return
             
-        self.scenario_win = ScenarioWindow(self, self.manager, selected_accounts)
+        self.scenario_win = SmartOrchestratorWindow(selected_accounts, self.manager)
         self.scenario_win.show()
 
     def start_scenario_execution(self, accounts, steps, task_id):

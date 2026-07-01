@@ -12,7 +12,6 @@ from PyQt6.QtCore import pyqtSignal, Qt, QThread
 
 from src.core.managers import proxy_manager, farm_manager, config_manager, hw_manager, process_manager, account_manager
 from src.core.constants import CONFIG_FILE
-from src.ui.docs_window import DocsWindow
 from src import styles
 
 """
@@ -56,22 +55,182 @@ class ProxyCheckerWorker(QThread):
 
 class SettingsPage(QWidget):
     back_requested = pyqtSignal()
-    settings_saved = pyqtSignal() # Сигнал для обновления UI (компактный режим)
+    settings_saved = pyqtSignal()
+    docs_requested = pyqtSignal() # Сигнал для обновления UI (компактный режим)
 
     def __init__(self):
         super().__init__()
-        self.docs_window = None
+        self.setObjectName("SettingsPage")
         self.proxy_worker = None
         self.init_ui()
+        self.load_settings()
 
     def init_ui(self):
-        main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(30, 20, 30, 20)
-        main_layout.setSpacing(15)
+        # Apply premium global stylesheet to the Settings Page
+        self.setStyleSheet(f'''
+            QWidget {{
+                font-family: "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif;
+                font-size: 14px;
+                color: #CFD8DC;
+            }}
+            QTabWidget::pane {{
+                border: 1px solid {styles.COLOR_BORDER};
+                background-color: {styles.COLOR_BG};
+                border-radius: 8px;
+                margin-top: -1px;
+            }}
+            QTabBar::tab {{
+                background-color: {styles.COLOR_CONSOLE_BG};
+                border: 1px solid {styles.COLOR_BORDER};
+                padding: 10px 20px;
+                border-top-left-radius: 8px;
+                border-top-right-radius: 8px;
+                color: #90A4AE;
+                font-weight: bold;
+                margin-right: 2px;
+            }}
+            QTabBar::tab:selected {{
+                background-color: {styles.COLOR_ACCENT_BG};
+                color: {styles.COLOR_PRIMARY};
+                border-bottom-color: {styles.COLOR_ACCENT_BG};
+            }}
+            QTabBar::tab:hover:!selected {{
+                background-color: {styles.COLOR_HOVER_BG};
+                color: #FFFFFF;
+            }}
+            QLabel#SettingsTitle {{
+                font-size: 26px;
+                font-weight: bold;
+                color: {styles.COLOR_PRIMARY};
+            }}
+            QLabel#SettingLabel {{
+                font-size: 15px;
+                font-weight: bold;
+                color: #FFFFFF;
+                margin-top: 10px;
+                margin-bottom: 5px;
+            }}
+            QLineEdit, QSpinBox, QComboBox, QTextEdit {{
+                background-color: {styles.COLOR_CONSOLE_BG};
+                border: 1px solid {styles.COLOR_BORDER};
+                border-radius: 6px;
+                padding: 10px 14px;
+                color: #FFFFFF;
+                font-size: 14px;
+            }}
+            QLineEdit:focus, QSpinBox:focus, QComboBox:focus, QTextEdit:focus {{
+                border: 1px solid {styles.COLOR_PRIMARY};
+                background-color: {styles.COLOR_HOVER_BG};
+            }}
+            QComboBox::drop-down {{
+                border: none;
+                width: 30px;
+            }}
+            QComboBox::down-arrow {{
+                image: none;
+                border-left: 5px solid transparent;
+                border-right: 5px solid transparent;
+                border-top: 5px solid {styles.COLOR_PRIMARY};
+                margin-right: 10px;
+            }}
+            QCheckBox {{
+                spacing: 10px;
+                font-size: 14px;
+                color: #ECEFF1;
+            }}
+            QCheckBox::indicator {{
+                width: 20px;
+                height: 20px;
+                border-radius: 4px;
+                border: 2px solid {styles.COLOR_BORDER};
+                background: {styles.COLOR_CONSOLE_BG};
+            }}
+            QCheckBox::indicator:checked {{
+                background-color: {styles.COLOR_PRIMARY};
+                border: 2px solid {styles.COLOR_PRIMARY};
+            }}
+            QCheckBox::indicator:hover {{
+                border: 2px solid {styles.COLOR_PRIMARY};
+            }}
+            QPushButton {{
+                background-color: {styles.COLOR_CONSOLE_BG};
+                color: #FFFFFF;
+                border: 1px solid {styles.COLOR_BORDER};
+                border-radius: 6px;
+                padding: 10px 16px;
+                font-weight: bold;
+                font-size: 14px;
+            }}
+            QPushButton:hover {{
+                background-color: {styles.COLOR_HOVER_BG};
+                border: 1px solid {styles.COLOR_PRIMARY};
+            }}
+            QPushButton:pressed {{
+                background-color: {styles.COLOR_BORDER};
+            }}
+            QPushButton#PrimaryBtn {{
+                background-color: {styles.COLOR_PRIMARY_DARK};
+                color: {'#000000' if styles.COLOR_PRIMARY == '#00E676' else '#FFFFFF'};
+                border: none;
+            }}
+            QPushButton#PrimaryBtn:hover {{
+                background-color: {styles.COLOR_PRIMARY};
+            }}
+            QPushButton#DangerBtn {{
+                background-color: #D32F2F;
+                color: white;
+                border: none;
+            }}
+            QPushButton#DangerBtn:hover {{
+                background-color: #F44336;
+            }}
+            QPushButton#WarningBtn {{
+                background-color: #F57C00;
+                color: white;
+                border: none;
+            }}
+            QPushButton#WarningBtn:hover {{
+                background-color: #FF9800;
+            }}
+            QTableWidget {{
+                background-color: {styles.COLOR_CONSOLE_BG};
+                border: 1px solid {styles.COLOR_BORDER};
+                border-radius: 8px;
+                color: #CFD8DC;
+                gridline-color: {styles.COLOR_BORDER};
+            }}
+            QHeaderView::section {{
+                background-color: {styles.COLOR_ACCENT_BG};
+                color: {styles.COLOR_PRIMARY};
+                padding: 10px;
+                border: none;
+                border-right: 1px solid {styles.COLOR_BORDER};
+                border-bottom: 1px solid {styles.COLOR_BORDER};
+                font-weight: bold;
+                font-size: 13px;
+            }}
+            QScrollBar:vertical {{
+                background-color: {styles.COLOR_BG};
+                width: 12px;
+                border-radius: 6px;
+            }}
+            QScrollBar::handle:vertical {{
+                background-color: {styles.COLOR_BORDER};
+                border-radius: 6px;
+                min-height: 20px;
+            }}
+            QScrollBar::handle:vertical:hover {{
+                background-color: {styles.COLOR_PRIMARY};
+            }}
+        ''')
 
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(30, 30, 30, 30)
+        main_layout.setSpacing(20)
+
+        # Header
         header_layout = QHBoxLayout()
         btn_back = QPushButton("← Назад")
-        btn_back.setObjectName("BackBtn")
         btn_back.setFixedWidth(120)
         btn_back.clicked.connect(self.back_requested.emit)
         header_layout.addWidget(btn_back)
@@ -79,38 +238,71 @@ class SettingsPage(QWidget):
         header_layout.addStretch()
 
         btn_docs = QPushButton("📖 Документация")
-        btn_docs.setFixedWidth(150)
-        btn_docs.setStyleSheet(f"background-color: {styles.COLOR_PRIMARY_DARK}; border: 1px solid {styles.COLOR_BORDER_DARK}; color: {'#000000' if styles.COLOR_PRIMARY == '#00E676' else '#FFFFFF'}; font-weight: bold;")
-        btn_docs.clicked.connect(self.show_docs)
+        btn_docs.setFixedWidth(160)
+        btn_docs.setObjectName("PrimaryBtn")
+        btn_docs.clicked.connect(self.docs_requested.emit)
         header_layout.addWidget(btn_docs)
 
         main_layout.addLayout(header_layout)
 
-        label_title = QLabel("Настройки")
+        label_title = QLabel("⚙️ Настройки Системы")
         label_title.setObjectName("SettingsTitle")
-        label_title.setStyleSheet(f"font-size: 24px; font-weight: bold; color: {styles.COLOR_PRIMARY};")
         main_layout.addWidget(label_title)
 
         self.tabs = QTabWidget()
         
+        # Helper to create tab containers
+        def create_tab_container():
+            w = QWidget()
+            l = QVBoxLayout(w)
+            l.setContentsMargins(25, 25, 25, 25)
+            l.setSpacing(15)
+            return w, l
+
         # 1. API & AI
-        tab_api = QWidget()
-        l_api = QVBoxLayout(tab_api)
-        # API ID and API Hash removed, they are now per-account in the profile window.
+        tab_api, l_api = create_tab_container()
+        l_api.addWidget(QLabel("Telegram API ID (по умолчанию):", objectName="SettingLabel"))
+        self.input_tg_api_id = QLineEdit()
+        self.input_tg_api_id.setPlaceholderText("Оставьте пустым для встроенных ключей")
+        l_api.addWidget(self.input_tg_api_id)
+        
+        l_api.addWidget(QLabel("Telegram API Hash (по умолчанию):", objectName="SettingLabel"))
+        self.input_tg_api_hash = QLineEdit()
+        self.input_tg_api_hash.setEchoMode(QLineEdit.EchoMode.Password)
+        self.input_tg_api_hash.setPlaceholderText("Оставьте пустым для встроенных ключей")
+        l_api.addWidget(self.input_tg_api_hash)
+        
+        l_api.addSpacing(15)
+        l_api.addWidget(QLabel("AI Настройки", objectName="SettingLabel"))
         l_api.addWidget(QLabel("AI API Ключ (по умолчанию):", objectName="SettingLabel"))
-        self.input_ai_api_key = QLineEdit(); self.input_ai_api_key.setEchoMode(QLineEdit.EchoMode.Password); l_api.addWidget(self.input_ai_api_key)
+        self.input_ai_api_key = QLineEdit()
+        self.input_ai_api_key.setEchoMode(QLineEdit.EchoMode.Password)
+        self.input_ai_api_key.setPlaceholderText("Введите API ключ (например, от Groq или OpenAI)")
+        l_api.addWidget(self.input_ai_api_key)
+        
         l_api.addWidget(QLabel("AI Base URL (по умолчанию):", objectName="SettingLabel"))
-        self.input_ai_base_url = QLineEdit(); l_api.addWidget(self.input_ai_base_url)
+        self.input_ai_base_url = QLineEdit()
+        self.input_ai_base_url.setPlaceholderText("https://api.groq.com/openai/v1")
+        l_api.addWidget(self.input_ai_base_url)
+        
         l_api.addWidget(QLabel("AI Название модели (по умолчанию):", objectName="SettingLabel"))
-        self.input_ai_model_name = QLineEdit(); l_api.addWidget(self.input_ai_model_name)
+        self.input_ai_model_name = QLineEdit()
+        self.input_ai_model_name.setPlaceholderText("llama-3.1-8b-instant")
+        l_api.addWidget(self.input_ai_model_name)
+        
+        l_api.addWidget(QLabel("AI Промпт (Тематика личности):", objectName="SettingLabel"))
+        self.input_ai_persona_prompt = QTextEdit()
+        self.input_ai_persona_prompt.setPlaceholderText("Обычный парень из СНГ, 25 лет")
+        self.input_ai_persona_prompt.setMaximumHeight(80)
+        l_api.addWidget(self.input_ai_persona_prompt)
+        
         l_api.addStretch()
-        self.tabs.addTab(tab_api, "API & AI")
+        self.tabs.addTab(tab_api, "🧠 API & AI")
 
         # 2. Автоматизация и Безопасность
-        tab_sec = QWidget()
-        l_sec = QVBoxLayout(tab_sec)
+        tab_sec, l_sec = create_tab_container()
         
-        l_sec.addWidget(QLabel("Массовый запуск (Задержки):", objectName="SettingLabel"))
+        l_sec.addWidget(QLabel("⏱ Массовый запуск (Задержки)", objectName="SettingLabel"))
         delay_layout = QHBoxLayout()
         delay_layout.addWidget(QLabel("Задержка между запусками Telegram (сек):"))
         self.spin_launch_delay = QSpinBox()
@@ -120,8 +312,8 @@ class SettingsPage(QWidget):
         delay_layout.addStretch()
         l_sec.addLayout(delay_layout)
 
-        l_sec.addSpacing(10)
-        l_sec.addWidget(QLabel("Лимиты модулей:", objectName="SettingLabel"))
+        l_sec.addSpacing(15)
+        l_sec.addWidget(QLabel("🚦 Лимиты модулей", objectName="SettingLabel"))
         
         flood_layout = QHBoxLayout()
         flood_layout.addWidget(QLabel("Макс. ожидание FloodWait (сек) (0 = ждать всегда):"))
@@ -141,29 +333,39 @@ class SettingsPage(QWidget):
         tasks_layout.addStretch()
         l_sec.addLayout(tasks_layout)
         
-        l_sec.addSpacing(10)
-        l_sec.addWidget(QLabel("Поведение модулей:", objectName="SettingLabel"))
-        self.cb_stealth_mode = QCheckBox("Режим Невидимки (+50% ко всем паузам в модулях)")
+        l_sec.addSpacing(15)
+        l_sec.addSpacing(15)
+        l_sec.addWidget(QLabel("🌐 Сетевые Таймауты", objectName="SettingLabel"))
+        
+        net_layout = QHBoxLayout()
+        net_layout.addWidget(QLabel("Таймаут подключения (сек):"))
+        self.spin_net_timeout = QSpinBox()
+        self.spin_net_timeout.setRange(5, 120)
+        self.spin_net_timeout.setValue(15)
+        net_layout.addWidget(self.spin_net_timeout)
+        net_layout.addStretch()
+        l_sec.addLayout(net_layout)
+
+        l_sec.addWidget(QLabel("👻 Поведение модулей", objectName="SettingLabel"))
+        self.cb_stealth_mode = QCheckBox("Режим Невидимки (+50% ко всем паузам в модулях для имитации человека)")
         l_sec.addWidget(self.cb_stealth_mode)
         
         l_sec.addStretch()
-        self.tabs.addTab(tab_sec, "Автоматизация")
+        self.tabs.addTab(tab_sec, "⚙️ Автоматизация")
 
         # 3. Прокси Пул
-        tab_proxy = QWidget()
-        l_proxy = QVBoxLayout(tab_proxy)
+        tab_proxy, l_proxy = create_tab_container()
         
         l_proxy.addWidget(QLabel("Быстрое добавление прокси (по одному на строку, http/socks5):", objectName="SettingLabel"))
-        
         import_layout = QHBoxLayout()
         self.text_proxy_pool = QTextEdit()
-        self.text_proxy_pool.setPlaceholderText("socks5://user:pass@192.168.1.1:1080\nhttp://user:pass@10.0.0.1:8080")
-        self.text_proxy_pool.setFixedHeight(80)
+        self.text_proxy_pool.setPlaceholderText("socks5://user:pass@192.168.1.1:1080\\nhttp://user:pass@10.0.0.1:8080")
+        self.text_proxy_pool.setFixedHeight(100)
         import_layout.addWidget(self.text_proxy_pool, 1)
         
         import_btns = QVBoxLayout()
-        btn_add_to_pool = QPushButton("Добавить в пул")
-        btn_add_to_pool.setStyleSheet("background-color: #00796b; color: white; font-weight: bold;")
+        btn_add_to_pool = QPushButton("➕ Добавить в пул")
+        btn_add_to_pool.setObjectName("PrimaryBtn")
         btn_add_to_pool.clicked.connect(self.add_text_to_pool)
         
         btn_clear_input = QPushButton("Очистить поле")
@@ -182,20 +384,6 @@ class SettingsPage(QWidget):
         self.table_proxy_pool.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         self.table_proxy_pool.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
         self.table_proxy_pool.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
-        self.table_proxy_pool.setStyleSheet(f"""
-            QTableWidget {{
-                background-color: {styles.COLOR_CONSOLE_BG};
-                border: 1px solid {styles.COLOR_BORDER};
-                color: #B0BEC5;
-                gridline-color: {styles.COLOR_BORDER};
-            }}
-            QHeaderView::section {{
-                background-color: {styles.COLOR_ACCENT_BG};
-                color: {styles.COLOR_PRIMARY};
-                padding: 6px;
-                border: 1px solid {styles.COLOR_BORDER};
-            }}
-        """)
         l_proxy.addWidget(self.table_proxy_pool)
         
         self.cb_overwrite_proxies = QCheckBox("Перезаписывать прокси у аккаунтов, у которых они уже настроены")
@@ -204,22 +392,35 @@ class SettingsPage(QWidget):
         
         self.proxy_progress = QProgressBar()
         self.proxy_progress.setVisible(False)
+        self.proxy_progress.setStyleSheet(f'''
+            QProgressBar {{
+                border: 1px solid {styles.COLOR_BORDER};
+                border-radius: 6px;
+                text-align: center;
+                color: white;
+                background-color: {styles.COLOR_CONSOLE_BG};
+                font-weight: bold;
+            }}
+            QProgressBar::chunk {{
+                background-color: {styles.COLOR_PRIMARY};
+                border-radius: 5px;
+            }}
+        ''')
         l_proxy.addWidget(self.proxy_progress)
 
         proxy_btns = QHBoxLayout()
-        
         self.btn_check_pool = QPushButton("Проверить весь пул")
-        self.btn_check_pool.setStyleSheet(f"background-color: {styles.COLOR_PRIMARY_DARK}; color: {'#000000' if styles.COLOR_PRIMARY == '#00E676' else '#FFFFFF'}; font-weight: bold;")
+        self.btn_check_pool.setObjectName("PrimaryBtn")
         self.btn_check_pool.clicked.connect(self.check_proxy_pool)
         proxy_btns.addWidget(self.btn_check_pool)
         
         btn_remove_dead = QPushButton("Удалить нерабочие")
-        btn_remove_dead.setStyleSheet("background-color: #c62828; color: white;")
+        btn_remove_dead.setObjectName("DangerBtn")
         btn_remove_dead.clicked.connect(self.remove_dead_proxies)
         proxy_btns.addWidget(btn_remove_dead)
 
         self.btn_distribute = QPushButton("Распределить по аккаунтам")
-        self.btn_distribute.setStyleSheet("background-color: #ff9800; color: white;")
+        self.btn_distribute.setObjectName("WarningBtn")
         self.btn_distribute.clicked.connect(self.distribute_proxies)
         proxy_btns.addWidget(self.btn_distribute)
         
@@ -228,11 +429,10 @@ class SettingsPage(QWidget):
         proxy_btns.addWidget(btn_clear_pool)
         
         l_proxy.addLayout(proxy_btns)
-        self.tabs.addTab(tab_proxy, "Прокси")
+        self.tabs.addTab(tab_proxy, "🌐 Пул Прокси")
 
         # 3.5. Вкладка Аккаунты и Прокси
-        tab_accounts_proxy = QWidget()
-        l_acc_proxy = QVBoxLayout(tab_accounts_proxy)
+        tab_accounts_proxy, l_acc_proxy = create_tab_container()
         l_acc_proxy.addWidget(QLabel("Прокси, подключенные к аккаунтам:", objectName="SettingLabel"))
         
         self.table_accounts_proxy = QTableWidget()
@@ -241,37 +441,22 @@ class SettingsPage(QWidget):
         self.table_accounts_proxy.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
         self.table_accounts_proxy.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
         self.table_accounts_proxy.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
-        self.table_accounts_proxy.setStyleSheet(f"""
-            QTableWidget {{
-                background-color: {styles.COLOR_CONSOLE_BG};
-                border: 1px solid {styles.COLOR_BORDER};
-                color: #B0BEC5;
-                gridline-color: {styles.COLOR_BORDER};
-            }}
-            QHeaderView::section {{
-                background-color: {styles.COLOR_ACCENT_BG};
-                color: {styles.COLOR_PRIMARY};
-                padding: 6px;
-                border: 1px solid {styles.COLOR_BORDER};
-            }}
-        """)
         l_acc_proxy.addWidget(self.table_accounts_proxy)
         
         batch_layout = QHBoxLayout()
         btn_reset_all_proxies = QPushButton("Сбросить прокси у всех аккаунтов")
-        btn_reset_all_proxies.setStyleSheet("background-color: #d32f2f; color: white;")
+        btn_reset_all_proxies.setObjectName("DangerBtn")
         btn_reset_all_proxies.clicked.connect(self.reset_all_account_proxies)
         batch_layout.addWidget(btn_reset_all_proxies)
         batch_layout.addStretch()
         l_acc_proxy.addLayout(batch_layout)
         
-        self.tabs.addTab(tab_accounts_proxy, "Аккаунты & Прокси")
+        self.tabs.addTab(tab_accounts_proxy, "🔗 Аккаунты & Прокси")
 
         # 4. Обслуживание
-        tab_maint = QWidget()
-        l_maint = QVBoxLayout(tab_maint)
+        tab_maint, l_maint = create_tab_container()
         
-        l_maint.addWidget(QLabel("Очистка данных:", objectName="SettingLabel"))
+        l_maint.addWidget(QLabel("🧹 Очистка данных", objectName="SettingLabel"))
         self.cb_auto_clean = QCheckBox("Автоматически чистить кэш профиля при закрытии Telegram")
         l_maint.addWidget(self.cb_auto_clean)
         
@@ -284,114 +469,149 @@ class SettingsPage(QWidget):
         log_layout.addStretch()
         l_maint.addLayout(log_layout)
         
-        l_maint.addSpacing(20)
+        l_maint.addSpacing(10)
         btn_clean_logs = QPushButton("Очистить устаревшие логи сейчас")
         btn_clean_logs.clicked.connect(self.clean_old_logs)
         l_maint.addWidget(btn_clean_logs)
 
-        btn_deep_clean = QPushButton("Глубокая очистка кэша всей фермы")
-        btn_deep_clean.setStyleSheet("background-color: #d32f2f; color: white;")
+        btn_deep_clean = QPushButton("Глубокая очистка кэша всей фермы (Осторожно)")
+        btn_deep_clean.setObjectName("DangerBtn")
         btn_deep_clean.clicked.connect(self.deep_clean_farm)
         l_maint.addWidget(btn_deep_clean)
 
         l_maint.addSpacing(20)
-        l_maint.addWidget(QLabel("Управление модулями:", objectName="SettingLabel"))
+        l_maint.addWidget(QLabel("🧩 Управление модулями", objectName="SettingLabel"))
         btn_import_module = QPushButton("📥 Импорт нового модуля (.py)")
-        btn_import_module.setStyleSheet("background-color: #00796b; color: white;")
+        btn_import_module.setObjectName("PrimaryBtn")
         btn_import_module.clicked.connect(self.import_module)
         l_maint.addWidget(btn_import_module)
 
         l_maint.addStretch()
-        self.tabs.addTab(tab_maint, "Данные и Обслуживание")
+        self.tabs.addTab(tab_maint, "🛠 Обслуживание")
 
         # 5. Интерфейс
-        tab_ui = QWidget()
-        l_ui = QVBoxLayout(tab_ui)
-        self.cb_compact_mode = QCheckBox("Компактный режим (уменьшенные строки аккаунтов)")
-        l_ui.addWidget(self.cb_compact_mode)
+        tab_ui, l_ui = create_tab_container()
         
-        l_ui.addSpacing(10)
-        l_ui.addWidget(QLabel("Тема оформления интерфейса:", objectName="SettingLabel"))
+        l_ui.addWidget(QLabel("🎨 Тема оформления", objectName="SettingLabel"))
         self.combo_theme = QComboBox()
         self.combo_theme.addItems(["Кибер-зеленый (Cyber Green)", "Глубокий синий (Deep Blue)"])
+        self.combo_theme.setFixedHeight(40)
         l_ui.addWidget(self.combo_theme)
+
+        l_ui.addSpacing(15)
+        l_ui.addWidget(QLabel("🖥 Отображение", objectName="SettingLabel"))
+        self.cb_compact_mode = QCheckBox("Компактный режим (уменьшенные строки аккаунтов на главном экране)")
+        l_ui.addWidget(self.cb_compact_mode)
         
         l_ui.addStretch()
-        self.tabs.addTab(tab_ui, "Интерфейс")
+        self.tabs.addTab(tab_ui, "🎨 Интерфейс")
 
         # 6. Бэкапы
-        tab_backup = QWidget()
-        l_backup = QVBoxLayout(tab_backup)
-        l_backup.addWidget(QLabel("Управление резервными копиями:", objectName="SettingLabel"))
+        tab_backup, l_backup = create_tab_container()
+        l_backup.addWidget(QLabel("💾 Автоматическое сохранение", objectName="SettingLabel"))
+        self.cb_auto_backup = QCheckBox("Делать бэкап конфигурации при закрытии приложения (в папку backups)")
+        l_backup.addWidget(self.cb_auto_backup)
+        l_backup.addSpacing(15)
         
-        btn_export = QPushButton("📤 Экспорт всех данных (ZIP)")
-        btn_export.setFixedHeight(40)
+        l_backup.addWidget(QLabel("📦 Ручное управление", objectName="SettingLabel"))
+        
+        btn_export = QPushButton("📤 Экспорт всех данных (ZIP Archive)")
+        btn_export.setFixedHeight(45)
         btn_export.clicked.connect(self.run_export)
         l_backup.addWidget(btn_export)
 
-        btn_import = QPushButton("📥 Импорт из бэкапа (ZIP)")
-        btn_import.setFixedHeight(40)
+        btn_import = QPushButton("📥 Импорт из бэкапа (ZIP Archive)")
+        btn_import.setFixedHeight(45)
         btn_import.clicked.connect(self.run_import)
         l_backup.addWidget(btn_import)
         l_backup.addStretch()
-        self.tabs.addTab(tab_backup, "Бэкапы")
+        self.tabs.addTab(tab_backup, "💾 Бэкапы")
+
+
+        # 7.5. Безопасность и Уведомления
+        tab_sec_notif, l_sec_notif = create_tab_container()
+        
+        l_sec_notif.addWidget(QLabel("🛡 Мастер-Пароль (ПИН-код)", objectName="SettingLabel"))
+        self.cb_enable_pin = QCheckBox("Запрашивать ПИН-код при запуске приложения")
+        l_sec_notif.addWidget(self.cb_enable_pin)
+        
+        pin_layout = QHBoxLayout()
+        pin_layout.addWidget(QLabel("Установите ПИН-код (цифры):"))
+        self.input_app_pin = QLineEdit()
+        self.input_app_pin.setEchoMode(QLineEdit.EchoMode.Password)
+        self.input_app_pin.setPlaceholderText("Например: 1234")
+        self.input_app_pin.setMaxLength(8)
+        self.input_app_pin.setFixedWidth(150)
+        pin_layout.addWidget(self.input_app_pin)
+        pin_layout.addStretch()
+        l_sec_notif.addLayout(pin_layout)
+        
+        l_sec_notif.addSpacing(15)
+        l_sec_notif.addWidget(QLabel("🔔 Уведомления", objectName="SettingLabel"))
+        self.cb_notify_bans = QCheckBox("Системное уведомление при бане аккаунта / критической ошибке")
+        l_sec_notif.addWidget(self.cb_notify_bans)
+        
+        self.cb_notify_finished = QCheckBox("Системное уведомление при завершении долгой задачи")
+        l_sec_notif.addWidget(self.cb_notify_finished)
+        
+        l_sec_notif.addSpacing(15)
+        l_sec_notif.addWidget(QLabel("🎵 Звуки", objectName="SettingLabel"))
+        self.cb_sound_alerts = QCheckBox("Воспроизводить звуковой сигнал при уведомлениях")
+        l_sec_notif.addWidget(self.cb_sound_alerts)
+        
+        l_sec_notif.addStretch()
+        self.tabs.addTab(tab_sec_notif, "🛡 Безопасность")
 
         # 7. Управление фермами
-        tab_farms = QWidget()
-        l_farms = QVBoxLayout(tab_farms)
-        l_farms.setSpacing(15)
+        tab_farms, l_farms = create_tab_container()
         
         l_farms.addWidget(QLabel("Текущая активная ферма:", objectName="SettingLabel"))
         self.label_active_farm = QLabel("default")
-        self.label_active_farm.setStyleSheet(f"font-size: 18px; font-weight: bold; color: {styles.COLOR_PRIMARY}; padding: 12px; background-color: {styles.COLOR_ACCENT_BG}; border: 1px solid {styles.COLOR_BORDER}; border-radius: 8px;")
+        self.label_active_farm.setStyleSheet(f"font-size: 18px; font-weight: bold; color: {styles.COLOR_PRIMARY}; padding: 12px; background-color: {styles.COLOR_CONSOLE_BG}; border: 1px solid {styles.COLOR_BORDER}; border-radius: 8px;")
+        self.label_active_farm.setAlignment(Qt.AlignmentFlag.AlignCenter)
         l_farms.addWidget(self.label_active_farm)
         
+        l_farms.addSpacing(15)
         l_farms.addWidget(QLabel("Выбрать активную ферму:", objectName="SettingLabel"))
         farm_select_layout = QHBoxLayout()
         self.combo_farms = QComboBox()
-        self.combo_farms.setStyleSheet(f"QComboBox {{ background-color: {styles.COLOR_CONSOLE_BG}; border: 1px solid {styles.COLOR_BORDER}; border-radius: 6px; padding: 8px; color: {styles.COLOR_PRIMARY}; }}")
+        self.combo_farms.setFixedHeight(40)
         farm_select_layout.addWidget(self.combo_farms, 1)
         
         btn_switch_farm = QPushButton("Переключить")
-        btn_switch_farm.setStyleSheet(f"background-color: {styles.COLOR_PRIMARY_DARK}; color: {'#000000' if styles.COLOR_PRIMARY == '#00E676' else '#FFFFFF'}; font-weight: bold; height: 35px;")
+        btn_switch_farm.setObjectName("PrimaryBtn")
+        btn_switch_farm.setFixedHeight(40)
         btn_switch_farm.clicked.connect(self.switch_farm)
         farm_select_layout.addWidget(btn_switch_farm)
         l_farms.addLayout(farm_select_layout)
         
+        l_farms.addSpacing(15)
         l_farms.addWidget(QLabel("Создать новую ферму:", objectName="SettingLabel"))
         farm_create_layout = QHBoxLayout()
         self.input_new_farm = QLineEdit()
-        self.input_new_farm.setPlaceholderText("Имя новой фермы (например: crypto_farm)")
+        self.input_new_farm.setFixedHeight(40)
+        self.input_new_farm.setPlaceholderText("Имя новой фермы (например: crypto_farm_02)")
         farm_create_layout.addWidget(self.input_new_farm, 1)
         
         btn_create_farm = QPushButton("Создать")
-        btn_create_farm.setStyleSheet(f"background-color: {styles.COLOR_PRIMARY_DARK}; color: {'#000000' if styles.COLOR_PRIMARY == '#00E676' else '#FFFFFF'}; font-weight: bold; height: 35px;")
+        btn_create_farm.setObjectName("PrimaryBtn")
+        btn_create_farm.setFixedHeight(40)
         btn_create_farm.clicked.connect(self.create_farm)
         farm_create_layout.addWidget(btn_create_farm)
         l_farms.addLayout(farm_create_layout)
         
         l_farms.addStretch()
-        self.tabs.addTab(tab_farms, "Фермы")
+        self.tabs.addTab(tab_farms, "🚜 Фермы")
 
         main_layout.addWidget(self.tabs)
 
-        btn_save = QPushButton("💾 Сохранить настройки")
-        btn_save.setFixedHeight(45)
-        btn_save.setStyleSheet(f"background-color: {styles.COLOR_PRIMARY_DARK}; color: {'#000000' if styles.COLOR_PRIMARY == '#00E676' else '#FFFFFF'}; font-weight: bold; font-size: 14px;")
+        btn_save = QPushButton("💾 Сохранить все настройки")
+        btn_save.setFixedHeight(50)
+        btn_save.setObjectName("PrimaryBtn")
         btn_save.clicked.connect(self.save_settings)
         main_layout.addWidget(btn_save)
 
-    def show_docs(self):
-        try:
-            if self.docs_window is None:
-                self.docs_window = DocsWindow()
-            self.docs_window.show()
-            self.docs_window.raise_()
-            self.docs_window.activateWindow()
-        except Exception as e:
-            import traceback
-            traceback.print_exc()
-            QMessageBox.critical(self, "Ошибка", f"Не удалось открыть документацию: {e}")
+
 
     def add_proxy_to_table(self, proxy_str: str, status: str = "Не проверен"):
         normalized = proxy_manager.normalize_proxy_url(proxy_str)
@@ -553,9 +773,29 @@ class SettingsPage(QWidget):
                 
                 # API
                 # API ID and API Hash are now per-account
+                # Telegram Defaults
+                self.input_tg_api_id.setText(str(s.get("default_tg_api_id", "")))
+                self.input_tg_api_hash.setText(s.get("default_tg_api_hash", ""))
+                
+                # Timeouts
+                self.spin_net_timeout.setValue(s.get("network_timeout", 15))
+                
+                # Security
+                self.cb_enable_pin.setChecked(s.get("enable_pin", False))
+                self.input_app_pin.setText(s.get("app_pin", ""))
+                
+                # Notifications
+                self.cb_notify_bans.setChecked(s.get("notify_bans", True))
+                self.cb_notify_finished.setChecked(s.get("notify_finished", True))
+                self.cb_sound_alerts.setChecked(s.get("sound_alerts", True))
+                
+                # Backup
+                self.cb_auto_backup.setChecked(s.get("auto_backup", False))
+
                 self.input_ai_api_key.setText(s.get("default_ai_api_key", ""))
                 self.input_ai_base_url.setText(s.get("default_ai_base_url", "https://api.groq.com/openai/v1"))
                 self.input_ai_model_name.setText(s.get("default_ai_model_name", "llama-3.1-8b-instant"))
+                self.input_ai_persona_prompt.setText(s.get("default_ai_persona_prompt", "Обычный парень из СНГ, 25 лет"))
                 
                 # Security & Automation
                 self.spin_launch_delay.setValue(s.get("launch_delay", 2))
@@ -610,9 +850,19 @@ class SettingsPage(QWidget):
                     pool_list.append(item.text())
             
             data["settings"].update({
+                "default_tg_api_id": self.input_tg_api_id.text().strip(),
+                "default_tg_api_hash": self.input_tg_api_hash.text().strip(),
+                "network_timeout": self.spin_net_timeout.value(),
+                "enable_pin": self.cb_enable_pin.isChecked(),
+                "app_pin": self.input_app_pin.text().strip(),
+                "notify_bans": self.cb_notify_bans.isChecked(),
+                "notify_finished": self.cb_notify_finished.isChecked(),
+                "sound_alerts": self.cb_sound_alerts.isChecked(),
+                "auto_backup": self.cb_auto_backup.isChecked(),
                 "default_ai_api_key": self.input_ai_api_key.text().strip(),
                 "default_ai_base_url": self.input_ai_base_url.text().strip(),
                 "default_ai_model_name": self.input_ai_model_name.text().strip(),
+                "default_ai_persona_prompt": self.input_ai_persona_prompt.toPlainText().strip(),
                 "launch_delay": self.spin_launch_delay.value(),
                 "max_flood_wait": self.spin_flood_limit.value(),
                 "max_concurrent_tasks": self.spin_max_tasks.value(),
@@ -658,9 +908,19 @@ class SettingsPage(QWidget):
                     pool_list.append(item.text())
             
             data["settings"].update({
+                "default_tg_api_id": self.input_tg_api_id.text().strip(),
+                "default_tg_api_hash": self.input_tg_api_hash.text().strip(),
+                "network_timeout": self.spin_net_timeout.value(),
+                "enable_pin": self.cb_enable_pin.isChecked(),
+                "app_pin": self.input_app_pin.text().strip(),
+                "notify_bans": self.cb_notify_bans.isChecked(),
+                "notify_finished": self.cb_notify_finished.isChecked(),
+                "sound_alerts": self.cb_sound_alerts.isChecked(),
+                "auto_backup": self.cb_auto_backup.isChecked(),
                 "default_ai_api_key": self.input_ai_api_key.text().strip(),
                 "default_ai_base_url": self.input_ai_base_url.text().strip(),
                 "default_ai_model_name": self.input_ai_model_name.text().strip(),
+                "default_ai_persona_prompt": self.input_ai_persona_prompt.toPlainText().strip(),
                 "launch_delay": self.spin_launch_delay.value(),
                 "max_flood_wait": self.spin_flood_limit.value(),
                 "max_concurrent_tasks": self.spin_max_tasks.value(),

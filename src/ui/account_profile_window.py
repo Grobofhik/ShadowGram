@@ -22,6 +22,38 @@ class ClickableLabel(QLabel):
             self.clicked.emit()
         super().mousePressEvent(event)
 
+class AvatarLabel(ClickableLabel):
+    image_dropped = pyqtSignal(str)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setAcceptDrops(True)
+
+    def dragEnterEvent(self, event):
+        if getattr(self, 'is_editable', False):
+            if event.mimeData().hasUrls():
+                urls = event.mimeData().urls()
+                if urls and urls[0].isLocalFile():
+                    path = urls[0].toLocalFile().lower()
+                    if path.endswith(('.png', '.jpg', '.jpeg')):
+                        event.acceptProposedAction()
+                        return
+        event.ignore()
+
+    def dragMoveEvent(self, event):
+        if getattr(self, 'is_editable', False):
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def dropEvent(self, event):
+        if getattr(self, 'is_editable', False):
+            urls = event.mimeData().urls()
+            if urls and urls[0].isLocalFile():
+                file_path = urls[0].toLocalFile()
+                self.image_dropped.emit(file_path)
+                event.acceptProposedAction()
+
 class SectionFrame(QFrame):
     """Custom styled frame for sections."""
     def __init__(self, title, parent=None):
@@ -213,30 +245,16 @@ class AccountProfileWindow(QDialog):
         header_layout.addLayout(edit_row)
         
         # Avatar
-        self.avatar_label = QLabel()
+        self.avatar_label = AvatarLabel()
         self.avatar_label.setFixedSize(90, 90)
         self.avatar_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.avatar_label.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.avatar_label.setToolTip("Click to change avatar")
-        # Default avatar circle
-        pixmap = QPixmap(90, 90)
-        pixmap.fill(Qt.GlobalColor.transparent)
-        painter = QPainter(pixmap)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        painter.setBrush(QColor(COLOR_BORDER))
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.drawEllipse(0, 0, 90, 90)
-        painter.end()
-        # Set Avatar Pixmap
-        parent_row = self.parent()
-        if parent_row and hasattr(parent_row, 'avatar_label'):
-            original_pixmap = parent_row.avatar_label.pixmap()
-            if original_pixmap and not original_pixmap.isNull():
-                self.avatar_label.setPixmap(original_pixmap.scaled(90, 90, Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.SmoothTransformation))
-            else:
-                self.avatar_label.setPixmap(pixmap)
-        else:
-            self.avatar_label.setPixmap(pixmap)
+        self.avatar_label.setToolTip("Click or drag image to change avatar (only in Edit mode)")
+        self.avatar_label.is_editable = False
+        self.avatar_label.clicked.connect(self.change_main_avatar)
+        self.avatar_label.image_dropped.connect(self.set_new_avatar)
+        
+        self.update_main_avatar_pixmap()
         
         # Name
         self.name_label = QLabel("Unknown Account")
@@ -280,6 +298,10 @@ class AccountProfileWindow(QDialog):
         self.f_channel_name.set_edit_mode(self.is_editing)
         self.f_channel_link.set_edit_mode(self.is_editing)
         self.channel_avatar_label.is_editable = self.is_editing
+        self.avatar_label.is_editable = self.is_editing
+        
+        if hasattr(self, 'btn_generate_api'):
+            self.btn_generate_api.setVisible(self.is_editing)
         
     def save_profile_data(self):
         workdir = self.account_data.get("workdir")
@@ -345,11 +367,21 @@ class AccountProfileWindow(QDialog):
         self.f_api_id = LabeledInput("API ID (Telegram app)", "", read_only=True)
         self.f_api_hash = LabeledInput("API Hash (Telegram app)", "", read_only=True)
         
+        self.btn_generate_api = QPushButton("🔄 Auto API")
+        self.btn_generate_api.setToolTip("Сгенерировать случайные ключи официального приложения")
+        self.btn_generate_api.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_generate_api.setFixedHeight(35)
+        self.btn_generate_api.setStyleSheet(f"background-color: {COLOR_BG}; border: 1px solid {COLOR_BORDER}; border-radius: 6px; font-weight: bold;")
+        self.btn_generate_api.clicked.connect(self.generate_api_keys)
+        self.btn_generate_api.setVisible(False)
+        
         row_api = QHBoxLayout()
         row_api.addWidget(self.f_api_id)
         row_api.addWidget(self.f_api_hash)
+        row_api.addWidget(self.btn_generate_api)
         
         self.f_proxy = LabeledInput("Proxy String (IP:PORT:USER:PASS)", "", read_only=True)
+        self.f_privacy_guard = LabeledInput("Privacy Guard", "", read_only=True)
         
         self.f_device_model = LabeledInput("Device Model", "", read_only=True)
         self.f_system_version = LabeledInput("OS Version", "", read_only=True)
@@ -368,7 +400,12 @@ class AccountProfileWindow(QDialog):
         self.f_prompt = LabeledInput("AI Prompt for Auto-reply", "", multi_line=True, read_only=True)
         
         section.layout.addLayout(row_api)
-        section.layout.addWidget(self.f_proxy)
+        
+        row_proxy = QHBoxLayout()
+        row_proxy.addWidget(self.f_proxy)
+        row_proxy.addWidget(self.f_privacy_guard)
+        section.layout.addLayout(row_proxy)
+        
         section.layout.addLayout(row_hw1)
         section.layout.addLayout(row_hw2)
         section.layout.addWidget(self.f_notes)
@@ -406,6 +443,14 @@ class AccountProfileWindow(QDialog):
         section.layout.addLayout(row)
         
         self.scroll_layout.addWidget(section)
+
+    def generate_api_keys(self):
+        from src.core.managers.api_manager import get_dynamic_api_credentials
+        import time
+        seed = str(time.time())
+        creds = get_dynamic_api_credentials(seed)
+        self.f_api_id.input_field.setText(str(creds['api_id']))
+        self.f_api_hash.input_field.setText(creds['api_hash'])
 
     def update_channel_avatar_pixmap(self):
         workdir = self.account_data.get("workdir")
@@ -452,6 +497,115 @@ class AccountProfileWindow(QDialog):
             except Exception as e:
                 pass
 
+    def update_main_avatar_pixmap(self):
+        workdir = self.account_data.get("workdir")
+        pixmap = None
+        if workdir:
+            avatar_path = os.path.join(workdir, "avatar.jpg")
+            if os.path.exists(avatar_path):
+                pixmap = QPixmap(avatar_path)
+        
+        if not pixmap or pixmap.isNull():
+            parent_row = self.parent()
+            if parent_row and hasattr(parent_row, 'avatar_label'):
+                original_pixmap = parent_row.avatar_label.pixmap()
+                if original_pixmap and not original_pixmap.isNull():
+                    pixmap = original_pixmap
+
+        if not pixmap or pixmap.isNull():
+            pixmap = QPixmap(90, 90)
+            pixmap.fill(Qt.GlobalColor.transparent)
+            painter = QPainter(pixmap)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+            painter.setBrush(QColor(COLOR_BORDER))
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawEllipse(0, 0, 90, 90)
+            painter.end()
+        else:
+            scaled = pixmap.scaled(90, 90, Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.SmoothTransformation)
+            pixmap = QPixmap(90, 90)
+            pixmap.fill(Qt.GlobalColor.transparent)
+            painter = QPainter(pixmap)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+            path = QPainterPath()
+            path.addEllipse(0, 0, 90, 90)
+            painter.setClipPath(path)
+            x = (90 - scaled.width()) // 2
+            y = (90 - scaled.height()) // 2
+            painter.drawPixmap(x, y, scaled)
+            painter.end()
+            
+        self.avatar_label.setPixmap(pixmap)
+        
+        parent_row = self.parent()
+        if parent_row and hasattr(parent_row, 'update_avatar'):
+            parent_row.update_avatar()
+
+    def change_main_avatar(self):
+        workdir = self.account_data.get("workdir")
+        if not workdir: return
+        file_path, _ = QFileDialog.getOpenFileName(self, "Выбрать аватар", "", "Images (*.png *.jpg *.jpeg)")
+        if file_path:
+            self.set_new_avatar(file_path)
+
+    def set_new_avatar(self, file_path):
+        workdir = self.account_data.get("workdir")
+        if not workdir: return
+        dest_path = os.path.join(workdir, "avatar.jpg")
+        try:
+            shutil.copy2(file_path, dest_path)
+            self.update_main_avatar_pixmap()
+            
+            # Start background upload
+            from PyQt6.QtCore import QThread, pyqtSignal
+            import asyncio
+            from src.modules.plugins.set_avatar import SetAvatarPlugin
+            
+            class AvatarUploadThread(QThread):
+                finished_signal = pyqtSignal(bool, str)
+                
+                def __init__(self, acc_data, photo_path):
+                    super().__init__()
+                    self.acc_data = acc_data
+                    self.photo_path = photo_path
+                    self.logs = []
+                    
+                def log_cb(self, msg):
+                    self.logs.append(msg)
+                    
+                def run(self):
+                    async def do_upload():
+                        plugin = SetAvatarPlugin(
+                            account_data=self.acc_data,
+                            api_id=str(self.acc_data.get("api_id", "")),
+                            api_hash=self.acc_data.get("api_hash", ""),
+                            log_callback=self.log_cb
+                        )
+                        # We don't want global locks to delay avatar set from UI
+                        await plugin.run(photo_path=self.photo_path)
+                        
+                    asyncio.run(do_upload())
+                    success = any("успешно" in msg for msg in self.logs)
+                    self.finished_signal.emit(success, "\\n".join(self.logs))
+                    
+            self.upload_thread = AvatarUploadThread(self.account_data, dest_path)
+            self.status_label.setText("Status: ⏳ Установка аватарки в Telegram...")
+            self.status_label.setStyleSheet(f"color: #fbc02d; font-size: 12px; font-weight: bold; font-family: '{FONT_NAME}'; background: transparent; border: none;")
+            
+            def on_finished(success, msgs):
+                if success:
+                    self.status_label.setText("Status: ✅ Аватарка установлена!")
+                    self.status_label.setStyleSheet(f"color: #00e676; font-size: 12px; font-weight: bold; font-family: '{FONT_NAME}'; background: transparent; border: none;")
+                else:
+                    self.status_label.setText("Status: ❌ Ошибка установки")
+                    self.status_label.setStyleSheet(f"color: #ff5252; font-size: 12px; font-weight: bold; font-family: '{FONT_NAME}'; background: transparent; border: none;")
+                    
+            self.upload_thread.finished_signal.connect(on_finished)
+            self.upload_thread.start()
+            
+        except Exception as e:
+            pass
+
     def setup_quick_actions_section(self):
         section = SectionFrame("Quick Actions Hub")
         
@@ -496,16 +650,13 @@ class AccountProfileWindow(QDialog):
         self.name_label.setText(name_text)
         
         # Proxy
-        proxy = self.account_data.get('proxy_url', '')
-        self.f_proxy.input_field.setText(proxy)
+        # API & Hardware
+        acc = self.account_data
+        self.f_api_id.input_field.setText(str(acc.get('api_id', '')))
+        self.f_api_hash.input_field.setText(acc.get('api_hash', ''))
+        self.f_proxy.input_field.setText(acc.get('proxy_url', ''))
+        self.f_privacy_guard.input_field.setText("🛡️ АКТИВЕН" if acc.get("privacy_guard") else "⚠️ УЯЗВИМ")
         
-        # API credentials
-        api_id = self.account_data.get('api_id', '')
-        api_hash = self.account_data.get('api_hash', '')
-        self.f_api_id.input_field.setText(str(api_id))
-        self.f_api_hash.input_field.setText(api_hash)
-        
-        # Setup Hardware profile
         from src.core.constants import CONFIG_FILE
         from src.core.managers.account_manager import get_hardware_profile
         hw_profile = get_hardware_profile(CONFIG_FILE, self.account_data.get('workdir', ''))
@@ -520,6 +671,12 @@ class AccountProfileWindow(QDialog):
         
         # Prompts
         self.f_prompt.input_field.setPlainText(self.account_data.get('ai_prompt', ''))
+        
+        # Status
+        workdir = self.account_data.get('workdir')
+        from src.ui.account_row import TelegramAccountRow
+        if workdir in TelegramAccountRow.status_cache:
+            self.status_label.setText(f"Status: {TelegramAccountRow.status_cache[workdir]}")
         
         # New fields (Username, Bio, Email, 2FA) might not exist yet, set defaults if available
         self.f_username.input_field.setText(self.account_data.get('username', ''))

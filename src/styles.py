@@ -465,7 +465,6 @@ QLabel#Title {{
     font-weight: bold;
     font-family: '{TITLE_FONT_NAME}';
     letter-spacing: 3px;
-    text-shadow: 0px 0px 12px {hex_to_rgba(COLOR_PRIMARY, 0.5)};
 }}
 
 QLabel#SettingLabel {{
@@ -614,7 +613,7 @@ QProgressBar::chunk {{
 """
 
     DOCS_STYLESHEET = f"""
-QWidget#DocsWindow {{
+QWidget#DocsPage {{
     background-color: {COLOR_BG};
     color: {COLOR_TEXT_MAIN};
 }}

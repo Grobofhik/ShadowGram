@@ -4,7 +4,7 @@ import string
 from pathlib import Path
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QLineEdit,
-    QSpinBox, QTextEdit, QCheckBox, QFileDialog, QMessageBox
+    QSpinBox, QTextEdit, QCheckBox, QFileDialog, QMessageBox, QFrame, QScrollArea, QWidget
 )
 from PyQt6.QtCore import Qt
 from src.core.managers import proxy_manager, farm_manager, config_manager, hw_manager, process_manager, account_manager
@@ -15,113 +15,144 @@ class MassProfileCreatorService(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Массовое создание профилей")
-        self.setFixedSize(500, 580)
-        if parent and hasattr(parent, 'styleSheet'):
-            self.setStyleSheet(parent.styleSheet())
-        else:
-            self.setStyleSheet(styles.STYLESHEET)
-        
+        self.setStyleSheet(f"background-color: {styles.COLOR_BG}; color: {styles.COLOR_TEXT_MAIN};")
         self.init_ui()
 
+    def create_card(self, title):
+        card = QFrame()
+        card.setStyleSheet(f"QFrame {{ background-color: {styles.COLOR_CONSOLE_BG}; border: 1px solid {styles.COLOR_BORDER}; border-radius: 10px; }}")
+        card_layout = QVBoxLayout(card)
+        card_layout.setContentsMargins(15, 15, 15, 15)
+        
+        lbl_title = QLabel(title)
+        lbl_title.setStyleSheet(f"font-size: 14px; font-weight: bold; color: {styles.COLOR_PRIMARY}; border: none;")
+        card_layout.addWidget(lbl_title)
+        return card, card_layout
+
     def init_ui(self):
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(20, 20, 20, 20)
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setStyleSheet("QScrollArea { border: none; background-color: transparent; }")
+        
+        container = QWidget()
+        container.setStyleSheet("background-color: transparent;")
+        layout = QVBoxLayout(container)
         layout.setSpacing(15)
 
-        # Заголовок
-        title_label = QLabel("Массовое создание профилей")
-        title_label.setStyleSheet(f"font-weight: bold; color: {styles.COLOR_PRIMARY}; font-size: 16px;")
-        layout.addWidget(title_label)
+        info_label = QLabel("Создайте множество профилей за пару кликов. Программа автоматически сгенерирует для них имена, раскидает прокси и создаст уникальные названия устройств.")
+        info_label.setWordWrap(True)
+        info_label.setStyleSheet(f"color: {styles.COLOR_TEXT_MUTED}; font-size: 14px;")
+        layout.addWidget(info_label)
 
-        # Настройки шаблона имени
-        name_settings_layout = QHBoxLayout()
+        # 1. Шаблон имени
+        card_name, name_layout = self.create_card("📝 Шаблон имени")
+        from PyQt6.QtWidgets import QFormLayout
+        form_name = QFormLayout()
+        form_name.setSpacing(15)
+        form_name.setLabelAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         
-        # Префикс
-        prefix_vbox = QVBoxLayout()
-        prefix_vbox.addWidget(QLabel("Префикс:"))
         self.input_prefix = QLineEdit("acc")
-        self.input_prefix.setPlaceholderText("acc")
-        prefix_vbox.addWidget(self.input_prefix)
-        name_settings_layout.addLayout(prefix_vbox)
+        self.input_prefix.setStyleSheet(f"background-color: {styles.COLOR_BG}; border: 1px solid {styles.COLOR_BORDER}; border-radius: 6px; padding: 5px;")
+        form_name.addRow(QLabel("Префикс:"), self.input_prefix)
 
-        # Старт
-        start_vbox = QVBoxLayout()
-        start_vbox.addWidget(QLabel("Старт:"))
         self.spin_start = QSpinBox()
+        self.spin_start.setStyleSheet(f"background-color: {styles.COLOR_BG}; border: 1px solid {styles.COLOR_BORDER}; border-radius: 6px; padding: 5px;")
         self.spin_start.setRange(1, 9999)
         self.spin_start.setValue(1)
-        start_vbox.addWidget(self.spin_start)
-        name_settings_layout.addLayout(start_vbox)
+        form_name.addRow(QLabel("Старт:"), self.spin_start)
 
-        # Энд
-        end_vbox = QVBoxLayout()
-        end_vbox.addWidget(QLabel("Конец:"))
         self.spin_end = QSpinBox()
+        self.spin_end.setStyleSheet(f"background-color: {styles.COLOR_BG}; border: 1px solid {styles.COLOR_BORDER}; border-radius: 6px; padding: 5px;")
         self.spin_end.setRange(1, 9999)
         self.spin_end.setValue(10)
-        end_vbox.addWidget(self.spin_end)
-        name_settings_layout.addLayout(end_vbox)
+        form_name.addRow(QLabel("Конец:"), self.spin_end)
 
-        # Дополнение нулями (padding)
-        pad_vbox = QVBoxLayout()
-        pad_vbox.addWidget(QLabel("Длина номера:"))
         self.spin_padding = QSpinBox()
+        self.spin_padding.setStyleSheet(f"background-color: {styles.COLOR_BG}; border: 1px solid {styles.COLOR_BORDER}; border-radius: 6px; padding: 5px;")
         self.spin_padding.setRange(1, 10)
         self.spin_padding.setValue(1)
-        self.spin_padding.setToolTip("Ширина числовой части (например, 3 для acc001)")
-        pad_vbox.addWidget(self.spin_padding)
-        name_settings_layout.addLayout(pad_vbox)
+        form_name.addRow(QLabel("Длина (нулей):"), self.spin_padding)
+        
+        name_layout.addLayout(form_name)
+        layout.addWidget(card_name)
 
-        layout.addLayout(name_settings_layout)
-
-        # Выбор базовой директории
-        dir_vbox = QVBoxLayout()
-        dir_vbox.addWidget(QLabel("Базовая папка для профилей (workdir):"))
+        # 2. Директория
+        card_dir, dir_layout = self.create_card("📁 Директория (workdir)")
         dir_hbox = QHBoxLayout()
         self.input_path = QLineEdit()
-        # По умолчанию берем активную ферму
+        self.input_path.setStyleSheet(f"background-color: {styles.COLOR_BG}; border: 1px solid {styles.COLOR_BORDER}; border-radius: 6px; padding: 5px;")
         farm_dir = farm_manager.get_active_farm_dir()
-        default_path = farm_dir / "accounts"
-        self.input_path.setText(str(default_path))
+        self.input_path.setText(str(farm_dir / "accounts"))
         dir_hbox.addWidget(self.input_path)
         
         btn_browse = QPushButton("Обзор")
+        btn_browse.setStyleSheet(f"background-color: {styles.COLOR_HOVER_BG}; border: 1px solid {styles.COLOR_BORDER}; border-radius: 6px; padding: 5px 15px;")
         btn_browse.clicked.connect(self.browse_directory)
         dir_hbox.addWidget(btn_browse)
-        dir_vbox.addLayout(dir_hbox)
-        layout.addLayout(dir_vbox)
+        dir_layout.addLayout(dir_hbox)
+        layout.addWidget(card_dir)
 
-        # Доп опции
-        options_layout = QHBoxLayout()
-        self.check_random_devices = QCheckBox("Случайные имена устройств")
+        # 3. Настройки прокси и железа
+        card_adv, adv_layout = self.create_card("⚙ Дополнительно")
+        adv_layout.setContentsMargins(10, 10, 10, 10)
+        adv_layout.setSpacing(5)
+        
+        opt_hbox = QHBoxLayout()
+        self.check_random_devices = QCheckBox("Случайные устройства")
         self.check_random_devices.setChecked(True)
-        options_layout.addWidget(self.check_random_devices)
+        self.check_random_devices.setStyleSheet("border: none; background: transparent;")
+        opt_hbox.addWidget(self.check_random_devices)
         
         self.check_cycle_proxies = QCheckBox("Циклить прокси")
         self.check_cycle_proxies.setChecked(True)
-        self.check_cycle_proxies.setToolTip("Если прокси меньше чем аккаунтов, распределять их по кругу")
-        options_layout.addWidget(self.check_cycle_proxies)
-        layout.addLayout(options_layout)
+        self.check_cycle_proxies.setStyleSheet("border: none; background: transparent;")
+        opt_hbox.addWidget(self.check_cycle_proxies)
+        adv_layout.addLayout(opt_hbox)
 
-        # Поле со списком прокси
-        proxy_vbox = QVBoxLayout()
-        proxy_vbox.addWidget(QLabel("Список прокси (по одному на строку):"))
+        proxy_lbl = QLabel("Список прокси (по одному на строку):")
+        proxy_lbl.setStyleSheet("border: none;")
+        adv_layout.addWidget(proxy_lbl)
+        
         self.input_proxies = QTextEdit()
-        self.input_proxies.setPlaceholderText(
-            "Вставьте список прокси в формате:\n"
-            "http://user:pass@host:port\n"
-            "socks5://user:pass@host:port\n"
-            "каждый с новой строки"
-        )
-        proxy_vbox.addWidget(self.input_proxies)
-        layout.addLayout(proxy_vbox)
+        self.input_proxies.setStyleSheet(f"""
+            QTextEdit {{
+                background-color: {styles.COLOR_BG}; 
+                border: 1px solid {styles.COLOR_BORDER}; 
+                border-radius: 6px; 
+                padding: 5px;
+                font-family: monospace;
+            }}
+        """)
+        self.input_proxies.setPlaceholderText("http://user:pass@host:port\nsocks5://user:pass@host:port")
+        self.input_proxies.setFixedHeight(70)
+        adv_layout.addWidget(self.input_proxies)
+        
+        layout.addWidget(card_adv)
 
         # Кнопка создания
-        self.btn_create = QPushButton("Создать профили")
-        self.btn_create.setObjectName("LaunchBtn")
-        self.btn_create.setFixedHeight(45)
+        self.btn_create = QPushButton("✨ Создать профили")
+        self.btn_create.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {styles.COLOR_PRIMARY};
+                color: #000000;
+                border: none;
+                border-radius: 8px;
+                padding: 12px;
+                font-weight: bold;
+                font-size: 16px;
+            }}
+            QPushButton:hover {{
+                background-color: {styles.COLOR_PRIMARY_LIGHT};
+            }}
+        """)
         self.btn_create.clicked.connect(self.create_profiles)
         layout.addWidget(self.btn_create)
+        
+        scroll.setWidget(container)
+        main_layout.addWidget(scroll)
 
     def browse_directory(self):
         dir_path = QFileDialog.getExistingDirectory(self, "Выберите базовую папку")
@@ -166,8 +197,7 @@ class MassProfileCreatorService(QDialog):
             profile_name = f"{prefix}{num_str}"
             workdir = base_dir / profile_name
 
-            # Проверяем, существует ли аккаунт с таким путем или именем, чтобы избежать дубликатов
-            # Загружаем текущий конфиг
+            # Проверяем
             config_data = config_manager._read_config(CONFIG_FILE)
             exists = False
             for acc in config_data.get("accounts", []):
@@ -178,7 +208,6 @@ class MassProfileCreatorService(QDialog):
             if exists:
                 continue
 
-            # Распределение прокси
             proxy_url = None
             if proxies:
                 pos = idx - start_idx
@@ -187,16 +216,13 @@ class MassProfileCreatorService(QDialog):
                 else:
                     proxy_url = proxies[pos] if pos < len(proxies) else None
 
-            # Имя устройства
             device_name = self.generate_random_device_name() if random_devices else f"PC-{profile_name}"
 
             if account_manager.add_account(CONFIG_FILE, profile_name, workdir, proxy_url, device_name):
                 created_count += 1
 
-        # Синхронизируем конфиг с фермой
         farm_manager.save_active_farm_config()
 
-        # Обновляем интерфейс в главном окне
         parent = self.parent()
         if parent:
             if hasattr(parent, 'refresh_accounts'):
@@ -209,4 +235,3 @@ class MassProfileCreatorService(QDialog):
             "Успех", 
             f"Массовое создание завершено!\nУспешно создано {created_count} профилей."
         )
-        self.accept()

@@ -110,6 +110,22 @@ def main() -> None:
     app.setStyleSheet(styles.STYLESHEET)
 
     from src.ui.main_window import TelegramManager
+    
+    try:
+        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            s = data.get("settings", {})
+            if s.get("enable_pin", False):
+                stored_pin = s.get("app_pin", "")
+                from PyQt6.QtWidgets import QInputDialog, QLineEdit, QMessageBox
+                # Ask for PIN
+                pin, ok = QInputDialog.getText(None, "Авторизация", "Введите ПИН-код:", QLineEdit.EchoMode.Password)
+                if not ok or pin != stored_pin:
+                    QMessageBox.critical(None, "Ошибка", "Неверный ПИН-код!")
+                    sys.exit(0)
+    except Exception:
+        pass
+        
     window = TelegramManager()
     window.show()
 

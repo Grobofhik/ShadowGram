@@ -1,135 +1,69 @@
-# <img src="../../resources/icons/moduls_icon.png" width="32" valign="middle"> Руководство разработчика плагинов
+# 💻 Разработка собственных модулей
 
-ShadowGram построен на модульной архитектуре. Это означает, что любую новую функцию автоматизации можно оформить в виде отдельного Python-файла (плагина), который приложение подхватит автоматически.
+ShadowGram обладает открытой архитектурой (Plugin API), позволяющей разработчикам на Python создавать собственные сценарии для автоматизации действий. 
 
----
-
-## 🏗 Архитектура системы
-
-Все плагины в ShadowGram являются наследниками базового класса `BaseModule`. Благодаря этому разработчику не нужно заботиться о:
-*   Поиске файлов сессий и авторизации.
-*   Поднятии прокси-туннелей через `gost`.
-*   Сложной логике многопоточности и управления задачами.
-
-### Где лежат плагины?
-Все файлы плагинов должны находиться в директории:
-`src/modules/plugins/`
+Все пользовательские модули загружаются автоматически при старте приложения, если они расположены в директории `src/modules/`.
 
 ---
 
-## 🛠 Справочник BaseModule
+## 🏗 Базовая структура модуля
 
-При создании плагина вы переопределяете ключевые атрибуты и методы.
-
-### Ключевые атрибуты (Metadata)
-*   `MODULE_NAME`: Строка. Имя модуля, которое увидит пользователь в списке.
-*   `MODULE_DESC`: Строка. Краткое описание функционала.
-*   `SINGLE_ACCOUNT`: Boolean. Если `True`, модуль запрещает массовый выбор аккаунтов (полезно для ручных инструментов).
-*   `PARAMS`: Список словарей. Описывает поля ввода для UI.
-    *   Пример: `{"name": "count", "type": "text", "label": "Кол-во сообщений"}`
-
-### Жизненный цикл (Task Lifecycle)
-Эти параметры критически важны для массовой автоматизации:
-*   `START_DELAY`: Кортеж `(min, max)`. Задержка в секундах перед самым первым запуском. Помогает избежать одновременного входа 100 аккаунтов в сеть.
-*   `IS_CYCLIC`: Boolean. Если `True`, после завершения метода `run` аккаунт уснет и запустится снова через время `CYCLE_DELAY`.
-*   `CYCLE_DELAY`: Кортеж `(min, max)`. Время сна между циклами выполнения (в секундах).
-
----
-
-## 🔌 Основные методы и инструменты
-
-### 1. `await self.init_client()`
-Всегда вызывайте этот метод первым делом в `run()`. Он:
-1.  Находит `.session` файл в папке аккаунта.
-2.  Запускает `gost` для прокси (если прокси привязан).
-3.  Создает и подключает экземпляр `hydrogram.Client`.
-4.  Возвращает `True` при успехе.
-
-### 2. `self.client`
-Это ваш главный инструмент. Полноценный клиент Hydrogram (MTProto).
-Примеры использования:
-```python
-# Получить информацию о себе
-me = await self.client.get_me()
-
-# Отправить сообщение
-await self.client.send_message("username", "Hello from ShadowGram!")
-
-# Вступить в чат
-await self.client.join_chat("https://t.me/example")
-```
-
-### 3. `self.log(message, status="info")`
-Метод для вывода информации в консоль приложения.
-*   `status="info"`: Белый текст (по умолчанию).
-*   `status="success"`: <span style="color: #00e676;">Зеленый</span> (успех).
-*   `status="warning"`: <span style="color: #fbc02d;">Желтый</span> (внимание).
-*   `status="error"`: <span style="color: #ff5252;">Красный</span> (ошибка).
-
-### 4. `self.acc`
-Словарь с данными текущего аккаунта:
-*   `self.acc['name']`: Название профиля.
-*   `self.acc['workdir']`: Путь к папке профиля.
-*   `self.acc['proxy_url']`: Строка прокси.
-
----
-
-## 🧪 Пример идеального плагина
-
-Создадим простой модуль для отправки сообщений:
+Каждый модуль должен наследоваться от базового класса `BaseModule` и реализовывать асинхронный метод `run()`.
 
 ```python
-import asyncio
-import random
 from src.core.base_module import BaseModule
+import asyncio
 
-class SimpleSpammer(BaseModule):
-    MODULE_NAME = "📩 Простой рассыльщик"
-    MODULE_DESC = "Рассылает сообщение по списку чатов."
+class MyCustomModule(BaseModule):
+    name = "💡 Мой кастомный модуль"
+    description = "Краткое описание того, что делает плагин."
     
-    # UI Параметры
-    PARAMS = [
-        {"name": "chats", "type": "textarea", "label": "Список чатов (каждый с новой строки)"},
-        {"name": "message", "type": "text", "label": "Текст сообщения"}
+    # Определение полей для графического интерфейса
+    fields = [
+        {"name": "target_username", "label": "Юзернейм цели:", "type": "text", "default": "@durov"},
+        {"name": "delay", "label": "Задержка (сек):", "type": "number", "default": "5"}
     ]
 
-    async def run(self, **kwargs):
-        # 1. Инициализация
-        if not await self.init_client():
-            return
+    async def run(self, client, config):
+        """
+        Основной метод выполнения.
+        :param client: Объект hydrogram.Client (уже авторизованный)
+        :param config: Словарь с параметрами, переданными из UI
+        """
+        target = config.get("target_username")
+        delay = int(config.get("delay", 5))
 
-        # 2. Получение данных из UI
-        chats = kwargs.get("chats", "").strip().split("\n")
-        text = kwargs.get("message", "Привет!")
-
+        self.log(f"Начинаем работу с {target}...")
+        
+        # Пример: Отправка сообщения
         try:
-            for chat in chats:
-                chat = chat.strip()
-                if not chat: continue
-                
-                self.log(f"Отправка в {chat}...", "info")
-                await self.client.send_message(chat, text)
-                self.log(f"Успешно отправлено в {chat}!", "success")
-                
-                # Имитация человеческой паузы
-                await asyncio.sleep(random.uniform(5, 10))
-                
+            await client.send_message(target, "Привет из ShadowGram!")
+            self.log(f"✅ Сообщение успешно отправлено!", level="success")
         except Exception as e:
-            self.log(f"Критическая ошибка: {e}", "error")
-        finally:
-            # 3. Всегда вызывайте cleanup для закрытия сессии и прокси
-            await self.cleanup()
+            self.log(f"❌ Ошибка отправки: {e}", level="error")
+            
+        await asyncio.sleep(delay)
+        self.log("Работа модуля завершена.")
 ```
 
----
+## 🛠 API и Инструменты
 
-## ⚠️ Обработка ошибок
+### Логирование
+Вместо стандартного `print()` всегда используйте встроенный метод `self.log()`. Это гарантирует, что ваше сообщение появится в графическом интерфейсе пользователя (в Консоли) и будет записано в системные логи.
+*   `level="info"` (по умолчанию)
+*   `level="success"` (зеленый текст)
+*   `level="error"` (красный текст)
+*   `level="warning"` (желтый текст)
 
-При написании логики обязательно импортируйте и обрабатывайте стандартные ошибки Hydrogram:
-*   `hydrogram.errors.FloodWait`: Возникает при слишком частых запросах. Обязательно делайте `await asyncio.sleep(e.value)`.
-*   `hydrogram.errors.UserDeactivated`: Аккаунт забанен.
-*   `hydrogram.errors.Unauthorized`: Сессия стала невалидной.
+### Объект `client`
+Модулю передается полностью инициализированный и подключенный к прокси клиент `hydrogram.Client`. Вы можете использовать все стандартные методы Hydrogram API (например, `client.join_chat()`, `client.get_messages()`, `client.resolve_peer()`).
 
----
+### Взаимодействие с UI
+Список `fields` определяет, какие элементы управления будут показаны пользователю при выборе вашего модуля:
+*   `text`: Однострочное текстовое поле (QLineEdite).
+*   `number`: Поле ввода только чисел.
+*   `textarea`: Многострочное поле для списков или больших текстов.
+*   `checkbox`: Галочка (True/False).
 
-<img src="../../resources/icons/rocket_icon.png" width="32" valign="middle"> **ShadowGram** — это гибкая платформа. Создавайте свои уникальные инструменты и автоматизируйте Telegram на полную мощность!
+## 🚀 Деплой
+Просто сохраните ваш скрипт как `my_module.py` в папку `src/modules/` и перезапустите ShadowGram. Если синтаксических ошибок нет, ваш плагин автоматически появится в левом меню!

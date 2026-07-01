@@ -18,17 +18,15 @@ from src.modules_styles import MODULES_STYLESHEET
 from src.ui.active_tasks_window import ActiveTasksWindow
 from src import styles
 
-class ServerWindow(QWidget):
+class ServerPage(QWidget):
     log_signal = pyqtSignal(str)
     task_log_signal = pyqtSignal(str, str)
     server_task_started_signal = pyqtSignal(str, str, int, str, str)
     ping_finished = pyqtSignal(bool, str, list)
     server_send_finished = pyqtSignal(bool, str)
 
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle("ShadowGram - Server Management")
-        self.resize(950, 750)
+    def __init__(self, parent=None):
+        super().__init__(parent)
         self.setStyleSheet(MODULES_STYLESHEET)
         
         self.manager = ModuleManager()
@@ -82,94 +80,123 @@ class ServerWindow(QWidget):
 
     def init_ui(self):
         main_layout = QHBoxLayout(self)
-        main_layout.setContentsMargins(15, 15, 15, 15)
-        main_layout.setSpacing(15)
+        main_layout.setContentsMargins(20, 20, 20, 20)
+        main_layout.setSpacing(20)
         
         # Левая панель: Настройки сервера и список аккаунтов
-        left_frame = QFrame(); left_frame.setObjectName("SectionFrame")
-        left_frame.setFixedWidth(300)
+        left_frame = QFrame()
+        left_frame.setObjectName("SectionFrame")
+        left_frame.setFixedWidth(340)
         left_layout = QVBoxLayout(left_frame)
+        left_layout.setSpacing(12)
         
-        left_layout.addWidget(QLabel("Настройки сервера", objectName="SectionTitle"))
+        server_title = QLabel("Настройки сервера", objectName="SectionTitle")
+        left_layout.addWidget(server_title)
+        
+        # Конфиг сервера
+        server_cfg_frame = QFrame()
+        server_cfg_frame.setStyleSheet(f"QFrame {{ background-color: {styles.COLOR_BG}; border: 1px solid {styles.COLOR_BORDER}; border-radius: 8px; padding: 10px; }}")
+        server_cfg_layout = QVBoxLayout(server_cfg_frame)
+        server_cfg_layout.setContentsMargins(10, 10, 10, 10)
+        server_cfg_layout.setSpacing(8)
         
         ip_layout = QHBoxLayout()
         ip_layout.addWidget(QLabel("IP:"))
         self.input_server_ip = QLineEdit(); self.input_server_ip.setPlaceholderText("127.0.0.1")
         ip_layout.addWidget(self.input_server_ip)
-        left_layout.addLayout(ip_layout)
+        server_cfg_layout.addLayout(ip_layout)
         
         port_layout = QHBoxLayout()
         port_layout.addWidget(QLabel("Порт:"))
         self.input_server_port = QLineEdit(); self.input_server_port.setPlaceholderText("8000")
         port_layout.addWidget(self.input_server_port)
-        left_layout.addLayout(port_layout)
+        server_cfg_layout.addLayout(port_layout)
         
         api_id_layout = QHBoxLayout()
         api_id_layout.addWidget(QLabel("API ID:"))
         self.input_api_id = QLineEdit()
         api_id_layout.addWidget(self.input_api_id)
-        left_layout.addLayout(api_id_layout)
+        server_cfg_layout.addLayout(api_id_layout)
         
         api_hash_layout = QHBoxLayout()
         api_hash_layout.addWidget(QLabel("API Hash:"))
         self.input_api_hash = QLineEdit()
         api_hash_layout.addWidget(self.input_api_hash)
-        left_layout.addLayout(api_hash_layout)
+        server_cfg_layout.addLayout(api_hash_layout)
         
         conn_layout = QHBoxLayout()
         btn_save_settings = QPushButton(" Сохранить")
         btn_save_settings.setIcon(get_icon(SAVE_ICON_PATH))
-        btn_save_settings.setIconSize(QSize(20, 20))
+        btn_save_settings.setIconSize(QSize(16, 16))
         btn_save_settings.clicked.connect(self.save_settings)
+        btn_save_settings.setStyleSheet("background-color: #334155; border: 1px solid #1e293b; font-size: 11px; padding: 6px;")
         conn_layout.addWidget(btn_save_settings)
         
         self.btn_ping = QPushButton(" Ping")
         self.btn_ping.setIcon(get_icon(PING_ICON_PATH))
-        self.btn_ping.setIconSize(QSize(20, 20))
+        self.btn_ping.setIconSize(QSize(16, 16))
         self.btn_ping.clicked.connect(self.ping_server)
+        self.btn_ping.setStyleSheet("background-color: #0d9488; border: 1px solid #0f766e; font-size: 11px; padding: 6px;")
         conn_layout.addWidget(self.btn_ping)
-        left_layout.addLayout(conn_layout)
         
-        left_layout.addSpacing(15)
-        left_layout.addWidget(QLabel("Аккаунты", objectName="SectionTitle"))
+        server_cfg_layout.addLayout(conn_layout)
+        left_layout.addWidget(server_cfg_frame)
         
-        self.scroll = QScrollArea(); self.scroll.setWidgetResizable(True)
+        left_layout.addSpacing(10)
+        
+        # Аккаунты
+        acc_header = QHBoxLayout()
+        acc_header.addWidget(QLabel("Аккаунты", objectName="SectionTitle"))
+        acc_header.addStretch()
+        
+        btn_server_only = QPushButton("СЕРВЕРНЫЕ")
+        btn_server_only.setStyleSheet("background-color: #4f46e5; border-radius: 4px; padding: 4px 8px; font-size: 10px;")
+        btn_server_only.clicked.connect(self.select_server_only)
+        acc_header.addWidget(btn_server_only)
+        left_layout.addLayout(acc_header)
+        
+        # Поиск
+        self.search_input = QLineEdit()
+        self.search_input.setPlaceholderText("Поиск аккаунта...")
+        self.search_input.textChanged.connect(self.filter_accounts)
+        left_layout.addWidget(self.search_input)
+        
+        self.scroll = QScrollArea()
+        self.scroll.setWidgetResizable(True)
         self.scroll_content = QWidget()
         self.scroll_layout = QVBoxLayout(self.scroll_content)
         self.scroll_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self.scroll_layout.setSpacing(6)
         self.checkboxes = []
         self.load_accounts()
         self.scroll.setWidget(self.scroll_content)
         left_layout.addWidget(self.scroll)
         
-        btn_all_layout = QHBoxLayout()
         btn_all = QPushButton("ВЫБРАТЬ ВСЕ")
+        btn_all.setObjectName("ExplorerBtn")
         btn_all.clicked.connect(self.toggle_all)
-        btn_all_layout.addWidget(btn_all)
+        left_layout.addWidget(btn_all)
         
-        btn_server_only = QPushButton("СЕРВЕРНЫЕ")
-        btn_server_only.clicked.connect(self.select_server_only)
-        btn_all_layout.addWidget(btn_server_only)
-        left_layout.addLayout(btn_all_layout)
-        
-        self.btn_send_sessions = QPushButton("📤 Отправить сессии на сервер")
+        self.btn_send_sessions = QPushButton("📤 ОТПРАВИТЬ СЕССИИ")
+        self.btn_send_sessions.setStyleSheet(f"background-color: {styles.COLOR_ACCENT_BG}; border: 1px solid {styles.COLOR_BORDER}; border-bottom: 3px solid {styles.COLOR_BORDER_DARK}; font-weight: bold; padding: 12px; border-radius: 6px;")
         self.btn_send_sessions.clicked.connect(self.send_sessions_to_server)
         left_layout.addWidget(self.btn_send_sessions)
         
         main_layout.addWidget(left_frame, 1)
 
         # Правая панель: Запуск задач и логи
-        right_frame = QFrame(); right_frame.setObjectName("SectionFrame")
+        right_frame = QFrame()
+        right_frame.setObjectName("SectionFrame")
         right_layout = QVBoxLayout(right_frame)
+        right_layout.setSpacing(16)
         
         header_layout = QHBoxLayout()
         header_layout.addWidget(QLabel("Выбор плагина", objectName="SectionTitle"))
         header_layout.addStretch()
         self.btn_active_tasks = QPushButton(" АКТИВНЫЕ ЗАДАЧИ")
         self.btn_active_tasks.setIcon(get_icon(ROCKET_ICON_PATH))
-        self.btn_active_tasks.setIconSize(QSize(20, 20))
-        self.btn_active_tasks.setFixedWidth(160)
-        self.btn_active_tasks.setStyleSheet("background-color: #4527a0; border-color: #5e35b1; font-size: 10px;")
+        self.btn_active_tasks.setIconSize(QSize(16, 16))
+        self.btn_active_tasks.setStyleSheet("background-color: #6366f1; border: 1px solid #4f46e5; border-bottom: 3px solid #4338ca; font-size: 10px; border-radius: 6px; padding: 6px 12px;")
         self.btn_active_tasks.clicked.connect(self.active_tasks_win.show)
         header_layout.addWidget(self.btn_active_tasks)
         right_layout.addLayout(header_layout)
@@ -179,17 +206,21 @@ class ServerWindow(QWidget):
         self.module_combo.addItems(list(self.available_plugins.keys()))
         self.module_combo.currentTextChanged.connect(self.update_params_panel)
         plugin_select_layout.addWidget(self.module_combo, 1)
+        
         btn_refresh_plugins = QPushButton("")
         btn_refresh_plugins.setIcon(get_icon(RELOAD_ICON_PATH))
         btn_refresh_plugins.setIconSize(QSize(16, 16))
         btn_refresh_plugins.setFixedWidth(40)
         btn_refresh_plugins.clicked.connect(self.refresh_plugins_list)
         plugin_select_layout.addWidget(btn_refresh_plugins)
+        
         right_layout.addLayout(plugin_select_layout)
         
         self.params_container = QFrame()
+        self.params_container.setStyleSheet(f"QFrame {{ background-color: {styles.COLOR_BG}; border: 1px solid {styles.COLOR_BORDER}; border-radius: 8px; padding: 10px; }}")
         self.params_layout = QVBoxLayout(self.params_container)
-        self.params_layout.setContentsMargins(0, 10, 0, 10)
+        self.params_layout.setContentsMargins(10, 10, 10, 10)
+        self.params_layout.setSpacing(12)
         right_layout.addWidget(self.params_container)
         
         self.btn_run = QPushButton(" ЗАПУСТИТЬ НА СЕРВЕРЕ")
@@ -199,10 +230,31 @@ class ServerWindow(QWidget):
         self.btn_run.clicked.connect(self.start_module_execution)
         right_layout.addWidget(self.btn_run)
         
-        right_layout.addWidget(QLabel("Логи сервера", objectName="SectionTitle", styleSheet="margin-top: 10px;"))
-        self.log_output = QTextEdit(); self.log_output.setObjectName("LogOutput"); self.log_output.setReadOnly(True)
+        terminal_header = QHBoxLayout()
+        terminal_title = QLabel("TERMINAL OUTPUT")
+        terminal_title.setStyleSheet("color: #475569; font-weight: bold; letter-spacing: 1px; font-size: 11px;")
+        terminal_header.addWidget(terminal_title)
+        terminal_header.addStretch()
+        mac_btns = QLabel("🔴 🟡 🟢")
+        mac_btns.setStyleSheet("font-size: 10px; color: #334155;")
+        terminal_header.addWidget(mac_btns)
+        
+        right_layout.addLayout(terminal_header)
+        
+        self.log_output = QTextEdit()
+        self.log_output.setObjectName("LogOutput")
+        self.log_output.setReadOnly(True)
         right_layout.addWidget(self.log_output, 1)
+        
         main_layout.addWidget(right_frame, 2)
+
+    def filter_accounts(self, text):
+        for cb in self.checkboxes:
+            card = cb.property("card_widget")
+            if text.lower() in cb.text().lower():
+                card.show()
+            else:
+                card.hide()
 
     def load_settings(self):
         try:
@@ -315,11 +367,39 @@ class ServerWindow(QWidget):
         if fp: le.setText(fp)
 
     def load_accounts(self):
-        for acc in config_manager.load_config(CONFIG_FILE):
+        self._clear_layout(self.scroll_layout)
+        self.checkboxes.clear()
+        
+        accounts = config_manager.load_config(CONFIG_FILE)
+        if not accounts:
+            no_acc = QLabel("Нет аккаунтов. Добавьте их в левом меню.")
+            no_acc.setStyleSheet("color: #94a3b8; font-style: italic;")
+            self.scroll_layout.addWidget(no_acc)
+            return
+            
+        for acc in accounts:
+            card = QFrame()
+            card.setObjectName("SectionFrame")
+            card.setStyleSheet("QFrame { background-color: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 6px; padding: 2px; } QFrame:hover { background-color: rgba(255, 255, 255, 0.07); border: 1px solid #6366f1; }")
+            
+            card_layout = QHBoxLayout(card)
+            card_layout.setContentsMargins(8, 8, 8, 8)
+            card_layout.setSpacing(10)
+            
+            avatar = QLabel("👤")
+            avatar.setStyleSheet("font-size: 16px; background: transparent; border: none;")
+            card_layout.addWidget(avatar)
+            
             cb = QCheckBox(f"{acc['name']}")
+            cb.setStyleSheet("QCheckBox { background: transparent; border: none; font-weight: 500; font-size: 13px; } QCheckBox::indicator { width: 18px; height: 18px; border-radius: 4px; }")
             cb.setProperty("acc_data", acc)
             cb.stateChanged.connect(lambda st, c=cb: self.on_account_toggled(st, c))
-            self.scroll_layout.addWidget(cb); self.checkboxes.append(cb)
+            
+            card_layout.addWidget(cb, 1)
+            cb.setProperty("card_widget", card)
+            
+            self.scroll_layout.addWidget(card)
+            self.checkboxes.append(cb)
 
     def on_account_toggled(self, state, cb):
         if state == Qt.CheckState.Checked.value:

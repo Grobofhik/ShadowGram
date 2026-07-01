@@ -2,6 +2,8 @@ from typing import Any
 from pathlib import Path
 from src.core.base_module import BaseModule
 from hydrogram.errors import UserDeactivated, AuthKeyUnregistered, Unauthorized
+from hydrogram import raw
+from src.core.managers.account_manager import update_privacy_guard
 
 """
 Модуль проверки работоспособности сессий.
@@ -32,7 +34,32 @@ class SessionCheckPlugin(BaseModule):
             from src.modules.session_checker import _check_spamblock
             spamblock_status = await _check_spamblock(self.client)
                 
-            self.log(f"Статус: АКТИВЕН (@{me.username or me.id}) | {spamblock_status}", "success")
+            if spamblock_status == "SPAM BLOCK":
+                self.log(f"Статус: АКТИВЕН (@{me.username or me.id}) | SPAM BLOCK", "warning")
+            else:
+                self.log(f"Статус: АКТИВЕН (@{me.username or me.id}) | Без ограничений", "success")
+                
+            # Проверяем настройки приватности (Privacy Guard)
+            self.log("Проверяю статус Privacy Guard...", "info")
+            try:
+                privacy = await self.client.invoke(raw.functions.account.GetPrivacy(
+                    key=raw.types.InputPrivacyKeyPhoneNumber()
+                ))
+                is_guarded = False
+                for rule in privacy.rules:
+                    if isinstance(rule, raw.types.PrivacyValueDisallowAll):
+                        is_guarded = True
+                        break
+                
+                update_privacy_guard(self.config_file, self.workdir, is_guarded)
+                
+                if is_guarded:
+                    self.log("🛡️ Privacy Guard: АКТИВИРОВАН (Номер скрыт)", "success")
+                else:
+                    self.log("⚠️ Privacy Guard: НЕ АКТИВЕН (Уязвимость!)", "warning")
+            except Exception as e:
+                self.log(f"Не удалось проверить приватность: {e}", "warning")
+            
             
         except UserDeactivated:
             self.log("Аккаунт в БАНЕ (Deactivated)", "error")

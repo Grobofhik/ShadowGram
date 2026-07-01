@@ -851,6 +851,7 @@ class SmartWarmerPlugin(BaseModule):
                 await self.sleep(delay)
 
             self.log("Сессия умного прогрева успешно завершена!", "success")
+            self.record_analytics("warmup_success", "Цикл прогрева завершен")
             
         finally:
             await self.cleanup()

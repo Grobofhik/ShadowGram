@@ -99,99 +99,257 @@ class AIPromptGeneratorService(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Генератор уникальных AI Промптов")
-        self.setFixedSize(540, 720) # Увеличили высоту для простора
         self.worker = None
         self.all_selected = False
         self.init_ui()
         self.load_accounts()
         self.load_api_keys()
 
+    def create_card(self, title):
+        from PyQt6.QtWidgets import QFrame
+        card = QFrame()
+        card.setStyleSheet(f"QFrame {{ background-color: {styles.COLOR_CONSOLE_BG}; border: 1px solid {styles.COLOR_BORDER}; border-radius: 10px; }}")
+        card_layout = QVBoxLayout(card)
+        card_layout.setContentsMargins(15, 15, 15, 15)
+        card_layout.setSpacing(10)
+        
+        lbl_title = QLabel(title)
+        lbl_title.setStyleSheet(f"font-size: 14px; font-weight: bold; color: {styles.COLOR_PRIMARY}; border: none;")
+        card_layout.addWidget(lbl_title)
+        return card, card_layout
+
     def init_ui(self):
-        layout = QVBoxLayout(self)
-        layout.setSpacing(8) # Более плотная компоновка
-        layout.setContentsMargins(15, 15, 15, 15)
+        from PyQt6.QtWidgets import QScrollArea, QWidget, QFormLayout
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(0, 0, 0, 0)
 
-        info_label = QLabel("Генерация уникального стиля общения для выбранных аккаунтов.")
-        info_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(info_label)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setStyleSheet("QScrollArea { border: none; background-color: transparent; }")
+        
+        container = QWidget()
+        container.setStyleSheet("background-color: transparent;")
+        
+        layout = QVBoxLayout(container)
+        layout.setSpacing(20)
 
-        # Настройки API
-        api_layout = QVBoxLayout()
-        api_layout.setSpacing(4)
+        header_layout = QVBoxLayout()
+        header_layout.setSpacing(5)
+        title_label = QLabel("Генератор уникальных ИИ-ролей")
+        title_label.setStyleSheet(f"font-size: 24px; font-weight: bold; color: {styles.COLOR_TEXT_MAIN};")
         
-        # Группируем API URL и Модель в одну строку
-        url_model_layout = QHBoxLayout()
-        url_model_layout.addWidget(QLabel("Base URL:"))
-        self.input_base_url = QLineEdit()
-        self.input_base_url.setText("https://api.groq.com/openai/v1")
-        url_model_layout.addWidget(self.input_base_url)
+        info_label = QLabel("Умный конструктор запросов для ИИ-модулей. Сгенерируйте уникальные роли и стили общения для аккаунтов на основе заданной тематики.")
+        info_label.setWordWrap(True)
+        info_label.setStyleSheet(f"color: {styles.COLOR_TEXT_MUTED}; font-size: 14px;")
         
-        url_model_layout.addWidget(QLabel("Модель:"))
-        self.input_model = QLineEdit()
-        self.input_model.setText("llama-3.1-8b-instant")
-        url_model_layout.addWidget(self.input_model)
+        header_layout.addWidget(title_label)
+        header_layout.addWidget(info_label)
+        layout.addLayout(header_layout)
         
-        api_layout.addWidget(QLabel("API Ключ (Groq, OpenRouter и т.д.):"))
+        columns_layout = QHBoxLayout()
+        columns_layout.setSpacing(20)
+        
+        # --- LEFT COLUMN ---
+        left_col = QVBoxLayout()
+        left_col.setSpacing(20)
+        
+        # API Card
+        api_card, api_layout = self.create_card("🔑 Настройки нейросети")
+        api_form = QFormLayout()
+        api_form.setSpacing(15)
+        api_form.setLabelAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        
+        self.input_base_url = QLineEdit("https://api.groq.com/openai/v1")
+        self.input_base_url.setStyleSheet(f"background-color: {styles.COLOR_BG}; border: 1px solid {styles.COLOR_BORDER}; border-radius: 6px; padding: 8px;")
+        self.input_base_url.setPlaceholderText("https://api.openai.com/v1")
+        lbl_url = QLabel("API URL:")
+        lbl_url.setStyleSheet("border: none; font-weight: bold;")
+        api_form.addRow(lbl_url, self.input_base_url)
+        
+        self.input_model = QLineEdit("llama-3.1-8b-instant")
+        self.input_model.setStyleSheet(f"background-color: {styles.COLOR_BG}; border: 1px solid {styles.COLOR_BORDER}; border-radius: 6px; padding: 8px;")
+        self.input_model.setPlaceholderText("gpt-4o-mini")
+        lbl_model = QLabel("Модель:")
+        lbl_model.setStyleSheet("border: none; font-weight: bold;")
+        api_form.addRow(lbl_model, self.input_model)
+        
         self.input_api_key = QLineEdit()
         self.input_api_key.setEchoMode(QLineEdit.EchoMode.Password)
-        api_layout.addWidget(self.input_api_key)
-        api_layout.addLayout(url_model_layout)
-        layout.addLayout(api_layout)
-
-        # Тематика и промпт
-        theme_layout = QHBoxLayout()
-        theme_layout.addWidget(QLabel("Тематика:"))
+        self.input_api_key.setPlaceholderText("sk-...")
+        self.input_api_key.setStyleSheet(f"background-color: {styles.COLOR_BG}; border: 1px solid {styles.COLOR_BORDER}; border-radius: 6px; padding: 8px;")
+        lbl_key = QLabel("API Ключ:")
+        lbl_key.setStyleSheet("border: none; font-weight: bold;")
+        api_form.addRow(lbl_key, self.input_api_key)
+        
+        api_layout.addLayout(api_form)
+        left_col.addWidget(api_card)
+        
+        # Theme Card
+        theme_card, theme_layout = self.create_card("🎭 Настройки роли")
+        theme_form = QFormLayout()
+        theme_form.setSpacing(15)
+        
         self.combo_theme = QComboBox()
         self.combo_theme.addItems(["Случайная (Tech / IT / Crypto)", "Криптовалюта и Web3", "Программирование и IT"])
-        theme_layout.addWidget(self.combo_theme)
-        layout.addLayout(theme_layout)
+        self.combo_theme.setStyleSheet(f"background-color: {styles.COLOR_BG}; border: 1px solid {styles.COLOR_BORDER}; border-radius: 6px; padding: 8px; color: {styles.COLOR_TEXT_MAIN};")
+        lbl_theme = QLabel("Тематика:")
+        lbl_theme.setStyleSheet("border: none; font-weight: bold;")
+        theme_form.addRow(lbl_theme, self.combo_theme)
+        
+        theme_layout.addLayout(theme_form)
+        
+        lbl_prompt = QLabel("Базовая роль (дополнительно):")
+        lbl_prompt.setStyleSheet("border: none; color: {styles.COLOR_TEXT_MUTED};")
+        theme_layout.addWidget(lbl_prompt)
 
-        layout.addWidget(QLabel("Базовая роль (оставьте пустым для генерации по тематике):"))
         self.input_base_prompt = QTextEdit()
-        self.input_base_prompt.setFixedHeight(60)
-        self.input_base_prompt.setPlaceholderText("Например: Ты инвестор, который любит обсуждать токены, всегда пишет коротко и по делу.")
-        layout.addWidget(self.input_base_prompt)
-
-        # Список аккаунтов и поиск
-        list_header_layout = QHBoxLayout()
-        list_header_layout.addWidget(QLabel("Выберите аккаунты:"))
+        self.input_base_prompt.setFixedHeight(120)
+        self.input_base_prompt.setStyleSheet(f"""
+            QTextEdit {{
+                background-color: {styles.COLOR_BG}; 
+                border: 1px solid {styles.COLOR_BORDER}; 
+                border-radius: 6px; 
+                padding: 10px;
+                line-height: 1.4;
+            }}
+        """)
+        self.input_base_prompt.setPlaceholderText("Оставьте пустым для полной автогенерации. \nНапример: 'Ты крипто-инвестор, который любит рисковать...'")
+        theme_layout.addWidget(self.input_base_prompt)
+        
+        left_col.addWidget(theme_card)
+        left_col.addStretch(1)
+        
+        # --- RIGHT COLUMN ---
+        right_col = QVBoxLayout()
+        right_col.setSpacing(20)
+        
+        # Accounts Card
+        acc_card, acc_layout = self.create_card("👥 Выбор аккаунтов")
         
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("Поиск аккаунта...")
-        self.search_input.setFixedHeight(40)
+        self.search_input.setStyleSheet(f"""
+            QLineEdit {{
+                background-color: {styles.COLOR_BG}; 
+                border: 1px solid {styles.COLOR_BORDER}; 
+                border-radius: 6px; 
+                padding: 8px;
+            }}
+            QLineEdit:focus {{
+                border: 1px solid {styles.COLOR_PRIMARY};
+            }}
+        """)
         self.search_input.textChanged.connect(self.filter_accounts)
-        list_header_layout.addWidget(self.search_input)
-        layout.addLayout(list_header_layout)
+        acc_layout.addWidget(self.search_input)
         
         self.list_widget = QListWidget()
-        self.list_widget.setSelectionMode(QListWidget.SelectionMode.MultiSelection)
-        layout.addWidget(self.list_widget)
-
-        # Кнопки и прогресс плотно внизу
-        bottom_layout = QVBoxLayout()
-        bottom_layout.setSpacing(5)
-
-        self.btn_select_all = QPushButton("Выбрать все")
+        self.list_widget.setSelectionMode(QListWidget.SelectionMode.ExtendedSelection)
+        self.list_widget.setStyleSheet(f"""
+            QListWidget {{
+                background-color: {styles.COLOR_BG}; 
+                border: 1px solid {styles.COLOR_BORDER}; 
+                border-radius: 6px;
+                padding: 5px;
+            }}
+            QListWidget::item {{
+                padding: 6px;
+                border-radius: 4px;
+            }}
+            QListWidget::item:selected {{
+                background-color: {styles.COLOR_PRIMARY_DARK};
+                color: #ffffff;
+            }}
+            QListWidget::item:hover {{
+                background-color: {styles.COLOR_HOVER_BG};
+            }}
+        """)
+        acc_layout.addWidget(self.list_widget, 1) # Expand vertically
+        
+        self.btn_select_all = QPushButton("✅ Выбрать все / Снять")
+        self.btn_select_all.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {styles.COLOR_HOVER_BG}; 
+                border: 1px solid {styles.COLOR_BORDER}; 
+                border-radius: 6px; 
+                padding: 8px;
+                color: {styles.COLOR_TEXT_MAIN};
+            }}
+            QPushButton:hover {{
+                background-color: {styles.COLOR_CONSOLE_BG};
+                border: 1px solid {styles.COLOR_PRIMARY};
+            }}
+        """)
         self.btn_select_all.clicked.connect(self.toggle_select_all)
-        bottom_layout.addWidget(self.btn_select_all)
+        acc_layout.addWidget(self.btn_select_all)
+        
+        right_col.addWidget(acc_card, 1) # Give this card stretch
+        
+        # Controls Section
+        control_card, control_layout = self.create_card("📊 Прогресс")
+        
+        self.log_area = QTextEdit()
+        self.log_area.setFixedHeight(100)
+        self.log_area.setReadOnly(True)
+        self.log_area.setStyleSheet(f"""
+            QTextEdit {{
+                background-color: {styles.COLOR_BG}; 
+                border: 1px solid {styles.COLOR_BORDER}; 
+                border-radius: 6px; 
+                padding: 8px; 
+                color: {styles.COLOR_PRIMARY}; 
+                font-family: monospace;
+            }}
+        """)
+        control_layout.addWidget(self.log_area)
 
         self.progress_bar = QProgressBar()
         self.progress_bar.setValue(0)
-        self.progress_bar.setFixedHeight(15)
+        self.progress_bar.setFixedHeight(12)
         self.progress_bar.setTextVisible(False)
-        bottom_layout.addWidget(self.progress_bar)
+        self.progress_bar.setStyleSheet(f"""
+            QProgressBar {{ 
+                border: none; 
+                border-radius: 6px; 
+                background: {styles.COLOR_BG}; 
+            }}
+            QProgressBar::chunk {{ 
+                background-color: {styles.COLOR_PRIMARY}; 
+                border-radius: 6px; 
+            }}
+        """)
+        control_layout.addWidget(self.progress_bar)
 
-        self.log_area = QTextEdit()
-        self.log_area.setFixedHeight(90)
-        self.log_area.setReadOnly(True)
-        bottom_layout.addWidget(self.log_area)
-
-        self.btn_generate = QPushButton("Начать генерацию")
-        self.btn_generate.setStyleSheet(f"background-color: {styles.COLOR_PRIMARY_DARK}; color: {'#000000' if styles.COLOR_PRIMARY == '#00E676' else '#FFFFFF'}; font-weight: bold; height: 35px;")
+        self.btn_generate = QPushButton("🚀 Начать генерацию")
+        self.btn_generate.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {styles.COLOR_PRIMARY};
+                color: #000000;
+                border: none;
+                border-radius: 8px;
+                padding: 14px;
+                font-weight: bold;
+                font-size: 15px;
+            }}
+            QPushButton:hover {{
+                background-color: {styles.COLOR_PRIMARY_LIGHT};
+            }}
+            QPushButton:disabled {{
+                background-color: {styles.COLOR_HOVER_BG};
+                color: {styles.COLOR_TEXT_MUTED};
+            }}
+        """)
         self.btn_generate.clicked.connect(self.start_generation)
-        bottom_layout.addWidget(self.btn_generate)
+        control_layout.addWidget(self.btn_generate)
+        
+        right_col.addWidget(control_card)
 
-        layout.addLayout(bottom_layout)
+        # Build columns
+        columns_layout.addLayout(left_col, 1)
+        columns_layout.addLayout(right_col, 1)
+        
+        layout.addLayout(columns_layout)
+        scroll.setWidget(container)
+        main_layout.addWidget(scroll)
 
     def load_accounts(self):
         self.accounts = config_manager.load_config(CONFIG_FILE)
@@ -214,7 +372,7 @@ class AIPromptGeneratorService(QDialog):
         if self.all_selected:
             self.btn_select_all.setText("Снять выделение")
         else:
-            self.btn_select_all.setText("Выбрать все")
+            self.btn_select_all.setText("✅ Выбрать все")
 
     def load_api_keys(self):
         try:

@@ -5,27 +5,23 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QTextBrowser, QPushButton, 
     QHBoxLayout, QScrollArea, QFrame, QLabel, QTreeWidget, QTreeWidgetItem
 )
-from PyQt6.QtCore import Qt, QSize, QUrl
+from PyQt6.QtCore import Qt, QSize, QUrl, pyqtSignal
 from PyQt6.QtGui import QIcon, QFont
 
 from src.core.constants import FOLDER_ICON_PATH, LOGO_PATH, SERVER_ICON_PATH, MODULS_ICON_PATH, SETTINGS_ICON_PATH
 from src import styles
 
-class DocsWindow(QWidget):
+class DocsPage(QWidget):
+    back_requested = pyqtSignal()
+
     def __init__(self):
         super().__init__()
-        self.setObjectName("DocsWindow")
+        self.setObjectName("DocsPage")
         self.current_file = ""
         self.init_ui()
-        # Применяем глобальные стили документации
-        self.setStyleSheet(styles.DOCS_STYLESHEET)
-        # По умолчанию загружаем START.md
         self.load_file("documentation/START.md")
 
     def init_ui(self):
-        self.setWindowTitle("ShadowGram - База знаний")
-        self.resize(1100, 800)
-
         main_h_layout = QHBoxLayout(self)
         main_h_layout.setContentsMargins(0, 0, 0, 0)
         main_h_layout.setSpacing(0)
@@ -33,12 +29,45 @@ class DocsWindow(QWidget):
         # ЛЕВАЯ ПАНЕЛЬ (Навигация)
         sidebar = QFrame()
         sidebar.setObjectName("DocsSidebar")
-        sidebar.setFixedWidth(280)
+        sidebar.setFixedWidth(300)
+        sidebar.setStyleSheet(f"""
+            QFrame#DocsSidebar {{
+                background-color: {styles.COLOR_ACCENT_BG};
+                border-right: 1px solid {styles.COLOR_BORDER};
+            }}
+            QLabel#DocsSidebarTitle {{
+                color: {styles.COLOR_PRIMARY};
+                font-size: 18px;
+                font-weight: bold;
+                padding-bottom: 15px;
+                border-bottom: 1px solid {styles.COLOR_BORDER};
+            }}
+            QTreeWidget {{
+                background-color: transparent;
+                border: none;
+                color: {styles.COLOR_TEXT_MAIN};
+                font-size: 14px;
+                outline: none;
+            }}
+            QTreeWidget::item {{
+                padding: 8px;
+                border-radius: 6px;
+            }}
+            QTreeWidget::item:selected {{
+                background-color: {styles.COLOR_PRIMARY};
+                color: #ffffff;
+            }}
+            QTreeWidget::item:hover:!selected {{
+                background-color: {styles.COLOR_HOVER_BG};
+            }}
+        """)
         sidebar_layout = QVBoxLayout(sidebar)
-        sidebar_layout.setContentsMargins(10, 20, 10, 10)
+        sidebar_layout.setContentsMargins(20, 30, 20, 20)
+        sidebar_layout.setSpacing(15)
 
         sidebar_title = QLabel("ShadowGram Wiki")
         sidebar_title.setObjectName("DocsSidebarTitle")
+        sidebar_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         sidebar_layout.addWidget(sidebar_title)
 
         self.tree = QTreeWidget()
@@ -46,7 +75,7 @@ class DocsWindow(QWidget):
         self.tree.setHeaderHidden(True)
         self.tree.setIndentation(20)
         self.tree.setAnimated(True)
-        self.tree.setIconSize(QSize(18, 18))
+        self.tree.setIconSize(QSize(20, 20))
         self.tree.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.tree.itemClicked.connect(self.on_item_clicked)
         
@@ -54,23 +83,63 @@ class DocsWindow(QWidget):
         sidebar_layout.addWidget(self.tree)
         sidebar_layout.addStretch()
         
-        self.btn_close = QPushButton(" Закрыть")
-        self.btn_close.setObjectName("DocsCloseBtn")
-        self.btn_close.setFixedHeight(38)
-        self.btn_close.clicked.connect(self.close)
+        self.btn_close = QPushButton("⬅ Вернуться назад")
+        self.btn_close.setObjectName("SecondaryBtn")
+        self.btn_close.setFixedHeight(45)
+        self.btn_close.setStyleSheet(f"""
+            QPushButton#SecondaryBtn {{
+                background-color: {styles.COLOR_SELECT_BG};
+                color: #ffffff;
+                border: none;
+                border-radius: 8px;
+                font-size: 15px;
+                font-weight: bold;
+            }}
+            QPushButton#SecondaryBtn:hover {{
+                background-color: {styles.COLOR_HOVER_BG};
+            }}
+        """)
+        self.btn_close.clicked.connect(self.back_requested.emit)
         sidebar_layout.addWidget(self.btn_close)
 
         main_h_layout.addWidget(sidebar)
 
         # ПРАВАЯ ПАНЕЛЬ (Контент)
         content_area = QFrame()
+        content_area.setStyleSheet(f"background-color: {styles.COLOR_BG};")
         content_layout = QVBoxLayout(content_area)
-        content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.setContentsMargins(40, 40, 40, 40)
 
         self.browser = QTextBrowser()
         self.browser.setObjectName("DocsBrowser")
         self.browser.setOpenExternalLinks(False) 
         self.browser.anchorClicked.connect(self.on_anchor_clicked)
+        self.browser.setStyleSheet(f"""
+            QTextBrowser {{
+                background-color: transparent;
+                border: none;
+                color: {styles.COLOR_TEXT_MAIN};
+                font-size: 15px;
+                line-height: 1.6;
+            }}
+            QScrollBar:vertical {{
+                background: {styles.COLOR_BG};
+                width: 12px;
+                margin: 0px 0px 0px 0px;
+                border-radius: 6px;
+            }}
+            QScrollBar::handle:vertical {{
+                background: {styles.COLOR_BORDER};
+                min-height: 20px;
+                border-radius: 6px;
+            }}
+            QScrollBar::handle:vertical:hover {{
+                background-color: {styles.COLOR_PRIMARY_LIGHT};
+            }}
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
+                height: 0px;
+            }}
+        """)
         content_layout.addWidget(self.browser)
 
         main_h_layout.addWidget(content_area, 1)
@@ -92,10 +161,14 @@ class DocsWindow(QWidget):
             item = QTreeWidgetItem(self.tree, [name])
             item.setIcon(0, icon)
             item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsSelectable)
+            # Expand by default
+            item.setExpanded(True)
             return item
 
         # 1. Введение
-        create_selectable_item(self.tree, "🚀 Обзор ShadowGram", "documentation/START.md", home_icon)
+        cat_intro = create_category("Введение", home_icon)
+        create_selectable_item(cat_intro, "🚀 Обзор ShadowGram", "documentation/START.md")
+        create_selectable_item(cat_intro, "🎯 Быстрый старт (Первый запуск)", "documentation/getting_started/first_start.md")
 
         # 2. Профили
         cat_profiles = create_category("Управление профилями", folder_icon)
@@ -115,11 +188,23 @@ class DocsWindow(QWidget):
                     name = file.replace(".md", "").replace("_", " ").title()
                     create_selectable_item(cat_modules, name, os.path.join(modules_dir, file))
 
-        # 5. Сервер
+        # 5. Сценарии
+        cat_features = create_category("Функции", module_icon)
+        create_selectable_item(cat_features, "Сценарии (Scenarios)", "documentation/features/scenarios.md")
+
+        # 6. Практики и Защита (Anti-Ban)
+        cat_best_practices = create_category("Защита от банов", folder_icon)
+        create_selectable_item(cat_best_practices, "Anti-Ban & Fingerprint", "documentation/best_practices/anti_ban.md")
+
+        # 7. Сервер
         cat_server = create_category("Управление сервером", server_icon)
         create_selectable_item(cat_server, "Настройка сервера", "documentation/server/server_setup.md")
 
-        # 6. Разработка
+        # 8. Ошибки и Решения
+        cat_troubleshooting = create_category("Решение проблем", settings_icon)
+        create_selectable_item(cat_troubleshooting, "Ошибки (FloodWait и др.)", "documentation/troubleshooting/errors.md")
+
+        # 9. Разработка
         cat_dev = create_category("Для разработчиков", folder_icon)
         create_selectable_item(cat_dev, "Создание плагинов", "documentation/developers/plugin_development_guide.md")
         
@@ -177,6 +262,26 @@ class DocsWindow(QWidget):
                     }
                     
                     html = markdown.markdown(md_text, extensions=extensions, extension_configs=extension_configs)
+                    
+                    # Wrap in a modern body style
+                    html = f"""
+                    <html><head><style>
+                        body {{ font-family: 'Inter', sans-serif; color: {styles.COLOR_TEXT_MAIN}; }}
+                        h1, h2, h3 {{ color: {styles.COLOR_PRIMARY}; border-bottom: 1px solid {styles.COLOR_BORDER}; padding-bottom: 5px; }}
+                        a {{ color: {styles.COLOR_PRIMARY_LIGHT}; text-decoration: none; }}
+                        a:hover {{ text-decoration: underline; }}
+                        pre {{ background-color: {styles.COLOR_CONSOLE_BG}; padding: 15px; border-radius: 8px; border: 1px solid {styles.COLOR_BORDER}; overflow-x: auto; }}
+                        code {{ background-color: {styles.COLOR_CONSOLE_BG}; padding: 2px 6px; border-radius: 4px; color: {styles.COLOR_SUCCESS}; font-family: 'Consolas', monospace; }}
+                        blockquote {{ border-left: 4px solid {styles.COLOR_PRIMARY}; padding-left: 15px; color: #888888; font-style: italic; background-color: {styles.COLOR_ACCENT_BG}; padding: 10px; border-radius: 4px; }}
+                        table {{ border-collapse: collapse; width: 100%; margin-top: 15px; }}
+                        th, td {{ border: 1px solid {styles.COLOR_BORDER}; padding: 10px; text-align: left; }}
+                        th {{ background-color: {styles.COLOR_ACCENT_BG}; color: {styles.COLOR_PRIMARY}; }}
+                        li {{ margin-bottom: 8px; }}
+                    </style></head><body>
+                    {html}
+                    <br><br><br>
+                    </body></html>
+                    """
                     
                     base_url = QUrl.fromLocalFile(os.path.abspath(file_path))
                     self.browser.document().setBaseUrl(base_url)
