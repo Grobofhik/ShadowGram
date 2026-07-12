@@ -249,10 +249,21 @@ class BaseModule:
 
         self.local_port = self._get_free_port()
         try:
+            from src.core.managers.proxy_manager import normalize_proxy_url
+            import json
+            normalized_url = normalize_proxy_url(self.proxy_url)
+            config_path = os.path.join(self.workdir, "gost.json")
+            gost_config = {
+                "ServeNodes": [f"socks5://127.0.0.1:{self.local_port}"],
+                "ChainNodes": [normalized_url]
+            }
+            with open(config_path, "w", encoding="utf-8") as f:
+                json.dump(gost_config, f)
+                
             log_path = os.path.join(self.workdir, "gost_module.log")
             log_file = open(log_path, "w")
             self.gost_process = subprocess.Popen(
-                ["gost", "-L", f"socks5://127.0.0.1:{self.local_port}", "-F", self.proxy_url],
+                ["gost", "-L", f"socks5://127.0.0.1:{self.local_port}", "-F", normalized_url],
                 stdout=log_file, stderr=log_file, start_new_session=True
             )
             time.sleep(0.5)
@@ -290,12 +301,15 @@ class BaseModule:
             from src.core.constants import CONFIG_FILE
             from src.core.managers.account_manager import get_hardware_profile
             hw_profile = get_hardware_profile(CONFIG_FILE, os.path.dirname(session_path))
+            from pathlib import Path
+            session_stem = Path(session_path).stem
+            session_dir = str(Path(session_path).parent)
             
             self.client = Client(
-                name=os.path.basename(session_path),
+                name=session_stem,
                 api_id=int(self.api_id),
                 api_hash=self.api_hash,
-                workdir=os.path.dirname(session_path),
+                workdir=session_dir,
                 proxy=proxy_settings,
                 device_model=hw_profile.get("device_model", "PC 64bit"),
                 system_version=hw_profile.get("system_version", "Windows 10"),

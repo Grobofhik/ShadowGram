@@ -1,3 +1,5 @@
+from src.core.constants import *
+from PyQt6.QtGui import QIcon
 import os
 import json
 from datetime import datetime
@@ -8,7 +10,7 @@ from PyQt6.QtCore import Qt, pyqtSignal, QSize, pyqtSlot
 from PyQt6.QtGui import QColor, QCursor
 
 from src import styles
-from src.modules_styles import MODULES_STYLESHEET
+
 from src.core.managers.smart_orchestrator import SmartOrchestratorThread
 
 class ModuleCard(QFrame):
@@ -74,7 +76,7 @@ class SmartOrchestratorWindow(QWidget):
         all_plugins = self.manager.discover_modules()
         self.available_plugins = {k: v for k, v in all_plugins.items() if not getattr(v, "SINGLE_ACCOUNT", False)}
         
-        self.setStyleSheet(MODULES_STYLESHEET)
+        self.setStyleSheet(styles.STYLESHEET)
         self.orchestrator_thread = None
         self.module_cards = []
         
@@ -131,7 +133,8 @@ class SmartOrchestratorWindow(QWidget):
         delay_layout.addWidget(self.spin_max)
         left_layout.addLayout(delay_layout)
         
-        self.btn_run = QPushButton("🚀 ЗАПУСТИТЬ ОРКЕСТРАТОР")
+        self.btn_run = QPushButton("ЗАПУСТИТЬ ОРКЕСТРАТОР")
+        self.btn_run.setIcon(QIcon(str(ROCKET_ICON_PATH)))
         self.btn_run.setFixedHeight(50)
         self.btn_run.setStyleSheet(f"background-color: {styles.COLOR_PRIMARY}; font-weight: bold; font-size: 14px; border-radius: 8px;")
         self.btn_run.clicked.connect(self.run_orchestrator)
@@ -198,7 +201,7 @@ class SmartOrchestratorWindow(QWidget):
         self.btn_run.setEnabled(False)
         self.btn_stop.setEnabled(True)
         self.log_console.clear()
-        self.log_message("SYSTEM", f"🚀 Запуск на {len(workdirs)} аккаунтах. Выбрано модулей: {len(selected_modules)}")
+        self.log_message("SYSTEM", f"Запуск на {len(workdirs)} аккаунтах. Выбрано модулей: {len(selected_modules)}")
         
         self.orchestrator_thread = SmartOrchestratorThread(workdirs, selected_modules, min_delay, max_delay)
         self.orchestrator_thread.signals.log_msg.connect(self.log_message)
@@ -212,6 +215,6 @@ class SmartOrchestratorWindow(QWidget):
             self.btn_stop.setEnabled(False)
 
     def on_orchestrator_finished(self):
-        self.log_message("SYSTEM", "✅ Все задачи завершены.")
+        self.log_message("SYSTEM", "Все задачи завершены.")
         self.btn_run.setEnabled(True)
         self.btn_stop.setEnabled(False)

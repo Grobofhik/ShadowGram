@@ -20,6 +20,9 @@ _cached_config = None
 _last_config_path = None
 _last_mtime = 0
 
+import threading
+_config_lock = threading.Lock()
+
 def _read_config(config_file: Path):
     global _cached_config, _last_config_path, _last_mtime
     if not config_file.exists():
@@ -55,31 +58,34 @@ def _write_config(config_file: Path, data):
     config_file = Path(config_file)
     dir_path = config_file.parent
     
-    if config_file.exists():
+    with _config_lock:
+        if config_file.exists():
+            try:
+                shutil.copy2(config_file, config_file.with_suffix(".json.bak"))
+            except Exception as e:
+                logger.error(f"Failed to create backup config: {e}")
+                
         try:
-            shutil.copy2(config_file, config_file.with_suffix(".json.bak"))
-        except Exception as e:
-            logger.warning(f"Could not create backup config file: {e}")
+            # Сначала пишем во временный файл, затем переименовываем для атомарности
+            temp_file = config_file.with_suffix(".json.tmp")
+            with open(temp_file, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=4, ensure_ascii=False)
+                
+            temp_file.replace(config_file)
             
-    with tempfile.NamedTemporaryFile("w", dir=dir_path, delete=False, encoding="utf-8") as tf:
-        json.dump(data, tf, indent=4, ensure_ascii=False)
-        temp_name = tf.name
-        
-    try:
-        os.replace(temp_name, config_file)
-    except Exception as e:
-        if os.path.exists(temp_name):
-            os.unlink(temp_name)
-        raise e
-
-    _cached_config = data
-    _last_config_path = config_file
-    _last_mtime = config_file.stat().st_mtime
+            _cached_config = data
+            _last_config_path = config_file
+            _last_mtime = config_file.stat().st_mtime
+        except Exception as e:
+            logger.error(f"Failed to write config: {e}")
+            
+        try:
+            from src.core.managers.db_manager import mirror_to_sqlite
+            mirror_to_sqlite(config_file, data)
+        except Exception as e:
+            logger.error(f"Failed to mirror config to DB: {e}")
+            
     save_active_farm_config()
-    
-    # Зеркалируем данные в SQLite для дашборда и аналитики
-    from src.core.managers.db_manager import mirror_to_sqlite
-    mirror_to_sqlite(config_file, data)
 
 
 def export_backup(

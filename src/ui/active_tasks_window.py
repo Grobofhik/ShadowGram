@@ -1,7 +1,8 @@
+from src.core.constants import *
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QTabWidget, QTextEdit, QPushButton, QHBoxLayout, QLabel
 from PyQt6.QtCore import pyqtSignal, Qt, QSize
 from PyQt6.QtGui import QIcon
-from src.modules_styles import MODULES_STYLESHEET
+from src.styles import STYLESHEET
 from src.core.constants import CANCEL_ICON_PATH
 from src import styles
 from src.ui.icon_cache import get_icon
@@ -22,7 +23,7 @@ class ActiveTasksWindow(QWidget):
         super().__init__()
         self.setWindowTitle("ShadowGram - Active Tasks")
         self.resize(800, 600)
-        self.setStyleSheet(MODULES_STYLESHEET)
+        self.setStyleSheet(STYLESHEET)
         
         self.tabs = {} # { task_id: { "log": QTextEdit, "btn": QPushButton } }
         self.init_ui()

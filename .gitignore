@@ -47,9 +47,12 @@ backups/
 *.db-journal
 *.sqlite
 *.sqlite3
+phones.txt
 
 # User content
 avatars/*
 !avatars/.gitkeep
 
 shadowgram.desktop
+DEF_FARMS
+

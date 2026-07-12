@@ -20,48 +20,55 @@ class SetAvatarPlugin(BaseModule):
     async def run(self, **kwargs: Any) -> None:
         """Подключение к клиенту и установка фото из указанного пути"""
         
-        # Получаем директорию из параметров или берем по умолчанию корень/avatars
-        avatars_dir = kwargs.get("avatars_dir")
-        if not avatars_dir:
-            avatars_dir = os.path.join(os.getcwd(), "avatars")
-            
-        avatars_path = Path(avatars_dir)
+        # Если передан конкретный путь к фото (например, из профиля), используем его
+        photo_path = kwargs.get("photo_path")
         
-        # Создаем папки если их нет
-        if not avatars_path.exists():
-            avatars_path.mkdir(parents=True, exist_ok=True)
-            
-        photo_path = None
-        
-        # Безопасно для всех потоков берем уникальную аватарку
-        async with self._lock:
-            valid_exts = {".jpg", ".jpeg", ".png"}
-            # Ищем все файлы
-            available_files = [f for f in avatars_path.iterdir() if f.is_file() and f.suffix.lower() in valid_exts]
-            
-            if not available_files:
-                self.log(f"В папке {avatars_path} нет картинок для установки!", "error")
+        if photo_path:
+            photo_path = Path(photo_path)
+            if not photo_path.exists():
+                self.log(f"Файл {photo_path} не найден!", "error")
                 return
+        else:
+            # Иначе берем случайное фото из папки avatars_dir (режим модуля)
+            avatars_dir = kwargs.get("avatars_dir")
+            if not avatars_dir:
+                avatars_dir = os.path.join(os.getcwd(), "avatars")
                 
-            # Берем первую попавшуюся
-            photo_path_obj = available_files[0]
+            avatars_path = Path(avatars_dir)
             
-            # Перемещаем её в папку used, чтобы другие аккаунты её не взяли
-            used_dir = avatars_path / "used"
-            used_dir.mkdir(exist_ok=True)
-            
-            new_path = used_dir / photo_path_obj.name
-            counter = 1
-            while new_path.exists():
-                new_path = used_dir / f"{photo_path_obj.stem}_{counter}{photo_path_obj.suffix}"
-                counter += 1
+            # Создаем папки если их нет
+            if not avatars_path.exists():
+                avatars_path.mkdir(parents=True, exist_ok=True)
                 
-            try:
-                shutil.move(str(photo_path_obj), str(new_path))
-                photo_path = new_path
-            except Exception as e:
-                self.log(f"Не удалось переместить фото: {e}", "error")
-                return
+            # Безопасно для всех потоков берем уникальную аватарку
+            async with self._lock:
+                valid_exts = {".jpg", ".jpeg", ".png"}
+                # Ищем все файлы
+                available_files = [f for f in avatars_path.iterdir() if f.is_file() and f.suffix.lower() in valid_exts]
+                
+                if not available_files:
+                    self.log(f"В папке {avatars_path} нет картинок для установки!", "error")
+                    return
+                    
+                # Берем первую попавшуюся
+                photo_path_obj = available_files[0]
+                
+                # Перемещаем её в папку used, чтобы другие аккаунты её не взяли
+                used_dir = avatars_path / "used"
+                used_dir.mkdir(exist_ok=True)
+                
+                new_path = used_dir / photo_path_obj.name
+                counter = 1
+                while new_path.exists():
+                    new_path = used_dir / f"{photo_path_obj.stem}_{counter}{photo_path_obj.suffix}"
+                    counter += 1
+                    
+                try:
+                    shutil.move(str(photo_path_obj), str(new_path))
+                    photo_path = new_path
+                except Exception as e:
+                    self.log(f"Не удалось переместить фото: {e}", "error")
+                    return
 
         if not await self.init_client():
             return

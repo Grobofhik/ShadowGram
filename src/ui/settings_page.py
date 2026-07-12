@@ -1,3 +1,5 @@
+from src.core.constants import *
+from PyQt6.QtGui import QIcon
 import json
 import os
 import shutil
@@ -245,7 +247,7 @@ class SettingsPage(QWidget):
 
         main_layout.addLayout(header_layout)
 
-        label_title = QLabel("⚙️ Настройки Системы")
+        label_title = QLabel("Настройки Системы")
         label_title.setObjectName("SettingsTitle")
         main_layout.addWidget(label_title)
 
@@ -351,7 +353,7 @@ class SettingsPage(QWidget):
         l_sec.addWidget(self.cb_stealth_mode)
         
         l_sec.addStretch()
-        self.tabs.addTab(tab_sec, "⚙️ Автоматизация")
+        self.tabs.addTab(tab_sec, "Автоматизация")
 
         # 3. Прокси Пул
         tab_proxy, l_proxy = create_tab_container()
@@ -364,7 +366,8 @@ class SettingsPage(QWidget):
         import_layout.addWidget(self.text_proxy_pool, 1)
         
         import_btns = QVBoxLayout()
-        btn_add_to_pool = QPushButton("➕ Добавить в пул")
+        btn_add_to_pool = QPushButton("Добавить в пул")
+        btn_add_to_pool.setIcon(QIcon(str(START_ICON_PATH)))
         btn_add_to_pool.setObjectName("PrimaryBtn")
         btn_add_to_pool.clicked.connect(self.add_text_to_pool)
         

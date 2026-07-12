@@ -1,3 +1,4 @@
+from src.core.constants import *
 from PyQt6.QtGui import QIcon
 
 _CACHE = {}

@@ -1,3 +1,5 @@
+from src.core.constants import *
+from PyQt6.QtGui import QIcon
 import os
 import shutil
 from pathlib import Path
@@ -151,7 +153,8 @@ class TDataConverterWindow(QDialog):
         card_layout.addWidget(self.list_widget)
 
         btn_layout = QHBoxLayout()
-        self.btn_add = QPushButton("📁 Добавить tdata папки")
+        self.btn_add = QPushButton("Добавить tdata папки")
+        self.btn_add.setIcon(QIcon(str(FOLDER_ICON_PATH)))
         self.btn_add.setStyleSheet(f"""
             QPushButton {{
                 background-color: {styles.COLOR_HOVER_BG};
@@ -209,7 +212,8 @@ class TDataConverterWindow(QDialog):
         self.progress.setValue(0)
         card_layout.addWidget(self.progress)
 
-        self.btn_start = QPushButton("🚀 Начать конвертацию")
+        self.btn_start = QPushButton("Начать конвертацию")
+        self.btn_start.setIcon(QIcon(str(ROCKET_ICON_PATH)))
         self.btn_start.setStyleSheet(f"""
             QPushButton {{
                 background-color: {styles.COLOR_PRIMARY};

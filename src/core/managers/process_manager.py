@@ -162,16 +162,24 @@ def is_process_running(process: Optional[subprocess.Popen]) -> bool:
 
 
 def open_explorer(workdir: Union[str, Path]) -> bool:
-    """Открытие папки аккаунта в файловом менеджере Thunar"""
+    """Открытие папки аккаунта в файловом менеджере"""
     workdir = Path(workdir)
     if not workdir.exists():
         workdir.mkdir(parents=True, exist_ok=True)
-    try:
-        subprocess.Popen(["thunar", str(workdir)])
-        return True
-    except Exception as e:
-        logger.error(f"Ошибка открытия Thunar: {e}")
-        return False
+        
+    file_managers = ["thunar", "nautilus", "dolphin", "nemo", "xdg-open", "explorer.exe"]
+    
+    for fm in file_managers:
+        if shutil.which(fm):
+            try:
+                subprocess.Popen([fm, str(workdir)])
+                return True
+            except Exception as e:
+                logger.error(f"Ошибка открытия {fm}: {e}")
+                continue
+                
+    logger.error("Не найден ни один из поддерживаемых файловых менеджеров.")
+    return False
 
 
 def clear_cache(workdir: Union[str, Path]) -> Tuple[bool, str]:

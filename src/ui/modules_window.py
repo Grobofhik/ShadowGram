@@ -1,3 +1,4 @@
+from src.core.constants import *
 from src.ui.icon_cache import get_icon
 import json
 import threading
@@ -25,7 +26,7 @@ from src.core.managers import proxy_manager, farm_manager, config_manager, hw_ma
 from src.core.logger import logger
 from src.core.constants import CONFIG_FILE, START_ICON_PATH, RELOAD_ICON_PATH, FOLDER_ICON_PATH
 from src.core.module_manager import ModuleManager
-from src.modules_styles import MODULES_STYLESHEET
+
 from src.ui.active_tasks_window import ActiveTasksWindow
 from src.ui.smart_orchestrator_window import SmartOrchestratorWindow
 from src import styles
@@ -37,7 +38,7 @@ class ModulesPage(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         
-        self.setStyleSheet(MODULES_STYLESHEET)
+        self.setStyleSheet(styles.STYLESHEET)
         
         self.manager = ModuleManager()
         self.available_plugins = self.manager.discover_modules()
@@ -270,12 +271,12 @@ class ModulesPage(QWidget):
 
     def open_monitor_config(self):
         # Быстрый переход к плагину Мониторинга
-        index = self.module_combo.findText("👁️ Мониторинг канала (24/7)")
+        index = self.module_combo.findText("Мониторинг канала (24/7)")
         if index >= 0:
             self.module_combo.setCurrentIndex(index)
             QMessageBox.information(self, "Мониторинг 24/7", "Включен режим мониторинга канала!\n\nНастройте параметры модуля ниже, отметьте нужные аккаунты слева и нажмите 'ЗАПУСТИТЬ ПЛАГИН'.\nАккаунты будут работать в фоновом режиме.")
         else:
-            QMessageBox.warning(self, "Ошибка", "Модуль '👁️ Мониторинг канала (24/7)' не найден в системе.")
+            QMessageBox.warning(self, "Ошибка", "Модуль ' Мониторинг канала (24/7)' не найден в системе.")
 
     def open_scenario_builder(self):
         selected_accounts = [c.property("acc_data") for c in self.checkboxes if c.isChecked()]
@@ -324,19 +325,19 @@ class ModulesPage(QWidget):
                                     async with concurrency_limit:
                                         if step["type"] == "pause":
                                             pause_sec = random.randint(step["params"]["min"], step["params"]["max"])
-                                            _log_f(f"[{step_idx+1}/{len(steps)}] ⏳ Пауза на {self.format_time(pause_sec)}...", "info")
+                                            _log_f(f"[{step_idx+1}/{len(steps)}]  Пауза на {self.format_time(pause_sec)}...", "info")
                                             await asyncio.sleep(pause_sec)
-                                            _log_f(f"[{step_idx+1}/{len(steps)}] ⏳ Пауза завершена.", "success")
+                                            _log_f(f"[{step_idx+1}/{len(steps)}]  Пауза завершена.", "success")
                                         elif step["type"] == "plugin":
                                             p_name = step["name"]
                                             p_params = step["params"]
                                             p_class = self.manager.get_module_class(p_name)
                                         
                                             if not p_class:
-                                                _log_f(f"[{step_idx+1}/{len(steps)}] ❌ Ошибка: плагин {p_name} не найден!", "error")
+                                                _log_f(f"[{step_idx+1}/{len(steps)}]  Ошибка: плагин {p_name} не найден!", "error")
                                                 continue
                                             
-                                            _log_f(f"[{step_idx+1}/{len(steps)}] 🚀 Запуск: {p_name}...", "info")
+                                            _log_f(f"[{step_idx+1}/{len(steps)}]  Запуск: {p_name}...", "info")
                                             instance = p_class(acc_data, aid, ah, _log_f)
                                             self.local_tasks[task_id]["instances"].append(instance)
                                         
@@ -344,14 +345,14 @@ class ModulesPage(QWidget):
                                                 if await instance.init_client():
                                                     await instance.run(**p_params)
                                             except Exception as e:
-                                                _log_f(f"[{step_idx+1}/{len(steps)}] ❌ Ошибка плагина: {e}", "error")
+                                                _log_f(f"[{step_idx+1}/{len(steps)}]  Ошибка плагина: {e}", "error")
                                             finally:
                                                 await instance.cleanup()
                                             
-                                _log_f("✅ Сценарий полностью выполнен!", "success")
+                                _log_f("Сценарий полностью выполнен!", "success")
                                             
                         except asyncio.CancelledError:
-                            _log_f("❌ Сценарий отменен пользователем.", "error")
+                            _log_f("Сценарий отменен пользователем.", "error")
                             raise
                         except Exception as e:
                             _log_f(f"Критическая ошибка сценария: {e}", "error")
@@ -537,7 +538,7 @@ class ModulesPage(QWidget):
                             
                             while True:
                                 async with concurrency_limit:
-                                    inst.log("🚀 Начинаю активную фазу...", "info")
+                                    inst.log("Начинаю активную фазу...", "info")
                                     try:
                                         if await inst.init_client():
                                             await inst.run(**p)
@@ -550,7 +551,7 @@ class ModulesPage(QWidget):
                                     break 
                                 
                                 wait_seconds = random.randint(cycle_delay_range[0], cycle_delay_range[1])
-                                inst.log(f"✅ Работа завершена. Сон: {self.format_time(wait_seconds)}", "success")
+                                inst.log(f"Работа завершена. Сон: {self.format_time(wait_seconds)}", "success")
                                 await asyncio.sleep(wait_seconds)
                                 
                         except asyncio.CancelledError:

@@ -21,9 +21,33 @@ def mirror_to_sqlite(config_file: Path, data: dict):
                     device_name TEXT,
                     phone TEXT,
                     username TEXT,
+                    first_name TEXT,
+                    last_name TEXT,
+                    bio TEXT,
+                    channel_link TEXT,
+                    bound_channel TEXT,
+                    password TEXT,
+                    privacy_guard BOOLEAN,
                     data_json TEXT
                 )
             ''')
+            
+            # Попытка добавить новые колонки, если таблица была создана в старой версии
+            new_columns = [
+                ("first_name", "TEXT"),
+                ("last_name", "TEXT"),
+                ("bio", "TEXT"),
+                ("username", "TEXT"),
+                ("channel_link", "TEXT"),
+                ("bound_channel", "TEXT"),
+                ("password", "TEXT"),
+                ("privacy_guard", "BOOLEAN"),
+            ]
+            for col_name, col_type in new_columns:
+                try:
+                    cursor.execute(f"ALTER TABLE accounts ADD COLUMN {col_name} {col_type}")
+                except sqlite3.OperationalError:
+                    pass # Колонка уже существует
             
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS settings (
@@ -60,12 +84,21 @@ def mirror_to_sqlite(config_file: Path, data: dict):
                     acc.get("device_name"),
                     acc.get("phone"),
                     acc.get("username"),
+                    acc.get("first_name"),
+                    acc.get("last_name"),
+                    acc.get("bio"),
+                    acc.get("channel_link"),
+                    acc.get("bound_channel"),
+                    acc.get("password"),
+                    acc.get("privacy_guard", False),
                     json.dumps(acc)
                 ))
             
             cursor.executemany('''
-                INSERT INTO accounts (workdir, name, proxy_url, api_id, api_hash, device_name, phone, username, data_json)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO accounts (workdir, name, proxy_url, api_id, api_hash, 
+                                      device_name, phone, username, first_name, last_name, bio, 
+                                      channel_link, bound_channel, password, privacy_guard, data_json)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', accs)
             
             conn.commit()

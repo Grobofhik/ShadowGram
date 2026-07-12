@@ -1,3 +1,4 @@
+from src.core.constants import *
 from src.ui.icon_cache import get_icon
 import json
 import os
@@ -10,7 +11,7 @@ from PyQt6.QtCore import Qt, pyqtSignal, QSize
 from datetime import datetime
 
 from src.core.constants import CONFIG_FILE, FOLDER_ICON_PATH
-from src.modules_styles import MODULES_STYLESHEET
+
 from src import styles
 
 class ScenarioWindow(QWidget):
@@ -31,7 +32,7 @@ class ScenarioWindow(QWidget):
         
         self.setWindowTitle(f"Конструктор сценариев ({len(selected_accounts)} акк.)")
         self.resize(800, 600)
-        self.setStyleSheet(MODULES_STYLESHEET)
+        self.setStyleSheet(styles.STYLESHEET)
         
         self.init_ui()
         self.update_params_panel()
@@ -57,7 +58,8 @@ class ScenarioWindow(QWidget):
         btn_clear.clicked.connect(self.clear_scenario)
         left_layout.addWidget(btn_clear)
         
-        self.btn_run = QPushButton("🚀 ЗАПУСТИТЬ СЦЕНАРИЙ")
+        self.btn_run = QPushButton("ЗАПУСТИТЬ СЦЕНАРИЙ")
+        self.btn_run.setIcon(QIcon(str(ROCKET_ICON_PATH)))
         self.btn_run.setFixedHeight(45)
         self.btn_run.clicked.connect(self.run_scenario)
         left_layout.addWidget(self.btn_run)
@@ -72,7 +74,7 @@ class ScenarioWindow(QWidget):
         
         type_layout = QHBoxLayout()
         self.type_combo = QComboBox()
-        self.type_combo.addItem("⏳ Пауза")
+        self.type_combo.addItem("Пауза")
         self.type_combo.addItems(list(self.available_plugins.keys()))
         self.type_combo.currentTextChanged.connect(self.update_params_panel)
         type_layout.addWidget(self.type_combo, 1)
@@ -103,7 +105,7 @@ class ScenarioWindow(QWidget):
         self.param_widgets = {}
         
         sel_text = self.type_combo.currentText()
-        if sel_text == "⏳ Пауза":
+        if sel_text == "Пауза":
             l1 = QHBoxLayout()
             l1.addWidget(QLabel("От (секунд):"))
             min_input = QLineEdit("60")
@@ -172,14 +174,14 @@ class ScenarioWindow(QWidget):
         sel_text = self.type_combo.currentText()
         step_data = {"name": sel_text, "params": {}}
         
-        if sel_text == "⏳ Пауза":
+        if sel_text == "Пауза":
             try:
                 min_p = int(self.param_widgets["min_pause"].text())
                 max_p = int(self.param_widgets["max_pause"].text())
                 if min_p > max_p: min_p, max_p = max_p, min_p
                 step_data["type"] = "pause"
                 step_data["params"] = {"min": min_p, "max": max_p}
-                display_text = f"⏳ Пауза ({min_p} - {max_p} сек.)"
+                display_text = f"Пауза ({min_p} - {max_p} сек.)"
             except ValueError:
                 QMessageBox.warning(self, "Ошибка", "Укажите корректные числа для паузы.")
                 return

@@ -692,6 +692,7 @@ QPushButton#DocsCloseBtn:pressed {{
     padding-top: 11px; padding-bottom: 9px;
 }}
 
+
 QTextBrowser#DocsBrowser {{
     background-color: {COLOR_BG};
     color: {COLOR_TEXT_MAIN};
@@ -700,6 +701,67 @@ QTextBrowser#DocsBrowser {{
     padding: 50px;
     font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
     line-height: 1.8;
+}}
+
+/* ========================================= */
+/* MODULES UI STYLES (from modules_styles.py)*/
+/* ========================================= */
+
+QFrame#SectionFrame {{
+    background-color: {GRADIENT_ACCENT};
+    border: 1px solid {COLOR_BORDER};
+    border-top: 1px solid {COLOR_BORDER_LIGHT};
+    border-radius: 14px;
+}}
+
+QLabel#SectionTitle {{
+    color: {COLOR_PRIMARY};
+    font-weight: bold;
+    font-size: 14px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    letter-spacing: 2px;
+}}
+
+QPushButton#RunModuleBtn {{
+    background-color: {GRADIENT_BTN};
+    border: 1px solid {COLOR_PRIMARY_DARK};
+    border-bottom: 3px solid #047857;
+    color: #FFFFFF;
+    font-size: 16px;
+    font-weight: bold;
+    border-radius: 10px;
+    padding: 16px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}}
+
+QPushButton#RunModuleBtn:hover {{
+    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 {COLOR_PRIMARY_LIGHT}, stop:1 {COLOR_PRIMARY});
+    border: 1px solid {COLOR_PRIMARY_LIGHT};
+    border-bottom: 3px solid {COLOR_PRIMARY_DARK};
+}}
+
+QPushButton#RunModuleBtn:pressed {{
+    background-color: {COLOR_PRIMARY_DARK};
+    border: 1px solid #047857;
+    border-top: 3px solid #047857;
+    border-bottom: 1px solid #047857;
+    color: {COLOR_TEXT_MAIN};
+    padding-top: 18px;
+    padding-bottom: 14px;
+}}
+
+QTextEdit#LogOutput {{
+    background-color: {COLOR_CONSOLE_BG};
+    border: 1px solid {COLOR_BORDER};
+    border-bottom: 2px solid {COLOR_BORDER_DARK};
+    border-radius: 10px;
+    color: {COLOR_PRIMARY};
+    font-family: '{FONT_NAME}', monospace;
+    font-size: 13px;
+    padding: 16px;
+    line-height: 1.5;
 }}
 """
 

@@ -66,9 +66,15 @@ class ThemeIconPath:
     @property
     def resolved_path(self) -> Path:
         theme_dir = RESOURCE_DIR / "icons" / CURRENT_THEME
-        if not theme_dir.exists():
-            return RESOURCE_DIR / "icons" / "green" / self.filename
-        return theme_dir / self.filename
+        theme_path = theme_dir / self.filename
+        if theme_path.exists():
+            return theme_path
+            
+        green_path = RESOURCE_DIR / "icons" / "green" / self.filename
+        if green_path.exists():
+            return green_path
+            
+        return RESOURCE_DIR / "icons" / self.filename
 
     def __str__(self) -> str:
         return str(self.resolved_path)
@@ -117,6 +123,16 @@ RELOAD_ICON_PATH: Final = ThemeIconPath("reload_icon.png")
 ROCKET_ICON_PATH: Final = ThemeIconPath("rocket_icon.png")
 SAVE_ICON_PATH: Final = ThemeIconPath("save_icon.png")
 USERS_ICON_PATH: Final = ThemeIconPath("folder_icon.png")
+
+NEIRO_ICON_PATH: Final = ThemeIconPath("neiro_icon.png")
+TOOGLE_ICON_PATH: Final = ThemeIconPath("toogle_icon.png")
+PHONE_ICON_PATH: Final = ThemeIconPath("phone_icon.png")
+KEY_ICON_PATH: Final = ThemeIconPath("key_icon.png")
+PEAPLE_ICON_PATH: Final = ThemeIconPath("peaple_icon.png")
+REFRESH_ICON_PATH: Final = ThemeIconPath("refresh_icon.png")
+REBOOT_ICON_PATH: Final = ThemeIconPath("reboot_icon.png")
+ROBOT_ICON_PATH: Final = ThemeIconPath("robot_icon.png")
+CALL_ICON_PATH: Final = ThemeIconPath("call_icon.png")
 
 # Другие ресурсы
 SOUND_PATH: Final[Path] = RESOURCE_DIR / "sounds" / "Nuya.mp3"

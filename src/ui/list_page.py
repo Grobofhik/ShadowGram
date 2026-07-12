@@ -1,3 +1,4 @@
+from src.core.constants import *
 import os
 import threading
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QCheckBox, QLineEdit, QScrollArea, QFrame, QFileDialog, QMessageBox, QDialog, QMenu
@@ -301,6 +302,7 @@ class AccountListPage(QWidget):
             row.apply_compact_mode(self.is_compact_mode)
             row.set_proxy_hidden(self.proxies_hidden)
             row.account_removed.connect(self.refresh_accounts)
+            row.profile_data_changed.connect(self.on_profile_data_changed)
             row.move_requested.connect(self.handle_move_request)
             self.rows.append(row)
             self.scroll_layout.addWidget(row)
@@ -308,6 +310,12 @@ class AccountListPage(QWidget):
             query = self.search_input.text().lower().strip()
             if query:
                 row.setVisible(query in row.name.lower() or query in (row.notes.lower() if row.notes else ""))
+
+    def on_profile_data_changed(self):
+        if hasattr(self.mgr, 'table_page'):
+            self.mgr.table_page.refresh_data()
+        if hasattr(self.mgr, 'new_modules_page'):
+            self.mgr.new_modules_page.refresh_accounts()
 
     def handle_move_request(self, row_widget, direction):
         if self.is_animating: return

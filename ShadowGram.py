@@ -96,6 +96,15 @@ def main() -> None:
 
     init_farms()
     init_config()
+    
+    # Инициализация базы данных дашборда при запуске
+    from src.core.managers.config_manager import _read_config
+    from src.core.managers.db_manager import mirror_to_sqlite
+    from src.core.constants import CONFIG_FILE
+    try:
+        mirror_to_sqlite(CONFIG_FILE, _read_config(CONFIG_FILE))
+    except Exception as e:
+        print(f"Failed to init DB on startup: {e}")
 
     app = QApplication(sys.argv)
 

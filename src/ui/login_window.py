@@ -1,3 +1,4 @@
+from src.core.constants import *
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, 
                              QPushButton, QLineEdit, QStackedWidget, QMessageBox)
 from PyQt6.QtCore import Qt, QThread
@@ -95,20 +96,8 @@ class LoginWindow(QDialog):
         proxy_str = self.account_data.get("proxy_url")
         device_name = self.account_data.get("device_name", "ShadowGram-PC")
         
-        # Парсинг прокси
-        proxy_dict = None
-        if proxy_str:
-            try:
-                parts = proxy_str.split("://")
-                if len(parts) == 2:
-                    scheme = parts[0]
-                    host_port = parts[1].split(":")
-                    proxy_dict = {"scheme": scheme, "hostname": host_port[0], "port": int(host_port[1])}
-            except Exception:
-                pass 
-
         self.thread = QThread()
-        self.worker = AuthWorker(phone, self.api_id, self.api_hash, workdir, proxy_dict, device_name)
+        self.worker = AuthWorker(phone, self.api_id, self.api_hash, workdir, proxy_str, device_name)
         self.worker.moveToThread(self.thread)
         
         self.thread.started.connect(self.worker.run)

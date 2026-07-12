@@ -1,3 +1,5 @@
+from src.core.constants import *
+from PyQt6.QtGui import QIcon
 import os
 import threading
 import json
@@ -50,6 +52,7 @@ class TelegramAccountRow(QFrame):
     proxy_check_finished = pyqtSignal(bool)
     session_check_finished = pyqtSignal(str, str)
     account_removed = pyqtSignal()
+    profile_data_changed = pyqtSignal()
     move_requested = pyqtSignal(QFrame, int)
     status_cache = {}  # Кэш статусов сессий в памяти
 
@@ -249,9 +252,9 @@ class TelegramAccountRow(QFrame):
         self.label_name.setStyleSheet(f"font-size: {name_fs}px; font-weight: bold; color: {styles.COLOR_PRIMARY};")
         
         if self.proxy_url:
-            self.label_details.setText(f"<span style='color: {styles.COLOR_TEXT_DISABLED};'>📁 {self.workdir}</span> &nbsp;|&nbsp; <span style='color: {styles.COLOR_PRIMARY_DARK};'>🌐 {display_proxy}</span>")
+            self.label_details.setText(f"<span style='color: {styles.COLOR_TEXT_DISABLED};'> {self.workdir}</span> &nbsp;|&nbsp; <span style='color: {styles.COLOR_PRIMARY_DARK};'>🌐 {display_proxy}</span>")
         else:
-            self.label_details.setText(f"📁 {self.workdir}")
+            self.label_details.setText(f"{self.workdir}")
             
         self.label_details.setStyleSheet(f"color: {styles.COLOR_TEXT_MUTED}; font-size: {workdir_fs}px;")
 

@@ -1,3 +1,5 @@
+from src.core.constants import *
+from PyQt6.QtGui import QIcon
 import os
 import csv
 from PyQt6.QtWidgets import (
@@ -74,7 +76,8 @@ class AccountTablePage(QWidget):
         
         header_layout.addStretch()
 
-        btn_refresh = QPushButton("🔄 Обновить")
+        btn_refresh = QPushButton("Обновить")
+        btn_refresh.setIcon(QIcon(str(REFRESH_ICON_PATH)))
         btn_refresh.setFixedSize(120, 35)
         btn_refresh.setStyleSheet(f"background-color: {styles.COLOR_BG}; border: 1px solid {styles.COLOR_BORDER}; border-radius: 5px;")
         btn_refresh.clicked.connect(self.refresh_data)
@@ -162,7 +165,7 @@ class AccountTablePage(QWidget):
         self.table.setRowCount(len(accounts))
 
         for row, acc in enumerate(accounts):
-            privacy_status = "🛡️ АКТИВЕН" if acc.get("privacy_guard") else "⚠️ УЯЗВИМ"
+            privacy_status = "АКТИВЕН"if acc.get("privacy_guard") else "УЯЗВИМ"
             items = [
                 "", # Checkbox column
                 acc.get("name", ""),

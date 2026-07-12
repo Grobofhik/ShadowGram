@@ -1,3 +1,4 @@
+from src.core.constants import *
 from src.ui.icon_cache import get_icon
 import os
 import markdown
@@ -83,7 +84,8 @@ class DocsPage(QWidget):
         sidebar_layout.addWidget(self.tree)
         sidebar_layout.addStretch()
         
-        self.btn_close = QPushButton("⬅ Вернуться назад")
+        self.btn_close = QPushButton("Вернуться назад")
+        self.btn_close.setIcon(QIcon(str(CANCEL_ICON_PATH)))
         self.btn_close.setObjectName("SecondaryBtn")
         self.btn_close.setFixedHeight(45)
         self.btn_close.setStyleSheet(f"""
@@ -167,7 +169,7 @@ class DocsPage(QWidget):
 
         # 1. Введение
         cat_intro = create_category("Введение", home_icon)
-        create_selectable_item(cat_intro, "🚀 Обзор ShadowGram", "documentation/START.md")
+        create_selectable_item(cat_intro, "Обзор ShadowGram", "documentation/START.md")
         create_selectable_item(cat_intro, "🎯 Быстрый старт (Первый запуск)", "documentation/getting_started/first_start.md")
 
         # 2. Профили

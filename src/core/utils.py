@@ -24,8 +24,13 @@ def find_session_file(workdir: Optional[str]) -> Optional[str]:
     for path in search_paths:
         if path.exists() and path.is_dir():
             try:
+                # First, check for our standard "account.session"
+                if (path / "account.session").is_file():
+                    return str(path / "account")
+                    
+                # Otherwise, find the first .session file that is not a known telethon file
                 for f in path.iterdir():
-                    if f.is_file() and f.suffix == ".session":
+                    if f.is_file() and f.suffix == ".session" and "telethon" not in f.name:
                         return str(f.with_suffix(""))
             except OSError:
                 continue

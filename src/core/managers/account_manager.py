@@ -91,6 +91,7 @@ def add_account(
     device_name: Optional[str] = None,
     api_id: Optional[str] = None,
     api_hash: Optional[str] = None,
+    password: Optional[str] = None,
 ) -> bool:
     """Добавление новой записи об аккаунте в конфиг"""
     try:
@@ -102,6 +103,7 @@ def add_account(
             data = _read_config(config_file)
 
         if not device_name or device_name == f"PC-{name}":
+            from src.core.managers.hw_manager import generate_random_device_name
             device_name = generate_random_device_name()
 
         account_record = {
@@ -111,6 +113,9 @@ def add_account(
             "device_name": device_name,
         }
         
+        if password:
+            account_record["password"] = password
+            
         if not api_id or not api_hash:
             settings = data.get("settings", {})
             def_api_id = settings.get("default_tg_api_id", "")

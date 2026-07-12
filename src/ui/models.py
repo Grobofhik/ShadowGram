@@ -1,3 +1,4 @@
+from src.core.constants import *
 from PyQt6.QtCore import QAbstractListModel, Qt, QModelIndex, pyqtSignal
 from src.core.managers.process_manager import is_process_running
 

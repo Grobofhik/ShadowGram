@@ -1,3 +1,5 @@
+from src.core.constants import *
+from PyQt6.QtGui import QIcon
 import os
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, 
@@ -237,7 +239,8 @@ class AccountProfileWindow(QDialog):
         # Edit button row
         edit_row = QHBoxLayout()
         edit_row.addStretch()
-        self.btn_edit = QPushButton("✏️ Edit")
+        self.btn_edit = QPushButton("Edit")
+        self.btn_edit.setIcon(QIcon(str(NOTE_ICON_PATH)))
         self.btn_edit.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_edit.setStyleSheet(f"background: transparent; border: none; color: {COLOR_PRIMARY}; font-weight: bold; font-size: 14px;")
         self.btn_edit.clicked.connect(self.toggle_edit_mode)
@@ -275,10 +278,10 @@ class AccountProfileWindow(QDialog):
         self.is_editing = not getattr(self, 'is_editing', False)
         
         if self.is_editing:
-            self.btn_edit.setText("✅ Save")
+            self.btn_edit.setText("Save")
             self.btn_edit.setStyleSheet(f"background: transparent; border: none; color: {COLOR_PRIMARY}; font-weight: bold; font-size: 14px;")
         else:
-            self.btn_edit.setText("✏️ Edit")
+            self.btn_edit.setText("Edit")
             self.btn_edit.setStyleSheet(f"background: transparent; border: none; color: {COLOR_PRIMARY}; font-weight: bold; font-size: 14px;")
             self.save_profile_data()
             
@@ -367,7 +370,8 @@ class AccountProfileWindow(QDialog):
         self.f_api_id = LabeledInput("API ID (Telegram app)", "", read_only=True)
         self.f_api_hash = LabeledInput("API Hash (Telegram app)", "", read_only=True)
         
-        self.btn_generate_api = QPushButton("🔄 Auto API")
+        self.btn_generate_api = QPushButton("Auto API")
+        self.btn_generate_api.setIcon(QIcon(str(REFRESH_ICON_PATH)))
         self.btn_generate_api.setToolTip("Сгенерировать случайные ключи официального приложения")
         self.btn_generate_api.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_generate_api.setFixedHeight(35)
@@ -536,10 +540,39 @@ class AccountProfileWindow(QDialog):
             painter.end()
             
         self.avatar_label.setPixmap(pixmap)
+        self.update_header_gradient(pixmap)
         
         parent_row = self.parent()
         if parent_row and hasattr(parent_row, 'update_avatar'):
             parent_row.update_avatar()
+
+    def update_header_gradient(self, pixmap):
+        if not hasattr(self, 'header_frame'):
+            return
+        if not pixmap or pixmap.isNull():
+            gradient = f"qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 {COLOR_ACCENT_BG}, stop:1 {COLOR_BG})"
+        else:
+            image = pixmap.toImage()
+            if image.isNull():
+                gradient = f"qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 {COLOR_ACCENT_BG}, stop:1 {COLOR_BG})"
+            else:
+                scaled = image.scaled(2, 2, Qt.AspectRatioMode.IgnoreAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                c1 = QColor(scaled.pixelColor(0, 0))
+                c2 = QColor(scaled.pixelColor(1, 1))
+                
+                h1, s1, l1, _ = c1.getHsl()
+                h2, s2, l2, _ = c2.getHsl()
+                
+                # Dark premium theme HSL constraints
+                l1 = max(15, min(l1, 35))
+                l2 = max(10, min(l2, 25))
+                
+                c1.setHsl(h1, s1, l1)
+                c2.setHsl(h2, s2, l2)
+                
+                gradient = f"qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 {c1.name()}, stop:1 {c2.name()})"
+                
+        self.header_frame.setStyleSheet(f"background-color: {gradient}; border-bottom: 1px solid {COLOR_BORDER};")
 
     def change_main_avatar(self):
         workdir = self.account_data.get("workdir")
@@ -589,15 +622,15 @@ class AccountProfileWindow(QDialog):
                     self.finished_signal.emit(success, "\\n".join(self.logs))
                     
             self.upload_thread = AvatarUploadThread(self.account_data, dest_path)
-            self.status_label.setText("Status: ⏳ Установка аватарки в Telegram...")
+            self.status_label.setText("Status:  Установка аватарки в Telegram...")
             self.status_label.setStyleSheet(f"color: #fbc02d; font-size: 12px; font-weight: bold; font-family: '{FONT_NAME}'; background: transparent; border: none;")
             
             def on_finished(success, msgs):
                 if success:
-                    self.status_label.setText("Status: ✅ Аватарка установлена!")
+                    self.status_label.setText("Status:  Аватарка установлена!")
                     self.status_label.setStyleSheet(f"color: #00e676; font-size: 12px; font-weight: bold; font-family: '{FONT_NAME}'; background: transparent; border: none;")
                 else:
-                    self.status_label.setText("Status: ❌ Ошибка установки")
+                    self.status_label.setText("Status:  Ошибка установки")
                     self.status_label.setStyleSheet(f"color: #ff5252; font-size: 12px; font-weight: bold; font-family: '{FONT_NAME}'; background: transparent; border: none;")
                     
             self.upload_thread.finished_signal.connect(on_finished)
@@ -616,7 +649,6 @@ class AccountProfileWindow(QDialog):
         self.btn_stop = ActionButton("Stop Telegram")
         self.btn_check = ActionButton("Check Session Validity")
         self.btn_clear = ActionButton("Clear Cache (tdata)")
-        self.btn_avatar = ActionButton("Generate AI Avatar")
         self.btn_bio = ActionButton("Generate Random Bio")
         self.btn_export = ActionButton("Export Session (ZIP)")
         
@@ -625,8 +657,7 @@ class AccountProfileWindow(QDialog):
         grid.addWidget(self.btn_check, 1, 0, 1, 2)
         grid.addWidget(self.btn_clear, 2, 0)
         grid.addWidget(self.btn_export, 2, 1)
-        grid.addWidget(self.btn_avatar, 3, 0)
-        grid.addWidget(self.btn_bio, 3, 1)
+        grid.addWidget(self.btn_bio, 3, 0, 1, 2)
         
         # Connect buttons to parent (TelegramAccountRow) methods
         parent_row = self.parent()
@@ -635,9 +666,30 @@ class AccountProfileWindow(QDialog):
             self.btn_check.clicked.connect(parent_row.run_session_check)
             self.btn_clear.clicked.connect(parent_row.clear_account_cache)
             # Other buttons can be wired later as functionality is implemented
+            
+        self.btn_bio.clicked.connect(self.generate_random_bio)
         
         section.layout.addLayout(grid)
         self.scroll_layout.addWidget(section)
+
+    def generate_random_bio(self):
+        import random
+        bios = [
+            "Just living life", "Crypto enthusiast", "Music lover", 
+            "Traveler & Dreamer", "Tech geek", "Coffee addict", 
+            "Always learning", "Making things happen", "Future billionaire", 
+            "Software engineer", "Digital artist", "Fitness & Health",
+            "Exploring the world, one city at a time", "Invest in yourself",
+            "Simplicity is the ultimate sophistication", "Stay hungry, stay foolish"
+        ]
+        
+        chosen_bio = random.choice(bios)
+        self.f_bio.input_field.setPlainText(chosen_bio)
+        
+        from src.core.managers import account_manager
+        from src.core.constants import CONFIG_FILE
+        account_manager.update_account_profile_data(CONFIG_FILE, self.account_data["workdir"], bio=chosen_bio)
+        self._sync_to_telegram({"bio": chosen_bio})
 
     def populate_data(self):
         # Basic fields
@@ -655,7 +707,7 @@ class AccountProfileWindow(QDialog):
         self.f_api_id.input_field.setText(str(acc.get('api_id', '')))
         self.f_api_hash.input_field.setText(acc.get('api_hash', ''))
         self.f_proxy.input_field.setText(acc.get('proxy_url', ''))
-        self.f_privacy_guard.input_field.setText("🛡️ АКТИВЕН" if acc.get("privacy_guard") else "⚠️ УЯЗВИМ")
+        self.f_privacy_guard.input_field.setText("АКТИВЕН"if acc.get("privacy_guard") else "УЯЗВИМ")
         
         from src.core.constants import CONFIG_FILE
         from src.core.managers.account_manager import get_hardware_profile

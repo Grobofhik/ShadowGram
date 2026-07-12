@@ -1,3 +1,4 @@
+from src.core.constants import *
 from PyQt6.QtWidgets import QStyledItemDelegate, QApplication, QStyle, QMenu
 from PyQt6.QtCore import Qt, QRect, QPoint, pyqtSignal, QSize, QEvent
 from PyQt6.QtGui import QPainter, QColor, QFont, QIcon, QPixmap

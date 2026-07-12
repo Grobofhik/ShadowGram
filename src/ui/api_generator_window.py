@@ -1,3 +1,5 @@
+from src.core.constants import *
+from PyQt6.QtGui import QIcon
 import json
 import random
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
@@ -93,7 +95,8 @@ class ApiGeneratorWindow(QWidget):
         card_layout.addWidget(self.acc_list, 1)
         
         btn_layout = QHBoxLayout()
-        btn_select_all = QPushButton("✅ Выбрать все")
+        btn_select_all = QPushButton("Выбрать все")
+        btn_select_all.setIcon(QIcon(str(START_ICON_PATH)))
         btn_select_all.setStyleSheet(f"""
             QPushButton {{
                 background-color: {styles.COLOR_HOVER_BG};
@@ -110,7 +113,8 @@ class ApiGeneratorWindow(QWidget):
         btn_select_all.clicked.connect(self.select_all)
         btn_layout.addWidget(btn_select_all)
         
-        btn_generate = QPushButton("🚀 Сгенерировать и применить")
+        btn_generate = QPushButton("Сгенерировать и применить")
+        btn_generate.setIcon(QIcon(str(ROCKET_ICON_PATH)))
         btn_generate.setStyleSheet(f"""
             QPushButton {{
                 background-color: {styles.COLOR_PRIMARY};
@@ -200,7 +204,7 @@ class ApiGeneratorWindow(QWidget):
                 
         # Сохраняем в конфиг
         config_manager._write_config(CONFIG_FILE, data)
-        self.log_output.append("\n✅ Все ключи успешно обновлены и сохранены!")
+        self.log_output.append("\n Все ключи успешно обновлены и сохранены!")
         
         # Обновим UI менеджера
         if hasattr(self.manager, 'load_accounts'):

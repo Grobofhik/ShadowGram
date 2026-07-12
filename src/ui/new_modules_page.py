@@ -1,3 +1,5 @@
+from src.core.constants import *
+from PyQt6.QtGui import QIcon
 from src.ui.icon_cache import get_icon
 import os
 import shutil
@@ -683,17 +685,20 @@ class CommentingControlWindow(QDialog):
         
         header.addStretch()
         
-        btn_play = QPushButton("▶ Запустить")
+        btn_play = QPushButton("Запустить")
+        btn_play.setIcon(QIcon(str(START_ICON_PATH)))
         btn_play.clicked.connect(lambda _, i=idx: self.on_play_block(i))
         btn_play.setStyleSheet(f"color: {styles.COLOR_PRIMARY}; border-color: {styles.COLOR_BORDER}; font-size: 11px; padding: 4px 8px;")
         header.addWidget(btn_play)
         
-        btn_pause = QPushButton("⏸ Пауза")
+        btn_pause = QPushButton("Пауза")
+        btn_pause.setIcon(QIcon(str(CANCEL_ICON_PATH)))
         btn_pause.clicked.connect(lambda _, i=idx: self.on_pause_block(i))
         btn_pause.setStyleSheet("color: #FF9800; border-color: #5E3C00; font-size: 11px; padding: 4px 8px;")
         header.addWidget(btn_pause)
         
-        btn_stop = QPushButton("⏹ Стоп")
+        btn_stop = QPushButton("Стоп")
+        btn_stop.setIcon(QIcon(str(CANCEL_ICON_PATH)))
         btn_stop.clicked.connect(lambda _, i=idx: self.on_stop_block(i))
         btn_stop.setStyleSheet("color: #FF5252; border-color: #5E1F1F; font-size: 11px; padding: 4px 8px;")
         header.addWidget(btn_stop)
@@ -725,13 +730,15 @@ class CommentingControlWindow(QDialog):
             channels_input.setPlaceholderText("Каналы через запятую...")
             acc_row.addWidget(channels_input, stretch=1)
             
-            btn_save = QPushButton("✔️")
+            btn_save = QPushButton("")
+            btn_save.setIcon(QIcon(str(SAVE_ICON_PATH)))
             btn_save.setToolTip("Сохранить и применить настройки на лету")
             btn_save.setFixedWidth(32)
             btn_save.clicked.connect(lambda _, n=acc["name"]: self.on_save_channels(n))
             acc_row.addWidget(btn_save)
             
-            btn_log = QPushButton("📝")
+            btn_log = QPushButton("")
+            btn_log.setIcon(QIcon(str(NOTE_ICON_PATH)))
             btn_log.setToolTip("Посмотреть логи аккаунта")
             btn_log.setFixedWidth(32)
             btn_log.clicked.connect(lambda _, n=acc["name"]: self.on_open_logs(n))
@@ -814,7 +821,7 @@ class CommentingControlWindow(QDialog):
             self.workers[block_index].pause()
             if block_index in self.block_status_labels:
                 lbl = self.block_status_labels[block_index]
-                lbl.setText("⏸ Пауза")
+                lbl.setText("Пауза")
                 lbl.setStyleSheet("color: #FF9800; font-weight: bold; font-size: 12px;")
 
     def on_stop_block(self, block_index):
@@ -1520,14 +1527,16 @@ class PromptCard(QFrame):
             }}
         """
         
-        self.btn_view = QPushButton("👁️")
+        self.btn_view = QPushButton("")
+        self.btn_view.setIcon(QIcon(str(VIEW_ICON_PATH)))
         self.btn_view.setToolTip("Просмотреть промпт")
         self.btn_view.setStyleSheet(btn_style)
         self.btn_view.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_view.clicked.connect(lambda: self.view_clicked.emit(self.key))
         btns_h.addWidget(self.btn_view)
         
-        self.btn_use = QPushButton("▶️")
+        self.btn_use = QPushButton("")
+        self.btn_use.setIcon(QIcon(str(START_ICON_PATH)))
         self.btn_use.setToolTip("Использовать этот промпт")
         self.btn_use.setStyleSheet(btn_style)
         self.btn_use.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -1535,14 +1544,16 @@ class PromptCard(QFrame):
         btns_h.addWidget(self.btn_use)
         
         if not self.is_system:
-            self.btn_edit = QPushButton("✏️")
+            self.btn_edit = QPushButton("")
+            self.btn_edit.setIcon(QIcon(str(NOTE_ICON_PATH)))
             self.btn_edit.setToolTip("Редактировать промпт")
             self.btn_edit.setStyleSheet(btn_style)
             self.btn_edit.setCursor(Qt.CursorShape.PointingHandCursor)
             self.btn_edit.clicked.connect(lambda: self.edit_clicked.emit(self.key))
             btns_h.addWidget(self.btn_edit)
             
-            self.btn_delete = QPushButton("🗑️")
+            self.btn_delete = QPushButton("")
+            self.btn_delete.setIcon(QIcon(str(DELETE_ICON_PATH)))
             self.btn_delete.setToolTip("Удалить промпт")
             self.btn_delete.setStyleSheet(btn_style)
             self.btn_delete.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -1565,7 +1576,7 @@ class PromptCard(QFrame):
                 }}
             """)
             if not (self.is_system and self.is_starred):
-                self.badge_lbl.setText("✔️")
+                self.badge_lbl.setText("")
                 self.badge_lbl.setStyleSheet(f"color: {styles.COLOR_PRIMARY}; font-size: 11px; font-weight: bold; background: transparent; border: none;")
         else:
             self.setObjectName("PromptCardInactive")
@@ -1739,7 +1750,7 @@ class EditAccountChannelsDialog(QDialog):
         layout.setContentsMargins(15, 15, 15, 15)
         layout.setSpacing(12)
         
-        header_lbl = QLabel(f"⚙️ Тонкая настройка аккаунта: {acc_name}")
+        header_lbl = QLabel(f"Тонкая настройка аккаунта: {acc_name}")
         header_lbl.setStyleSheet(f"font-size: 14px; font-weight: bold; color: {styles.COLOR_PRIMARY};")
         layout.addWidget(header_lbl)
         
@@ -1840,7 +1851,7 @@ class AccountDistributionCard(QFrame):
         counter_layout.addStretch()
         
         # Prompt Status Badge
-        self.prompt_status_lbl = QLabel("📝 Свой промпт" if initial_prompt else "📝 Дефолт")
+        self.prompt_status_lbl = QLabel("Свой промпт"if initial_prompt else "Дефолт")
         self.prompt_status_lbl.setStyleSheet(f"color: {styles.COLOR_PRIMARY}; font-size: 10px; font-weight: bold;")
         counter_layout.addWidget(self.prompt_status_lbl)
         
@@ -1907,9 +1918,9 @@ class AccountDistributionCard(QFrame):
     def on_prompt_text_changed(self):
         text = self.txt_prompt.toPlainText().strip()
         if text:
-            self.prompt_status_lbl.setText("📝 Свой промпт")
+            self.prompt_status_lbl.setText("Свой промпт")
         else:
-            self.prompt_status_lbl.setText("📝 Дефолт")
+            self.prompt_status_lbl.setText("Дефолт")
         self.promptChanged.emit(self.acc_name, text)
         
     def update_counter(self, text):
@@ -2096,7 +2107,8 @@ class NewModulesPage(QWidget):
         self.show_warmup_steroids_module()
 
     def setup_modules_list(self):
-        self.btn_warmup = QPushButton("🔥 Прогрев (Стероиды)")
+        self.btn_warmup = QPushButton("Прогрев (Стероиды)")
+        self.btn_warmup.setIcon(QIcon(str(ROCKET_ICON_PATH)))
         self.btn_warmup.setObjectName("ModuleListBtnActive")
         self.btn_warmup.clicked.connect(self.on_warmup_clicked)
         self.scroll_layout.addWidget(self.btn_warmup)
@@ -2106,12 +2118,14 @@ class NewModulesPage(QWidget):
         self.btn_commenting.clicked.connect(self.on_commenting_clicked)
         self.scroll_layout.addWidget(self.btn_commenting)
 
-        btn_bot = QPushButton("🤖 AI Автоответчик v2\n(Скоро)")
+        btn_bot = QPushButton("AI Автоответчик v2\n(Скоро)")
+        btn_bot.setIcon(QIcon(str(ROBOT_ICON_PATH)))
         btn_bot.setObjectName("ModuleListBtnDisabled")
         btn_bot.setEnabled(False)
         self.scroll_layout.addWidget(btn_bot)
 
-        btn_inviter = QPushButton("🚀 Умный Инвайтер v2\n(Скоро)")
+        btn_inviter = QPushButton("Умный Инвайтер v2\n(Скоро)")
+        btn_inviter.setIcon(QIcon(str(ROCKET_ICON_PATH)))
         btn_inviter.setObjectName("ModuleListBtnDisabled")
         btn_inviter.setEnabled(False)
         self.scroll_layout.addWidget(btn_inviter)
@@ -2159,7 +2173,7 @@ class NewModulesPage(QWidget):
 
         # Шапка
         title_layout = QHBoxLayout()
-        module_title = QLabel("🔥 Прогрев и Управление Профилем (Стероиды)")
+        module_title = QLabel("Прогрев и Управление Профилем (Стероиды)")
         module_title.setObjectName("ModuleWorkTitle")
         title_layout.addWidget(module_title)
         title_layout.addStretch()
@@ -2260,7 +2274,8 @@ class NewModulesPage(QWidget):
         
         prof_btns = QHBoxLayout()
         prof_btns.addStretch()
-        self.btn_load_tg = QPushButton("🔄 Загрузить из TG")
+        self.btn_load_tg = QPushButton("Загрузить из TG")
+        self.btn_load_tg.setIcon(QIcon(str(REFRESH_ICON_PATH)))
         self.btn_load_tg.clicked.connect(self.load_data_from_telegram)
         prof_btns.addWidget(self.btn_load_tg)
         
@@ -2590,7 +2605,7 @@ class NewModulesPage(QWidget):
         ]))
 
         # 2. Социальные
-        col1_layout.addWidget(self.create_category_card("👥 Социальные", [
+        col1_layout.addWidget(self.create_category_card("Социальные", [
             ("forward_messages", "Пересылка сообщений", False),
             ("notes_saved", "Заметки в Избранном", False),
             ("sync_contacts", "Синхронизация контактов", False),
@@ -2604,7 +2619,7 @@ class NewModulesPage(QWidget):
         ]))
 
         # 4. Группы
-        col2_layout.addWidget(self.create_category_card("📁 Группы", [
+        col2_layout.addWidget(self.create_category_card("Группы", [
             ("archive_chats", "Архивирование чатов", False),
             ("mute_chats", "Отключение звука в чатах", False),
         ]))
@@ -2681,7 +2696,8 @@ class NewModulesPage(QWidget):
         self.btn_save_warmup.clicked.connect(self.save_warmup_only)
         warmup_control_layout.addWidget(self.btn_save_warmup)
 
-        self.btn_run_warmup = QPushButton("🔥 Запустить авто-прогрев")
+        self.btn_run_warmup = QPushButton("Запустить авто-прогрев")
+        self.btn_run_warmup.setIcon(QIcon(str(ROCKET_ICON_PATH)))
         self.btn_run_warmup.setObjectName("ApplyBtn")
         self.btn_run_warmup.clicked.connect(self.start_automatic_warmup)
         warmup_control_layout.addWidget(self.btn_run_warmup)
@@ -2690,7 +2706,8 @@ class NewModulesPage(QWidget):
         self.btn_schedule_warmup.clicked.connect(self.schedule_warmup)
         warmup_control_layout.addWidget(self.btn_schedule_warmup)
         
-        self.btn_stop_warmup = QPushButton("⏹️ Остановить прогрев")
+        self.btn_stop_warmup = QPushButton("Остановить прогрев")
+        self.btn_stop_warmup.setIcon(QIcon(str(CANCEL_ICON_PATH)))
         self.btn_stop_warmup.clicked.connect(self.stop_automatic_warmup)
         warmup_control_layout.addWidget(self.btn_stop_warmup)
         settings_layout.addLayout(warmup_control_layout)
@@ -2811,7 +2828,7 @@ class NewModulesPage(QWidget):
         self.right_layout.addWidget(self.commenting_tabs)
 
         # ==========================================
-        # Вкладка 1: 🚀 Запуск (Launch)
+        # Вкладка 1:  Запуск (Launch)
         # ==========================================
         tab_launch = QWidget()
         layout_launch = QVBoxLayout(tab_launch)
@@ -2995,7 +3012,7 @@ class NewModulesPage(QWidget):
         console_layout.addWidget(self.console_output)
         layout_launch.addWidget(console_frame)
 
-        self.commenting_tabs.addTab(tab_launch, "🚀 Запуск")
+        self.commenting_tabs.addTab(tab_launch, "Запуск")
 
         # ==========================================
         # Вкладка 2: 🧠 Интеллект ИИ (AI settings)
@@ -3125,7 +3142,7 @@ class NewModulesPage(QWidget):
         sys_sect_layout.setSpacing(4)
         
         sys_header = QHBoxLayout()
-        sys_title = QLabel("📊 Системные промпты")
+        sys_title = QLabel("Системные промпты")
         sys_title.setStyleSheet("font-weight: bold; color: white; font-size: 11px;")
         sys_header.addWidget(sys_title)
         self.lbl_sys_count = QLabel("(6)")
@@ -3210,7 +3227,7 @@ class NewModulesPage(QWidget):
         self.commenting_tabs.addTab(tab_ai, "🧠 Интеллект ИИ")
 
         # ==========================================
-        # Вкладка 3: 🛡️ Алгоритм и Лимиты
+        # Вкладка 3:  Алгоритм и Лимиты
         # ==========================================
         tab_limits = QWidget()
         layout_limits = QVBoxLayout(tab_limits)
@@ -3230,7 +3247,7 @@ class NewModulesPage(QWidget):
         protection_layout.setSpacing(8)
 
         row1_layout = QHBoxLayout()
-        shield_lbl = QLabel("🛡️")
+        shield_lbl = QLabel("")
         shield_lbl.setFixedSize(22, 22)
         shield_lbl.setStyleSheet(f"background-color: {styles.COLOR_PRIMARY_DARK}; border-radius: 6px; font-size: 12px; qproperty-alignment: AlignCenter; color: #000;")
         row1_layout.addWidget(shield_lbl)
@@ -3252,8 +3269,8 @@ class NewModulesPage(QWidget):
         # Пресеты
         self.preset_layout = QHBoxLayout()
         self.preset_layout.setSpacing(6)
-        self.card_conservative = ProtectionPresetCard("conservative", "🛡️", "Максимум", "Медленно, безопасно")
-        self.card_balanced = ProtectionPresetCard("balanced", "🎛️", "Баланс", "Оптимальный режим")
+        self.card_conservative = ProtectionPresetCard("conservative", "", "Максимум", "Медленно, безопасно")
+        self.card_balanced = ProtectionPresetCard("balanced", "", "Баланс", "Оптимальный режим")
         self.card_aggressive = ProtectionPresetCard("aggressive", "⚡", "Агрессивно", "Высокая скорость")
         for card in [self.card_conservative, self.card_balanced, self.card_aggressive]:
             card.clicked.connect(self.on_preset_clicked)
@@ -3426,10 +3443,10 @@ class NewModulesPage(QWidget):
         settings_layout.addWidget(followup_frame)
 
         layout_limits.addWidget(settings_frame)
-        self.commenting_tabs.addTab(tab_limits, "🛡️ Алгоритм и Лимиты")
+        self.commenting_tabs.addTab(tab_limits, "Алгоритм и Лимиты")
 
         # ==========================================
-        # Вкладка 4: 📊 Распределение (Distribution)
+        # Вкладка 4:  Распределение (Distribution)
         # ==========================================
         tab_dist = QWidget()
         layout_dist = QVBoxLayout(tab_dist)
@@ -3447,8 +3464,8 @@ class NewModulesPage(QWidget):
         dist_layout.addWidget(dist_section_title)
 
         work_presets_h = QHBoxLayout()
-        self.card_work_multithread = WorkModePresetCard("multithreaded", "⚙️", "Многопоточный", "Каналы делятся между аккаунтами")
-        self.card_work_standard = WorkModePresetCard("standard", "🔄", "Стандартный", "Все аккаунты мониторят все каналы")
+        self.card_work_multithread = WorkModePresetCard("multithreaded", "", "Многопоточный", "Каналы делятся между аккаунтами")
+        self.card_work_standard = WorkModePresetCard("standard", "", "Стандартный", "Все аккаунты мониторят все каналы")
         self.card_work_multithread.clicked.connect(self.on_work_mode_changed)
         self.card_work_standard.clicked.connect(self.on_work_mode_changed)
         work_presets_h.addWidget(self.card_work_multithread, 1)
@@ -3483,7 +3500,8 @@ class NewModulesPage(QWidget):
         btn_green_style = f"background-color: {styles.COLOR_HOVER_BG}; color: {styles.COLOR_PRIMARY}; border: 1px solid {styles.COLOR_BORDER_DARK}; border-radius: 4px; font-size: 10px; padding: 0 10px;"
         btn_muted_style = f"background-color: {styles.COLOR_HOVER_BG}; color: {styles.COLOR_TEXT_MUTED}; border: 1px solid {styles.COLOR_BORDER_DARK}; border-radius: 4px; font-size: 10px; padding: 0 10px;"
         
-        btn_recalc = QPushButton("🔄 Пересчитать / Обновить")
+        btn_recalc = QPushButton("Пересчитать / Обновить")
+        btn_recalc.setIcon(QIcon(str(REFRESH_ICON_PATH)))
         btn_recalc.setMinimumWidth(180)
         btn_recalc.setFixedHeight(26)
         btn_recalc.setStyleSheet(btn_green_style)
@@ -3559,7 +3577,8 @@ class NewModulesPage(QWidget):
         dist_btn_h.addWidget(self.combo_distribute_prompts)
         
         dist_btn_h.addStretch()
-        btn_distribute = QPushButton("✈️ Распределить")
+        btn_distribute = QPushButton("Распределить")
+        btn_distribute.setIcon(QIcon(str(ROCKET_ICON_PATH)))
         dist_fg = "#000000" if styles.COLOR_PRIMARY == "#00E676" else "#FFFFFF"
         btn_distribute.setStyleSheet(f"""
             QPushButton {{
@@ -4995,7 +5014,7 @@ class NewModulesPage(QWidget):
         self.btn_run_warmup.setEnabled(False)
         self.btn_run_warmup.setText("⌛ Прогрев выполняется...")
         self.btn_stop_warmup.setEnabled(True)
-        self.btn_stop_warmup.setText("⏹️ Остановить прогрев")
+        self.btn_stop_warmup.setText("Остановить прогрев")
         self.warmer_cancelled = False
         
         selected_names_str = ", ".join(a["name"] for a in self.selected_accounts)
@@ -5027,9 +5046,9 @@ class NewModulesPage(QWidget):
 
     def on_warmer_finished(self):
         self.btn_run_warmup.setEnabled(True)
-        self.btn_run_warmup.setText("🔥 Запустить авто-прогрев")
+        self.btn_run_warmup.setText("Запустить авто-прогрев")
         self.btn_stop_warmup.setEnabled(False)
-        self.btn_stop_warmup.setText("⏹️ Остановить прогрев")
+        self.btn_stop_warmup.setText("Остановить прогрев")
         self.append_log("Параллельная сессия автоматического прогрева завершена.", "success")
         if getattr(self, "warmer_cancelled", False):
             self.warmer_cancelled = False
@@ -5113,11 +5132,13 @@ class NewModulesPage(QWidget):
             actions_layout.setContentsMargins(4, 2, 4, 2)
             actions_layout.setSpacing(6)
             
-            btn_edit = QPushButton("✏️ Изменить")
+            btn_edit = QPushButton("Изменить")
+            btn_edit.setIcon(QIcon(str(NOTE_ICON_PATH)))
             btn_edit.setStyleSheet(f"padding: 2px 8px; font-size: 11px; background-color: rgba(0, 230, 118, 0.1) if styles.COLOR_PRIMARY == '#00E676' else rgba(0, 176, 255, 0.1); border: 1px solid {styles.COLOR_PRIMARY}; color: {styles.COLOR_PRIMARY};")
             btn_edit.clicked.connect(lambda checked, name=acc_name: self.edit_single_account_channels(name))
             
-            btn_clear = QPushButton("🗑️ Сбросить")
+            btn_clear = QPushButton("Сбросить")
+            btn_clear.setIcon(QIcon(str(DELETE_ICON_PATH)))
             btn_clear.setStyleSheet("padding: 2px 8px; font-size: 11px; background-color: rgba(255, 82, 82, 0.1); border: 1px solid rgba(255, 82, 82, 0.3); color: #FF5252;")
             btn_clear.clicked.connect(lambda checked, name=acc_name: self.clear_single_account_channels(name))
             

@@ -67,9 +67,10 @@ def parse_proxy_url(proxy_url: str) -> Optional[dict]:
         default_ports = {"http": 80, "https": 443, "socks5": 1080, "socks4": 1080}
         port = parsed.port or default_ports.get(scheme, 80)
         
+        from urllib.parse import unquote
         hostname = parsed.hostname
-        username = parsed.username
-        password = parsed.password
+        username = unquote(parsed.username) if parsed.username else None
+        password = unquote(parsed.password) if parsed.password else None
         
         return {
             "scheme": scheme,
@@ -141,10 +142,25 @@ def _setup_gost_proxy(
 ) -> Optional[subprocess.Popen]:
     """Настройка Gost прокси"""
     try:
+        normalized_url = normalize_proxy_url(proxy_url)
+        config_path = workdir / "gost.json"
+        
+        gost_config = {
+            "ServeNodes": [
+                f"socks5://127.0.0.1:{local_port}"
+            ],
+            "ChainNodes": [
+                normalized_url
+            ]
+        }
+        
+        with open(config_path, "w", encoding="utf-8") as f:
+            json.dump(gost_config, f)
+            
         log_path = workdir / "gost.log"
         with open(log_path, "w") as log_file:
             gost_process = subprocess.Popen(
-                ["gost", "-L", f"socks5://127.0.0.1:{local_port}", "-F", proxy_url],
+                ["gost", "-C", str(config_path)],
                 stdout=log_file,
                 stderr=log_file,
                 start_new_session=True,

@@ -1,3 +1,4 @@
+from src.core.constants import *
 import os
 import subprocess
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QStackedWidget, QFrame, QLabel, QPushButton, QMenu
@@ -29,7 +30,7 @@ from src.core.constants import (
     SOUND_PATH, LOGO_PATH, FOLDER_ICON_PATH,
     SERVER_ICON_PATH, MODULS_ICON_PATH, 
     NOTE_ICON_PATH, SETTINGS_ICON_PATH, ROCKET_ICON_PATH,
-    SEARCH_ICON_PATH, USERS_ICON_PATH
+    SEARCH_ICON_PATH, USERS_ICON_PATH, NEIRO_ICON_PATH, ROBOT_ICON_PATH
 )
 
 class TelegramManager(QWidget):
@@ -45,9 +46,16 @@ class TelegramManager(QWidget):
     def clear_nav_selection(self):
         self.btn_dashboard.setChecked(False)
         self.btn_accounts.setChecked(False)
+        self.btn_create_profile.setChecked(False)
+        self.btn_server.setChecked(False)
         self.btn_modules.setChecked(False)
-        self.btn_settings.setChecked(False)
+        self.btn_new_modules.setChecked(False)
+        self.btn_table.setChecked(False)
+        self.btn_services.setChecked(False)
+        self.btn_neiro.setChecked(False)
+        self.btn_ai_assistant.setChecked(False)
         self.btn_docs.setChecked(False)
+        self.btn_settings.setChecked(False)
 
     def show_dashboard(self):
         self.clear_nav_selection()
@@ -74,6 +82,8 @@ class TelegramManager(QWidget):
 
         # Логотип и заголовок
         logo_layout = QHBoxLayout()
+        logo_layout.setSpacing(10)
+        
         logo_label = QLabel()
         logo_pix = QPixmap(str(LOGO_PATH))
         if not logo_pix.isNull():
@@ -87,6 +97,8 @@ class TelegramManager(QWidget):
         title_label.setObjectName("Title")
         title_label.setStyleSheet("font-size: 24px; background-color: transparent;")
         logo_layout.addWidget(title_label)
+        logo_layout.addStretch()
+        
         sidebar_layout.addLayout(logo_layout)
         
         sidebar_layout.addSpacing(10)
@@ -121,6 +133,14 @@ class TelegramManager(QWidget):
         self.btn_table.clicked.connect(self.show_table)
         sidebar_layout.addWidget(self.btn_table)
 
+        self.btn_neiro = self.create_nav_button(" Нейрокомментинг", NEIRO_ICON_PATH)
+        self.btn_neiro.clicked.connect(self.show_neiro)
+        sidebar_layout.addWidget(self.btn_neiro)
+
+        self.btn_ai_assistant = self.create_nav_button(" ИИ Ассистент", ROBOT_ICON_PATH)
+        self.btn_ai_assistant.clicked.connect(self.show_ai_assistant)
+        sidebar_layout.addWidget(self.btn_ai_assistant)
+
         # Меню доп сервисов
         self.btn_services = self.create_nav_button(" Доп сервисы", MODULS_ICON_PATH)
         self.btn_services.clicked.connect(self.show_services)
@@ -150,14 +170,17 @@ class TelegramManager(QWidget):
         from src.ui.modules_window import ModulesPage
         from src.ui.server_window import ServerPage
         from src.ui.services_page import ServicesPage
+        from src.ui.ai_page import AIPage
+        from src.ui.neuro_commenting_page import NeuroCommentingPage
         
         self.services_page = ServicesPage(self)
         self.modules_page = ModulesPage(self)
         self.server_page = ServerPage(self)
-        
         self.new_modules_page = NewModulesPage(self)
         self.table_page = AccountTablePage(self)
         self.docs_page = DocsPage()
+        self.ai_page = AIPage(self)
+        self.neuro_page = NeuroCommentingPage(self)
 
         self.settings_page.back_requested.connect(self.show_list)
         self.settings_page.settings_saved.connect(self.reload_all_windows)
@@ -167,12 +190,14 @@ class TelegramManager(QWidget):
         self.stack.addWidget(self.dashboard_page)
         self.stack.addWidget(self.acc_list_page)
         self.stack.addWidget(self.settings_page)
-        self.stack.addWidget(self.services_page)
         self.stack.addWidget(self.modules_page)
         self.stack.addWidget(self.server_page)
         self.stack.addWidget(self.new_modules_page)
         self.stack.addWidget(self.table_page)
+        self.stack.addWidget(self.services_page)
         self.stack.addWidget(self.docs_page)
+        self.stack.addWidget(self.ai_page)
+        self.stack.addWidget(self.neuro_page)
 
         main_layout.addWidget(self.stack, 1) # 1 - растягивать контент
 
@@ -300,8 +325,17 @@ class TelegramManager(QWidget):
         self.stack.setCurrentWidget(self.new_modules_page)
 
     def show_table(self):
+        self.update_nav_buttons(self.btn_table)
         self.table_page.refresh_data()
-        self.stack.setCurrentWidget(self.table_page)
+        self.switch_page(self.table_page)
+
+    def show_neiro(self):
+        self.update_nav_buttons(self.btn_neiro)
+        self.switch_page(self.neuro_page)
+
+    def show_ai_assistant(self):
+        self.update_nav_buttons(self.btn_ai_assistant)
+        self.switch_page(self.ai_page)
 
     def reload_all_windows(self):
         from src import styles, modules_styles
@@ -375,22 +409,23 @@ class TelegramManager(QWidget):
         btn_style = f"""
             QPushButton {{
                 background-color: transparent;
+                color: {styles.COLOR_PRIMARY};
                 border: none;
-                text-align: left;
-                padding-left: 10px;
-                font-size: 14px;
-                font-weight: bold;
                 border-radius: 8px;
+                padding: 12px 20px;
+                text-align: left;
+                font-size: 15px;
             }}
             QPushButton:hover {{
-                background-color: {styles.COLOR_HOVER_BG};
-                border: 1px solid {styles.COLOR_BORDER};
+                background-color: {styles.COLOR_SELECT_BG};
             }}
-            QPushButton::menu-indicator {{
-                image: none;
+            QPushButton:checked {{
+                background-color: {styles.COLOR_HOVER_BG};
+                color: {styles.COLOR_PRIMARY};
+                font-weight: bold;
             }}
         """
-        for btn in [self.btn_dashboard, self.btn_accounts, self.btn_create_profile, self.btn_server, self.btn_modules, self.btn_new_modules, self.btn_table, self.btn_services, self.btn_docs, self.btn_settings]:
+        for btn in [self.btn_dashboard, self.btn_accounts, self.btn_create_profile, self.btn_server, self.btn_modules, self.btn_new_modules, self.btn_table, self.btn_services, self.btn_neiro, self.btn_ai_assistant, self.btn_docs, self.btn_settings]:
             btn.setStyleSheet(btn_style)
 
 
@@ -421,7 +456,8 @@ class TelegramManager(QWidget):
         header_layout = QHBoxLayout(header_widget)
         header_layout.setContentsMargins(20, 15, 20, 15)
         
-        btn_back = QPushButton("⬅ Назад к сервисам")
+        btn_back = QPushButton("Назад к сервисам")
+        btn_back.setIcon(QIcon(str(CANCEL_ICON_PATH)))
         btn_back.setStyleSheet(f"""
             QPushButton {{
                 background-color: transparent;
@@ -486,6 +522,46 @@ class TelegramManager(QWidget):
         from src.ui.tdata_converter_window import TDataConverterWindow
         service = TDataConverterWindow(self)
         self._embed_service_page(service, "Конвертер TData")
+
+    def open_session_manager(self):
+        from src.ui.session_creator import SessionCreatorWindow
+        service = SessionCreatorWindow(self)
+        self._embed_service_page(service, "Генератор сессий")
+
+    def open_telethon_converter(self):
+        from src.ui.telethon_converter_window import TelethonConverterWindow
+        service = TelethonConverterWindow(self)
+        self._embed_service_page(service, "Конвертер Telethon")
+
+    def export_phone_numbers(self):
+        from PyQt6.QtWidgets import QFileDialog, QMessageBox
+        import json
+        from src.core.constants import CONFIG_FILE
+        
+        if not CONFIG_FILE.exists():
+            QMessageBox.warning(self, "Ошибка", "Конфигурационный файл не найден.")
+            return
+            
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, "Сохранить номера", "", "Текстовые файлы (*.txt);;Все файлы (*)"
+        )
+        if not file_path:
+            return
+            
+        try:
+            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+                config = json.load(f)
+            
+            accounts = config.get("accounts", [])
+            phones = [acc.get("phone", "") for acc in accounts if acc.get("phone")]
+            
+            with open(file_path, "w", encoding="utf-8") as f:
+                for phone in phones:
+                    f.write(f"{phone}\n")
+                    
+            QMessageBox.information(self, "Успех", f"Успешно экспортировано {len(phones)} номеров.")
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Не удалось экспортировать номера:\n{e}")
 
     def update_sidebar_icons(self):
         for r in self.acc_list_page.rows:

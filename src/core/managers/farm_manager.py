@@ -74,6 +74,13 @@ def init_farms():
                 
         # На старте всегда копируем конфиг активной фермы в корень
         shutil.copy2(farm_config, CONFIG_FILE)
+        
+        # Обновляем SQLite зеркало
+        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        from src.core.managers.db_manager import mirror_to_sqlite
+        mirror_to_sqlite(CONFIG_FILE, data)
+        
     except Exception as e:
         logger.error(f"Ошибка инициализации ферм: {e}")
 
@@ -139,6 +146,13 @@ def switch_active_farm(name: str) -> bool:
         
         # 3. Копируем новый конфиг в корень
         shutil.copy2(farm_config, CONFIG_FILE)
+        
+        # 4. Обновляем SQLite зеркало
+        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        from src.core.managers.db_manager import mirror_to_sqlite
+        mirror_to_sqlite(CONFIG_FILE, data)
+        
         return True
     except Exception as e:
         logger.error(f"Ошибка переключения фермы: {e}")

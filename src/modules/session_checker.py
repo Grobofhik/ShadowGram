@@ -24,10 +24,24 @@ def _find_session_file(workdir: Path) -> Optional[Path]:
 async def _setup_proxy(proxy_url: str) -> Tuple[Optional[subprocess.Popen], Optional[Dict[str, Any]]]:
     local_port = get_free_port()
     try:
+        from src.core.managers.proxy_manager import normalize_proxy_url
+        import json
+        import os
+        normalized_url = normalize_proxy_url(proxy_url)
+        # Create config file in a temporary location since session checker might run outside specific workdirs, or we can use /tmp
+        import tempfile
+        fd, config_path = tempfile.mkstemp(suffix=".json", prefix="gost_")
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump({
+                "ServeNodes": [f"socks5://127.0.0.1:{local_port}"],
+                "ChainNodes": [normalized_url]
+            }, f)
+            
         gost_process = subprocess.Popen(
-            ["gost", "-L", f"socks5://127.0.0.1:{local_port}", "-F", proxy_url],
+            ["gost", "-L", f"socks5://127.0.0.1:{local_port}", "-F", normalized_url],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
+            start_new_session=True
         )
         proxy_settings = {
             "scheme": "socks5",
@@ -213,7 +227,8 @@ async def check_account(
                 
                 if channel.photo:
                     avatar_path = Path(workdir) / "channel_avatar.jpg"
-                    await client.download_media(channel.photo.big_file_id, file_name=str(avatar_path))
+                    if not avatar_path.exists():
+                        await client.download_media(channel.photo.big_file_id, file_name=str(avatar_path))
         except Exception as e:
             logger.debug(f"Failed to fetch personal channel info: {e}")
             
@@ -223,14 +238,14 @@ async def check_account(
         update_account_profile_data(
             config_file=CONFIG_FILE,
             workdir=workdir,
-            first_name=me.first_name,
-            last_name=me.last_name,
-            bio=bio,
+            first_name=me.first_name or "",
+            last_name=me.last_name or "",
+            bio=bio or "",
             bound_channel=None,
-            username=me.username,
-            phone=me.phone_number,
-            channel_name=channel_name,
-            channel_link=channel_link
+            username=me.username or "",
+            phone=me.phone_number or "",
+            channel_name=channel_name or "",
+            channel_link=channel_link or ""
         )
         
         # Проверяем наличие спамблока через @SpamBot

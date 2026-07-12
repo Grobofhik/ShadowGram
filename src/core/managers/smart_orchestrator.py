@@ -15,12 +15,13 @@ class OrchestratorSignals(QObject):
     finished = pyqtSignal()
 
 class SmartOrchestratorThread(QThread):
-    def __init__(self, workdirs: List[str], plugins: List[str], min_delay: int = 10, max_delay: int = 30):
+    def __init__(self, workdirs: List[str], plugins: List[str], min_delay: int = 10, max_delay: int = 30, user_params: Dict = None):
         super().__init__()
         self.workdirs = workdirs
         self.plugins = plugins
         self.min_delay = min_delay
         self.max_delay = max_delay
+        self.user_params = user_params or {}
         self.signals = OrchestratorSignals()
         self._is_running = False
         
@@ -107,6 +108,10 @@ class SmartOrchestratorThread(QThread):
                         # Some plugins might need links (like Smart Warmer)
                         if "default_chat_links" in self.global_settings:
                             kwargs["chat_links"] = self.global_settings["default_chat_links"]
+                            
+                        # Merge user_params specifically for this plugin
+                        if step in self.user_params:
+                            kwargs.update(self.user_params[step])
                             
                         await plugin_inst.run(**kwargs)
                     else:

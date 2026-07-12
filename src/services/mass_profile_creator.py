@@ -100,16 +100,27 @@ class MassProfileCreatorService(QDialog):
         adv_layout.setContentsMargins(10, 10, 10, 10)
         adv_layout.setSpacing(5)
         
+        # 2FA Password
+        from PyQt6.QtWidgets import QFormLayout
+        form_2fa = QFormLayout()
+        form_2fa.setLabelAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        self.input_2fa = QLineEdit()
+        self.input_2fa.setPlaceholderText("Общий облачный пароль (оставьте пустым если нет)")
+        self.input_2fa.setStyleSheet(f"background-color: {styles.COLOR_BG}; border: 1px solid {styles.COLOR_BORDER}; border-radius: 6px; padding: 5px;")
+        form_2fa.addRow(QLabel("2FA пароль:"), self.input_2fa)
+        adv_layout.addLayout(form_2fa)
+        
         opt_hbox = QHBoxLayout()
-        self.check_random_devices = QCheckBox("Случайные устройства")
+        self.check_random_devices = QCheckBox("Генерация отпечатков устройства")
         self.check_random_devices.setChecked(True)
         self.check_random_devices.setStyleSheet("border: none; background: transparent;")
         opt_hbox.addWidget(self.check_random_devices)
         
-        self.check_cycle_proxies = QCheckBox("Циклить прокси")
-        self.check_cycle_proxies.setChecked(True)
-        self.check_cycle_proxies.setStyleSheet("border: none; background: transparent;")
-        opt_hbox.addWidget(self.check_cycle_proxies)
+        self.btn_load_proxies = QPushButton("Загрузить из Proxy Pool")
+        self.btn_load_proxies.setStyleSheet(f"background-color: {styles.COLOR_HOVER_BG}; border: 1px solid {styles.COLOR_BORDER}; border-radius: 6px; padding: 4px 10px;")
+        self.btn_load_proxies.clicked.connect(self.load_proxy_pool)
+        opt_hbox.addWidget(self.btn_load_proxies)
+        
         adv_layout.addLayout(opt_hbox)
 
         proxy_lbl = QLabel("Список прокси (по одному на строку):")
@@ -154,6 +165,25 @@ class MassProfileCreatorService(QDialog):
         scroll.setWidget(container)
         main_layout.addWidget(scroll)
 
+    def load_proxy_pool(self):
+        farm_name = farm_manager.get_active_farm_name()
+        if not farm_name: return
+        from src.core.constants import FARMS_DIR
+        config_path = FARMS_DIR / farm_name / "config.json"
+        config = config_manager._read_config(config_path)
+        pool = config.get("settings", {}).get("proxy_pool", [])
+        if pool:
+            proxy_texts = []
+            for p in pool:
+                if isinstance(p, dict):
+                    proxy_texts.append(p.get("url", ""))
+                else:
+                    proxy_texts.append(str(p))
+            self.input_proxies.setText("\n".join(proxy_texts))
+            QMessageBox.information(self, "Успех", f"Загружено {len(pool)} прокси из пула.")
+        else:
+            QMessageBox.warning(self, "Пусто", "Прокси пул пуст.")
+
     def browse_directory(self):
         dir_path = QFileDialog.getExistingDirectory(self, "Выберите базовую папку")
         if dir_path:
@@ -189,8 +219,8 @@ class MassProfileCreatorService(QDialog):
         proxies = [p.strip() for p in proxies_text.split("\n") if p.strip()]
 
         created_count = 0
-        cycle_proxies = self.check_cycle_proxies.isChecked()
         random_devices = self.check_random_devices.isChecked()
+        two_fa_password = self.input_2fa.text().strip() or None
 
         for idx in range(start_idx, end_idx + 1):
             num_str = f"{idx:0{padding}d}"
@@ -211,14 +241,12 @@ class MassProfileCreatorService(QDialog):
             proxy_url = None
             if proxies:
                 pos = idx - start_idx
-                if cycle_proxies:
-                    proxy_url = proxies[pos % len(proxies)]
-                else:
-                    proxy_url = proxies[pos] if pos < len(proxies) else None
+                # Always cycle by default since cycle checkbox is replaced
+                proxy_url = proxies[pos % len(proxies)]
 
             device_name = self.generate_random_device_name() if random_devices else f"PC-{profile_name}"
 
-            if account_manager.add_account(CONFIG_FILE, profile_name, workdir, proxy_url, device_name):
+            if account_manager.add_account(CONFIG_FILE, profile_name, workdir, proxy_url, device_name, password=two_fa_password):
                 created_count += 1
 
         farm_manager.save_active_farm_config()

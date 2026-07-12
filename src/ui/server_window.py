@@ -1,3 +1,4 @@
+from src.core.constants import *
 from src.ui.icon_cache import get_icon
 import json
 import threading
@@ -14,7 +15,7 @@ from src.core.managers import proxy_manager, farm_manager, config_manager, hw_ma
 from src.core.constants import (CONFIG_FILE, START_ICON_PATH, PING_ICON_PATH, 
                                RELOAD_ICON_PATH, ROCKET_ICON_PATH, SAVE_ICON_PATH)
 from src.core.module_manager import ModuleManager
-from src.modules_styles import MODULES_STYLESHEET
+
 from src.ui.active_tasks_window import ActiveTasksWindow
 from src import styles
 
@@ -27,7 +28,7 @@ class ServerPage(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setStyleSheet(MODULES_STYLESHEET)
+        self.setStyleSheet(styles.STYLESHEET)
         
         self.manager = ModuleManager()
         self.available_plugins = self.manager.discover_modules()
@@ -322,7 +323,7 @@ class ServerPage(QWidget):
                 acc_data = cb.property("acc_data")
                 base_name = acc_data["name"]
                 if base_name in server_accounts:
-                    cb.setText(f"✅ {base_name}")
+                    cb.setText(f"{base_name}")
                     cb.setStyleSheet(f"color: {styles.COLOR_PRIMARY};") # Окрашиваем в акцентный цвет
                 else:
                     cb.setText(f"{base_name}")
@@ -423,7 +424,7 @@ class ServerPage(QWidget):
             QMessageBox.information(self, "Внимание", "Только один аккаунт разрешен!")
             return
         
-        server_checkboxes = [c for c in self.checkboxes if "✅" in c.text()]
+        server_checkboxes = [c for c in self.checkboxes if ""in c.text()]
         if not server_checkboxes:
             return
 
@@ -431,7 +432,7 @@ class ServerPage(QWidget):
         st = not all(c.isChecked() for c in server_checkboxes)
         
         for c in self.checkboxes:
-            if "✅" in c.text():
+            if ""in c.text():
                 c.setChecked(st)
             else:
                 c.setChecked(False)

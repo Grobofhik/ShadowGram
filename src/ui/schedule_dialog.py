@@ -1,3 +1,4 @@
+from src.core.constants import *
 from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QSpinBox, QPushButton, QMessageBox
 from PyQt6.QtCore import Qt
 from src import styles
