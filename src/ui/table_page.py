@@ -168,7 +168,7 @@ class AccountTablePage(QWidget):
             privacy_status = "АКТИВЕН"if acc.get("privacy_guard") else "УЯЗВИМ"
             items = [
                 "", # Checkbox column
-                acc.get("name", ""),
+                f"{acc.get('first_name', '')} {acc.get('last_name', '')}".strip(),
                 acc.get("phone", ""),
                 privacy_status,
                 str(acc.get("api_id", "")),

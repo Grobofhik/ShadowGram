@@ -285,6 +285,8 @@ class AccountProfileWindow(QDialog):
             self.btn_edit.setStyleSheet(f"background: transparent; border: none; color: {COLOR_PRIMARY}; font-weight: bold; font-size: 14px;")
             self.save_profile_data()
             
+        self.f_first_name.set_edit_mode(self.is_editing)
+        self.f_last_name.set_edit_mode(self.is_editing)
         self.f_username.set_edit_mode(self.is_editing)
         self.f_bio.set_edit_mode(self.is_editing)
         self.f_email.set_edit_mode(self.is_editing)
@@ -317,6 +319,8 @@ class AccountProfileWindow(QDialog):
         account_manager.update_account_profile_data(
             CONFIG_FILE,
             workdir,
+            first_name=self.f_first_name.input_field.text().strip() or None,
+            last_name=self.f_last_name.input_field.text().strip() or None,
             bio=self.f_bio.input_field.toPlainText().strip() or None,
             username=self.f_username.input_field.text().strip() or None,
             email=self.f_email.input_field.text().strip() or None,
@@ -349,15 +353,22 @@ class AccountProfileWindow(QDialog):
     def setup_public_info_section(self):
         section = SectionFrame("Public Profile Info")
         
+        self.f_first_name = LabeledInput("Имя (First Name)", "", read_only=True)
+        self.f_last_name = LabeledInput("Фамилия (Last Name)", "", read_only=True)
         self.f_username = LabeledInput("Username (@)", "", read_only=True)
         self.f_bio = LabeledInput("Bio (Description)", "", multi_line=True, read_only=True)
         self.f_email = LabeledInput("Recovery Email (2FA)", "", read_only=True)
         self.f_password = LabeledInput("Cloud Password (2FA)", "", read_only=True)
         
+        row_names = QHBoxLayout()
+        row_names.addWidget(self.f_first_name)
+        row_names.addWidget(self.f_last_name)
+        
         row1 = QHBoxLayout()
         row1.addWidget(self.f_username)
         row1.addWidget(self.f_email)
         
+        section.layout.addLayout(row_names)
         section.layout.addLayout(row1)
         section.layout.addWidget(self.f_password)
         section.layout.addWidget(self.f_bio)
@@ -691,6 +702,56 @@ class AccountProfileWindow(QDialog):
         account_manager.update_account_profile_data(CONFIG_FILE, self.account_data["workdir"], bio=chosen_bio)
         self._sync_to_telegram({"bio": chosen_bio})
 
+    def _sync_to_telegram(self, fields):
+        if "bio" in fields:
+            bio_val = fields["bio"]
+            from PyQt6.QtCore import QThread, pyqtSignal
+            import asyncio
+            from src.modules.plugins.set_bio import SetBioPlugin
+            
+            class BioUploadThread(QThread):
+                finished_signal = pyqtSignal(bool, str)
+                
+                def __init__(self, acc_data, target_bio):
+                    super().__init__()
+                    self.acc_data = acc_data
+                    self.target_bio = target_bio
+                    self.logs = []
+                    
+                def log_cb(self, msg):
+                    self.logs.append(msg)
+                    
+                def run(self):
+                    async def do_sync():
+                        plugin = SetBioPlugin(
+                            account_data=self.acc_data,
+                            api_id=str(self.acc_data.get("api_id", "")),
+                            api_hash=self.acc_data.get("api_hash", ""),
+                            log_callback=self.log_cb
+                        )
+                        # Pass workdir so the plugin knows which account is running
+                        plugin.workdir = self.acc_data.get("workdir")
+                        await plugin.run(bios_text=self.target_bio)
+                        
+                    asyncio.run(do_sync())
+                    success = any("успешно" in msg.lower() for msg in self.logs)
+                    self.finished_signal.emit(success, "\n".join(self.logs))
+                    
+            self.bio_sync_thread = BioUploadThread(self.account_data, bio_val)
+            self.status_label.setText("Status:  Синхронизация био с Telegram...")
+            self.status_label.setStyleSheet(f"color: #fbc02d; font-size: 12px; font-weight: bold; font-family: '{FONT_NAME}'; background: transparent; border: none;")
+            
+            def on_finished(success, msgs):
+                if success:
+                    self.status_label.setText("Status:  Био синхронизировано!")
+                    self.status_label.setStyleSheet(f"color: #00e676; font-size: 12px; font-weight: bold; font-family: '{FONT_NAME}'; background: transparent; border: none;")
+                else:
+                    self.status_label.setText("Status:  Ошибка синхронизации био")
+                    self.status_label.setStyleSheet(f"color: #ff5252; font-size: 12px; font-weight: bold; font-family: '{FONT_NAME}'; background: transparent; border: none;")
+                    
+            self.bio_sync_thread.finished_signal.connect(on_finished)
+            self.bio_sync_thread.start()
+
     def populate_data(self):
         # Basic fields
         first = self.account_data.get('first_name')
@@ -731,6 +792,8 @@ class AccountProfileWindow(QDialog):
             self.status_label.setText(f"Status: {TelegramAccountRow.status_cache[workdir]}")
         
         # New fields (Username, Bio, Email, 2FA) might not exist yet, set defaults if available
+        self.f_first_name.input_field.setText(self.account_data.get('first_name', ''))
+        self.f_last_name.input_field.setText(self.account_data.get('last_name', ''))
         self.f_username.input_field.setText(self.account_data.get('username', ''))
         self.f_email.input_field.setText(self.account_data.get('email', ''))
         self.f_password.input_field.setText(self.account_data.get('password', ''))
