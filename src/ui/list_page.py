@@ -314,8 +314,6 @@ class AccountListPage(QWidget):
     def on_profile_data_changed(self):
         if hasattr(self.mgr, 'table_page'):
             self.mgr.table_page.refresh_data()
-        if hasattr(self.mgr, 'new_modules_page'):
-            self.mgr.new_modules_page.refresh_accounts()
 
     def handle_move_request(self, row_widget, direction):
         if self.is_animating: return

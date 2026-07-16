@@ -1,0 +1,26 @@
+# Пример кастомного плагина для ShadowGram
+# Для активации переименуйте файл в example_node.py
+
+# 1. Спецификация UI блока
+NODE_SPEC = {
+    "custom_example_action": {
+        "title": "Пример плагина",
+        "category": "Плагины",
+        "inputs": ["prev"],
+        "outputs": ["next"],
+        "params": {
+            "message_text": {"label": "Текст сообщения", "type": "str", "default": "Привет из плагина!"}
+        }
+    }
+}
+
+# 2. Логика выполнения (Action Handler)
+async def handler(executor, params):
+    # Получаем разрешенный параметр
+    text = executor.resolve_string(params.get("message_text", ""))
+    
+    # Логируем действие в консоль редактора
+    executor.log(f"Плагин запущен! Текст: {text}", "success")
+    
+    # Передаем управление следующему блоку
+    return "next"

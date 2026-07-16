@@ -22,7 +22,6 @@ from src.ui.icon_cache import get_icon
 
 from src.ui.list_page import AccountListPage
 from src.ui.settings_page import SettingsPage
-from src.ui.new_modules_page import NewModulesPage
 from src.ui.table_page import AccountTablePage
 from src.ui.docs_window import DocsPage
 from src import styles
@@ -49,11 +48,11 @@ class TelegramManager(QWidget):
         self.btn_create_profile.setChecked(False)
         self.btn_server.setChecked(False)
         self.btn_modules.setChecked(False)
-        self.btn_new_modules.setChecked(False)
         self.btn_table.setChecked(False)
         self.btn_services.setChecked(False)
         self.btn_neiro.setChecked(False)
         self.btn_ai_assistant.setChecked(False)
+        self.btn_node_editor.setChecked(False)
         self.btn_docs.setChecked(False)
         self.btn_settings.setChecked(False)
 
@@ -120,10 +119,6 @@ class TelegramManager(QWidget):
         self.btn_modules = self.create_nav_button(" Модули", MODULS_ICON_PATH)
         self.btn_modules.clicked.connect(self.show_modules)
         sidebar_layout.addWidget(self.btn_modules)
-
-        self.btn_new_modules = self.create_nav_button(" Новые Модули", MODULS_ICON_PATH)
-        self.btn_new_modules.clicked.connect(self.show_new_modules)
-        sidebar_layout.addWidget(self.btn_new_modules)
         
         self.btn_dashboard = self.create_nav_button(" Дашборд", SEARCH_ICON_PATH)
         self.btn_dashboard.clicked.connect(self.show_dashboard)
@@ -140,6 +135,10 @@ class TelegramManager(QWidget):
         self.btn_ai_assistant = self.create_nav_button(" ИИ Ассистент", ROBOT_ICON_PATH)
         self.btn_ai_assistant.clicked.connect(self.show_ai_assistant)
         sidebar_layout.addWidget(self.btn_ai_assistant)
+
+        self.btn_node_editor = self.create_nav_button(" Node-Сценарист", ROCKET_ICON_PATH)
+        self.btn_node_editor.clicked.connect(self.show_node_editor)
+        sidebar_layout.addWidget(self.btn_node_editor)
 
         # Меню доп сервисов
         self.btn_services = self.create_nav_button(" Доп сервисы", MODULS_ICON_PATH)
@@ -176,11 +175,13 @@ class TelegramManager(QWidget):
         self.services_page = ServicesPage(self)
         self.modules_page = ModulesPage(self)
         self.server_page = ServerPage(self)
-        self.new_modules_page = NewModulesPage(self)
         self.table_page = AccountTablePage(self)
         self.docs_page = DocsPage()
         self.ai_page = AIPage(self)
         self.neuro_page = NeuroCommentingPage(self)
+        
+        from src.ui.node_editor.node_editor_window import NodeEditorWindow
+        self.node_editor_page = NodeEditorWindow(manager=self)
 
         self.settings_page.back_requested.connect(self.show_list)
         self.settings_page.settings_saved.connect(self.reload_all_windows)
@@ -192,12 +193,12 @@ class TelegramManager(QWidget):
         self.stack.addWidget(self.settings_page)
         self.stack.addWidget(self.modules_page)
         self.stack.addWidget(self.server_page)
-        self.stack.addWidget(self.new_modules_page)
         self.stack.addWidget(self.table_page)
         self.stack.addWidget(self.services_page)
         self.stack.addWidget(self.docs_page)
         self.stack.addWidget(self.ai_page)
         self.stack.addWidget(self.neuro_page)
+        self.stack.addWidget(self.node_editor_page)
 
         main_layout.addWidget(self.stack, 1) # 1 - растягивать контент
 
@@ -320,10 +321,6 @@ class TelegramManager(QWidget):
     def show_list(self):
         self.stack.setCurrentWidget(self.acc_list_page)
 
-    def show_new_modules(self):
-        self.new_modules_page.refresh_accounts()
-        self.stack.setCurrentWidget(self.new_modules_page)
-
     def show_table(self):
         self.update_nav_buttons(self.btn_table)
         self.table_page.refresh_data()
@@ -338,12 +335,11 @@ class TelegramManager(QWidget):
         self.switch_page(self.ai_page)
 
     def reload_all_windows(self):
-        from src import styles, modules_styles
+        from src import styles
         from PyQt6.QtWidgets import QApplication
         
-        # Перезагружаем тему в модулях стилей
+        # Перезагружаем тему
         styles.load_theme()
-        modules_styles.load_theme()
         
         # Применяем новую тему к приложению
         app = QApplication.instance()
@@ -361,13 +357,6 @@ class TelegramManager(QWidget):
         self.stack.addWidget(self.settings_page)
         self.stack.removeWidget(old_settings)
         old_settings.deleteLater()
-
-        # Пересоздаём new_modules_page — все inline-стили будут с новой темой
-        old_modules = self.new_modules_page
-        self.new_modules_page = NewModulesPage(self)
-        self.stack.addWidget(self.new_modules_page)
-        self.stack.removeWidget(old_modules)
-        old_modules.deleteLater()
 
         # Пересоздаём modules_page
         from src.ui.modules_window import ModulesPage
@@ -425,7 +414,7 @@ class TelegramManager(QWidget):
                 font-weight: bold;
             }}
         """
-        for btn in [self.btn_dashboard, self.btn_accounts, self.btn_create_profile, self.btn_server, self.btn_modules, self.btn_new_modules, self.btn_table, self.btn_services, self.btn_neiro, self.btn_ai_assistant, self.btn_docs, self.btn_settings]:
+        for btn in [self.btn_dashboard, self.btn_accounts, self.btn_create_profile, self.btn_server, self.btn_modules, self.btn_table, self.btn_services, self.btn_neiro, self.btn_ai_assistant, self.btn_node_editor, self.btn_docs, self.btn_settings]:
             btn.setStyleSheet(btn_style)
 
 
@@ -532,6 +521,24 @@ class TelegramManager(QWidget):
         from src.ui.telethon_converter_window import TelethonConverterWindow
         service = TelethonConverterWindow(self)
         self._embed_service_page(service, "Конвертер Telethon")
+
+    def show_node_editor(self):
+        selected_accounts = []
+        if hasattr(self, 'acc_list_page') and hasattr(self.acc_list_page, 'rows'):
+            selected_accounts = [
+                {
+                    "name": r.name,
+                    "workdir": r.workdir,
+                    "proxy_url": r.proxy_url,
+                    "device_name": r.device_name,
+                    "notes": r.notes,
+                    "ai_prompt": r.ai_prompt
+                }
+                for r in self.acc_list_page.rows if r.checkbox.isChecked()
+            ]
+        self.node_editor_page.selected_accounts = selected_accounts
+        self.update_nav_buttons(self.btn_node_editor)
+        self.switch_page(self.node_editor_page)
 
     def export_phone_numbers(self):
         from PyQt6.QtWidgets import QFileDialog, QMessageBox

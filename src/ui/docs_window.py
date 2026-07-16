@@ -209,6 +209,7 @@ class DocsPage(QWidget):
         # 9. Разработка
         cat_dev = create_category("Для разработчиков", folder_icon)
         create_selectable_item(cat_dev, "Создание плагинов", "documentation/developers/plugin_development_guide.md")
+        create_selectable_item(cat_dev, "Справочник Hydrogram API", "documentation/developers/hydrogram_api_reference.md")
         
     def on_anchor_clicked(self, url: QUrl):
         link = url.toString()

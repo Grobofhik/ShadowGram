@@ -479,7 +479,7 @@ class TelegramAccountRow(QFrame):
             self.tg_process, self.gost_process = process_manager.start_telegram(self.workdir, self.proxy_url, self.device_name, account_name=self.name)
             if self.tg_process: self.update_status(True)
         else:
-            if process_manager.stop_telegram(self.tg_process, self.gost_process):
+            if process_manager.stop_telegram(self.tg_process, self.gost_process, self.workdir):
                 self.tg_process = self.gost_process = None
                 self.update_status(False)
                 self._check_auto_clean()
@@ -494,7 +494,7 @@ class TelegramAccountRow(QFrame):
 
     def check_status(self):
         if self.tg_process and not process_manager.is_process_running(self.tg_process):
-            process_manager.stop_telegram(self.tg_process, self.gost_process)
+            process_manager.stop_telegram(self.tg_process, self.gost_process, self.workdir)
             self.tg_process = self.gost_process = None
             self.update_status(False)
             self._check_auto_clean()

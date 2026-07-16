@@ -1,6 +1,6 @@
 from src.core.constants import *
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QTabWidget, QTextEdit, QPushButton, QHBoxLayout, QLabel
-from PyQt6.QtCore import pyqtSignal, Qt, QSize
+from PyQt6.QtCore import pyqtSignal, pyqtSlot, Qt, QSize
 from PyQt6.QtGui import QIcon
 from src.styles import STYLESHEET
 from src.core.constants import CANCEL_ICON_PATH
@@ -78,6 +78,7 @@ class ActiveTasksWindow(QWidget):
             self.tab_widget.setCurrentIndex(index)
         return self.tabs[task_id]["log"]
 
+    @pyqtSlot(str, str)
     def append_log(self, task_id, text):
         if task_id in self.tabs:
             self.tabs[task_id]["log"].append(text)
