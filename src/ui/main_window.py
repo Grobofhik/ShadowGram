@@ -508,6 +508,11 @@ class TelegramManager(QWidget):
         service = SessionCreatorWindow(self)
         self._embed_service_page(service, "Генератор сессий")
 
+    def open_mass_session_creator(self):
+        from src.services.mass_session_service import MassSessionService
+        service = MassSessionService(self)
+        self._embed_service_page(service, "Массовое создание сессий")
+
     def open_telethon_converter(self):
         from src.ui.telethon_converter_window import TelethonConverterWindow
         service = TelethonConverterWindow(self)
