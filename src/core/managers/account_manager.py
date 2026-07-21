@@ -124,15 +124,8 @@ def add_account(
                 api_id = def_api_id
             if not api_hash and def_api_hash:
                 api_hash = def_api_hash
-                
-            # Если ключи всё еще пустые (или 0), присваиваем динамические от оф. клиентов!
-            if not api_id or not api_hash or str(api_id) == "0":
-                from src.core.managers.api_manager import get_dynamic_api_credentials
-                creds = get_dynamic_api_credentials(str(workdir))
-                api_id = creds["api_id"]
-                api_hash = creds["api_hash"]
 
-        if api_id:
+        if api_id and str(api_id) != "0":
             account_record["api_id"] = api_id
         if api_hash:
             account_record["api_hash"] = api_hash

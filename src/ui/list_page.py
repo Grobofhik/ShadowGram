@@ -171,6 +171,7 @@ class AccountListPage(QWidget):
 
     def __init__(self, parent):
         super().__init__()
+        self.setObjectName("PageRoot")
         self.mgr = parent
         self.rows = []
         self.proxies_hidden = True
@@ -184,61 +185,155 @@ class AccountListPage(QWidget):
 
     def init_ui(self):
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(15)
+        layout.setContentsMargins(18, 18, 18, 18)
+        layout.setSpacing(12)
 
-        toolbar = QHBoxLayout()
+        hero = QFrame()
+        hero.setObjectName("PageHero")
+        hero_layout = QHBoxLayout(hero)
+        hero_layout.setContentsMargins(18, 18, 18, 18)
+        hero_layout.setSpacing(16)
+
+        hero_copy = QVBoxLayout()
+        hero_copy.setSpacing(4)
+
+        hero_eyebrow = QLabel("CONTROL CENTER")
+        hero_eyebrow.setObjectName("PageEyebrow")
+        hero_copy.addWidget(hero_eyebrow)
+
+        hero_title = QLabel("Управление аккаунтами")
+        hero_title.setObjectName("PageTitle")
+        hero_copy.addWidget(hero_title)
+
+        hero_subtitle = QLabel("Основной список профилей с быстрыми действиями, поиском, проверками и пакетным управлением.")
+        hero_subtitle.setObjectName("PageSubtitle")
+        hero_subtitle.setWordWrap(True)
+        hero_copy.addWidget(hero_subtitle)
+
+        hero_layout.addLayout(hero_copy, 1)
+
+        hero_actions = QHBoxLayout()
+        hero_actions.setSpacing(10)
+
+        btn_create = QPushButton("Создать профиль")
+        btn_create.setObjectName("PillBtn")
+        btn_create.setIcon(get_icon(FOLDER_ICON_PATH))
+        btn_create.setIconSize(QSize(18, 18))
+        btn_create.clicked.connect(self.open_create_profile_dialog)
+        hero_actions.addWidget(btn_create)
+
+        btn_services = QPushButton("Сервисы")
+        btn_services.setObjectName("GhostBtn")
+        btn_services.setIcon(get_icon(MODULS_ICON_PATH))
+        btn_services.setIconSize(QSize(18, 18))
+        btn_services.clicked.connect(self.mgr.show_services)
+        hero_actions.addWidget(btn_services)
+
+        btn_docs = QPushButton("Документация")
+        btn_docs.setObjectName("GhostBtn")
+        btn_docs.setIcon(get_icon(NOTE_ICON_PATH))
+        btn_docs.setIconSize(QSize(18, 18))
+        btn_docs.clicked.connect(self.mgr.show_docs)
+        hero_actions.addWidget(btn_docs)
+
+        hero_layout.addLayout(hero_actions)
+        layout.addWidget(hero)
+
+        toolbar_card = QFrame()
+        toolbar_card.setObjectName("ToolbarCard")
+        toolbar_layout = QVBoxLayout(toolbar_card)
+        toolbar_layout.setContentsMargins(14, 12, 14, 12)
+        toolbar_layout.setSpacing(10)
+
+        toolbar_top = QHBoxLayout()
+        toolbar_top.setSpacing(8)
         self.select_all_cb = QCheckBox("Выбрать все")
         self.select_all_cb.stateChanged.connect(self.toggle_select_all)
-        toolbar.addWidget(self.select_all_cb)
-        toolbar.addStretch()
+        toolbar_top.addWidget(self.select_all_cb)
+        toolbar_top.addStretch()
 
-        for btn_text, slot in [(" Запустить", self.bulk_launch), (" Остановить", self.bulk_stop), (" Проверить", self.bulk_check_proxy), (" Кэш", self.bulk_clear_cache)]:
-            btn = QPushButton(btn_text)
-            if btn_text == " Запустить":
-                btn.setIcon(get_icon(SUCCESS_ICON_PATH))
-                btn.setIconSize(QSize(20, 20))
-            elif btn_text == " Остановить":
-                btn.setIcon(get_icon(CANCEL_ICON_PATH))
-                btn.setIconSize(QSize(20, 20))
-            elif btn_text == " Проверить":
-                btn.setIcon(get_icon(PROXY_ICON_PATH))
-                btn.setIconSize(QSize(20, 20))
-            elif btn_text == " Кэш":
-                btn.setIcon(get_icon(CASH_ICON_PATH))
-                btn.setIconSize(QSize(22, 22))
-            btn.clicked.connect(slot)
-            toolbar.addWidget(btn)
-            
-        self.btn_toggle_proxies = QPushButton()
+        self.bulk_buttons = []
+        for text, slot, icon_path in [
+            ("Запустить", self.bulk_launch, SUCCESS_ICON_PATH),
+            ("Остановить", self.bulk_stop, CANCEL_ICON_PATH),
+            ("Проверить", self.bulk_check_proxy, PROXY_ICON_PATH),
+            ("Кэш", self.bulk_clear_cache, CASH_ICON_PATH),
+        ]:
+            btn = self._create_toolbar_button(text, icon_path, slot)
+            self.bulk_buttons.append(btn)
+            toolbar_top.addWidget(btn)
+
+        self.btn_toggle_proxies = QPushButton("Прокси")
+        self.btn_toggle_proxies.setObjectName("GhostBtn")
         self.btn_toggle_proxies.setIcon(get_icon(VIEV_ICON_PATH))
-        self.btn_toggle_proxies.setIconSize(QSize(24, 24))
-        self.btn_toggle_proxies.setFixedWidth(45)
-        self.btn_toggle_proxies.setToolTip("Показать/Скрыть все прокси")
+        self.btn_toggle_proxies.setIconSize(QSize(18, 18))
+        self.btn_toggle_proxies.setToolTip("Показать или скрыть адреса прокси")
         self.btn_toggle_proxies.clicked.connect(self.toggle_all_proxies)
-        toolbar.addWidget(self.btn_toggle_proxies)
-        layout.addLayout(toolbar)
+        toolbar_top.addWidget(self.btn_toggle_proxies)
+        toolbar_layout.addLayout(toolbar_top)
+
+        toolbar_bottom = QHBoxLayout()
+        toolbar_bottom.setSpacing(8)
 
         self.search_input = QLineEdit()
-        self.search_input.setPlaceholderText(" Поиск по имени или заметкам...")
+        self.search_input.setPlaceholderText("Поиск по имени, пути, прокси, устройству или заметкам...")
         self.search_input.textChanged.connect(self.filter_accounts)
-        layout.addWidget(self.search_input)
+        toolbar_bottom.addWidget(self.search_input, 1)
+
+        btn_refresh = QPushButton("Обновить список")
+        btn_refresh.setObjectName("GhostBtn")
+        btn_refresh.clicked.connect(self.refresh_accounts)
+        toolbar_bottom.addWidget(btn_refresh)
+
+        toolbar_layout.addLayout(toolbar_bottom)
+        layout.addWidget(toolbar_card)
+
+        content_card = QFrame()
+        content_card.setObjectName("PageCard")
+        content_layout = QVBoxLayout(content_card)
+        content_layout.setContentsMargins(10, 10, 10, 10)
+        content_layout.setSpacing(0)
 
         self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)
         self.scroll_content = QWidget()
         self.scroll_content.setObjectName("ScrollContent")
         self.scroll_layout = QVBoxLayout(self.scroll_content)
+        self.scroll_layout.setContentsMargins(2, 2, 2, 2)
         self.scroll_layout.setSpacing(10)
         self.scroll_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.scroll.setWidget(self.scroll_content)
         self.scroll.verticalScrollBar().setSingleStep(25)
-        layout.addWidget(self.scroll)
+        content_layout.addWidget(self.scroll)
 
-        btn_ref = QPushButton("Обновить список")
-        btn_ref.setFixedHeight(40)
-        btn_ref.clicked.connect(self.refresh_accounts)
-        layout.addWidget(btn_ref)
+        self.empty_state = QFrame()
+        self.empty_state.setObjectName("EmptyStateCard")
+        empty_layout = QVBoxLayout(self.empty_state)
+        empty_layout.setContentsMargins(24, 22, 24, 22)
+        empty_layout.setSpacing(8)
+
+        self.empty_text = QLabel("Создайте первый профиль или измените поисковый запрос, если список уже заполнен.")
+        self.empty_text.setObjectName("EmptyStateText")
+        self.empty_text.setWordWrap(True)
+        self.empty_text.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        empty_layout.addWidget(self.empty_text)
+
+        self.empty_btn = QPushButton("Создать профиль")
+        self.empty_btn.setObjectName("PillBtn")
+        self.empty_btn.clicked.connect(self.open_create_profile_dialog)
+        empty_layout.addWidget(self.empty_btn, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        self.scroll_layout.addWidget(self.empty_state)
+        self.scroll_layout.addStretch()
+        layout.addWidget(content_card, 1)
+
+    def _create_toolbar_button(self, text, icon_path, slot):
+        btn = QPushButton(text)
+        btn.setObjectName("GhostBtn")
+        btn.setIcon(get_icon(icon_path))
+        btn.setIconSize(QSize(18, 18))
+        btn.clicked.connect(slot)
+        return btn
 
     def open_create_profile_dialog(self):
         if not self.create_dialog:
@@ -269,7 +364,9 @@ class AccountListPage(QWidget):
             self.scroll_layout.removeWidget(r)
             r.deleteLater()
         self.rows = []
-        
+        self.update_summary()
+        self.update_empty_state()
+
         try:
             data = config_manager._read_config(CONFIG_FILE)
             self.is_compact_mode = data.get("settings", {}).get("compact_mode", False)
@@ -281,6 +378,8 @@ class AccountListPage(QWidget):
             self._load_timer = QTimer(self)
             self._load_timer.timeout.connect(self._load_next_batch)
             self._load_timer.start(10)
+        else:
+            self.update_empty_state()
 
     def _load_next_batch(self):
         batch_size = 5
@@ -304,16 +403,35 @@ class AccountListPage(QWidget):
             row.account_removed.connect(self.refresh_accounts)
             row.profile_data_changed.connect(self.on_profile_data_changed)
             row.move_requested.connect(self.handle_move_request)
+            row.running_state_changed.connect(lambda _state: self.update_summary())
+            row.checkbox.stateChanged.connect(lambda _state: self.update_summary())
             self.rows.append(row)
-            self.scroll_layout.addWidget(row)
+            self.scroll_layout.insertWidget(max(0, self.scroll_layout.count() - 1), row)
             
             query = self.search_input.text().lower().strip()
             if query:
-                row.setVisible(query in row.name.lower() or query in (row.notes.lower() if row.notes else ""))
+                row.setVisible(self._match_row_query(row, query))
+        self.update_summary()
+        self.update_empty_state()
+
+    def _match_row_query(self, row, query):
+        haystacks = [
+            row.name,
+            row.workdir,
+            row.proxy_url or "",
+            row.device_name or "",
+            row.notes or "",
+            row.ai_prompt or "",
+        ]
+        query = query.lower().strip()
+        return any(query in value.lower() for value in haystacks if value)
 
     def on_profile_data_changed(self):
         if hasattr(self.mgr, 'table_page'):
             self.mgr.table_page.refresh_data()
+        self.filter_accounts(self.search_input.text())
+        self.update_summary()
+        self.update_empty_state()
 
     def handle_move_request(self, row_widget, direction):
         if self.is_animating: return
@@ -381,9 +499,11 @@ class AccountListPage(QWidget):
         self.anim_group.start()
 
     def filter_accounts(self, text):
-        t = text.lower()
+        t = text.lower().strip()
         for r in self.rows:
-            r.setVisible(t in r.name.lower() or (r.notes and t in r.notes.lower()))
+            r.setVisible(self._match_row_query(r, t) if t else True)
+        self.update_empty_state()
+        self.update_summary()
 
     def toggle_all_proxies(self):
         self.proxies_hidden = not self.proxies_hidden
@@ -392,6 +512,7 @@ class AccountListPage(QWidget):
     def toggle_select_all(self, state):
         st = state == Qt.CheckState.Checked.value
         for r in self.rows: r.checkbox.setChecked(st)
+        self.update_summary()
 
     def bulk_launch(self):
         try:
@@ -414,6 +535,7 @@ class AccountListPage(QWidget):
     def bulk_stop(self):
         for r in self.rows:
             if r.checkbox.isChecked() and process_manager.is_process_running(r.tg_process): r.toggle_telegram()
+        self.update_summary()
 
     def bulk_check_proxy(self):
         for r in self.rows:
@@ -426,3 +548,15 @@ class AccountListPage(QWidget):
                 process_manager.clear_cache(r.workdir)
                 cleared += 1
         QMessageBox.information(self, "Очистка кэша", f"Очищен кэш у {cleared} аккаунтов.")
+
+    def update_summary(self):
+        return
+
+    def update_empty_state(self):
+        if not self.rows:
+            self.empty_state.show()
+            self.empty_text.setText("Создайте первый профиль, чтобы начать работу с фермой.")
+            self.empty_btn.show()
+            return
+
+        self.empty_state.hide()

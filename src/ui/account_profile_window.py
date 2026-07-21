@@ -381,9 +381,9 @@ class AccountProfileWindow(QDialog):
         self.f_api_id = LabeledInput("API ID (Telegram app)", "", read_only=True)
         self.f_api_hash = LabeledInput("API Hash (Telegram app)", "", read_only=True)
         
-        self.btn_generate_api = QPushButton("Auto API")
+        self.btn_generate_api = QPushButton("API Fallback")
         self.btn_generate_api.setIcon(QIcon(str(REFRESH_ICON_PATH)))
-        self.btn_generate_api.setToolTip("Сгенерировать случайные ключи официального приложения")
+        self.btn_generate_api.setToolTip("Назначить случайную локальную fallback-пару из vetted official списка")
         self.btn_generate_api.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_generate_api.setFixedHeight(35)
         self.btn_generate_api.setStyleSheet(f"background-color: {COLOR_BG}; border: 1px solid {COLOR_BORDER}; border-radius: 6px; font-weight: bold;")

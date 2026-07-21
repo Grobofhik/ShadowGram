@@ -54,6 +54,7 @@ class TelegramAccountRow(QFrame):
     account_removed = pyqtSignal()
     profile_data_changed = pyqtSignal()
     move_requested = pyqtSignal(QFrame, int)
+    running_state_changed = pyqtSignal(bool)
     status_cache = {}  # Кэш статусов сессий в памяти
 
     def __init__(self, name, workdir, proxy_url=None, notes=None, device_name=None, ai_prompt=None):
@@ -80,12 +81,13 @@ class TelegramAccountRow(QFrame):
 
     def init_ui(self):
         self.layout_main = QHBoxLayout(self)
-        self.layout_main.setContentsMargins(15, 12, 15, 12)
-        self.layout_main.setSpacing(15)
+        self.layout_main.setContentsMargins(18, 14, 18, 14)
+        self.layout_main.setSpacing(14)
 
         # 1. Кнопки перемещения
         move_layout = QVBoxLayout()
-        move_layout.setSpacing(0)
+        move_layout.setSpacing(2)
+        move_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
         self.btn_up = QPushButton("▲")
         self.btn_up.setObjectName("MoveBtn")
         self.btn_up.setFixedSize(20, 20)
@@ -116,37 +118,53 @@ class TelegramAccountRow(QFrame):
         QTimer.singleShot(0, self.load_avatar)
         self.layout_main.addWidget(self.avatar_label)
 
-        # 4. Информация (Имя + Детали)
+        # 4. Информация
         info_layout = QVBoxLayout()
-        info_layout.setSpacing(2)
+        info_layout.setSpacing(6)
         info_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
-        
+
         self.label_name = QLabel(self.name)
-        self.label_name.setStyleSheet("font-size: 16px; font-weight: normal; color: #E0E0E0;")
+        self.label_name.setObjectName("AccountName")
         info_layout.addWidget(self.label_name)
-        
-        self.label_details = QLabel()
+
+        self.label_path = QLabel()
+        self.label_path.setObjectName("AccountPath")
+        self.label_path.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        info_layout.addWidget(self.label_path)
+
+        badges_layout = QHBoxLayout()
+        badges_layout.setSpacing(8)
+        badges_layout.setContentsMargins(0, 2, 0, 0)
+
+        self.badge_proxy = QLabel()
+        self.badge_proxy.setObjectName("MetaBadge")
+        badges_layout.addWidget(self.badge_proxy)
+
+        self.badge_device = QLabel()
+        self.badge_device.setObjectName("MetaBadge")
+        badges_layout.addWidget(self.badge_device)
+
+        self.badge_notes = QLabel()
+        self.badge_notes.setObjectName("MetaBadge")
+        badges_layout.addWidget(self.badge_notes)
+
+        self.badge_prompt = QLabel()
+        self.badge_prompt.setObjectName("MetaBadge")
+        badges_layout.addWidget(self.badge_prompt)
+
+        badges_layout.addStretch()
+        info_layout.addLayout(badges_layout)
+
         self.update_label_text()
-        info_layout.addWidget(self.label_details)
-        
         self.layout_main.addLayout(info_layout, 1)
 
-        # 5. Статус
-        self.status_label = QLabel("Остановлен")
-        self.status_label.setObjectName("StatusStopped")
-        self.status_label.setFixedWidth(95)
-        self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.layout_main.addWidget(self.status_label)
-
-        # Разделитель
-        sep1 = QFrame()
-        sep1.setFrameShape(QFrame.Shape.VLine)
-        sep1.setStyleSheet(f"color: {styles.COLOR_BORDER}; margin: 0px 4px;")
-        self.layout_main.addWidget(sep1)
-
         # 6. Кнопки инструментов
+        actions_frame = QFrame()
+        actions_frame.setObjectName("RowActionsFrame")
         btns_layout = QHBoxLayout()
+        btns_layout.setContentsMargins(12, 10, 12, 10)
         btns_layout.setSpacing(6)
+        actions_frame.setLayout(btns_layout)
 
         btns = [
             (START_ICON_PATH, "LoginBtn", self.open_login_window, "Авторизовать (Войти)"),
@@ -170,43 +188,55 @@ class TelegramAccountRow(QFrame):
             btn.setToolTip(tip)
             btn.clicked.connect(slot)
             if obj_name == "CheckBtn": self.btn_check = btn; btn.setVisible(bool(self.proxy_url))
-            if obj_name == "NotesBtn": self.btn_notes = btn; btn.installEventFilter(self)
+            if obj_name == "NotesBtn":
+                self.btn_notes = btn
+                btn.installEventFilter(self)
+                btn.setProperty("status", "success" if self.notes else "default")
             if obj_name == "SessionBtn": self.btn_session = btn
             if obj_name == "PromptBtn": self.btn_prompt = btn; btn.setProperty("status", "success" if self.ai_prompt else "default")
             btns_layout.addWidget(btn)
 
-        self.layout_main.addLayout(btns_layout)
+        self.layout_main.addWidget(actions_frame)
 
-        # Разделитель
-        sep2 = QFrame()
-        sep2.setFrameShape(QFrame.Shape.VLine)
-        sep2.setStyleSheet(f"color: {styles.COLOR_BORDER}; margin: 0px 4px;")
-        self.layout_main.addWidget(sep2)
+        # 7. Статус и запуск
+        launch_layout = QVBoxLayout()
+        launch_layout.setSpacing(8)
+        launch_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
 
-        # 7. Главная кнопка запуска
+        self.status_label = QLabel("Остановлен")
+        self.status_label.setObjectName("StatusStopped")
+        self.status_label.setFixedWidth(124)
+        self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        launch_layout.addWidget(self.status_label, alignment=Qt.AlignmentFlag.AlignRight)
+
         self.btn_launch = QPushButton("Запустить")
         self.btn_launch.setObjectName("LaunchBtn")
+        self.btn_launch.setProperty("running", False)
         self.btn_launch.setIcon(get_icon(START_ICON_PATH))
         self.btn_launch.setIconSize(QSize(18, 18))
-        self.btn_launch.setFixedSize(130, 38)
+        self.btn_launch.setFixedSize(138, 40)
         self.btn_launch.clicked.connect(self.toggle_telegram)
-        self.layout_main.addWidget(self.btn_launch)
+        launch_layout.addWidget(self.btn_launch, alignment=Qt.AlignmentFlag.AlignRight)
+
+        self.layout_main.addLayout(launch_layout)
 
     def apply_compact_mode(self, is_compact):
         self.is_compact = is_compact
         if is_compact:
-            self.layout_main.setContentsMargins(8, 6, 8, 6)
+            self.layout_main.setContentsMargins(10, 8, 10, 8)
             self.avatar_label.setFixedSize(36, 36)
-            self.btn_launch.setFixedSize(100, 32)
+            self.status_label.setFixedWidth(108)
+            self.btn_launch.setFixedSize(116, 34)
             for btn_name in ["LoginBtn", "SessionBtn", "EditBtn", "DeviceBtn", "PromptBtn", "NotesBtn", "CheckBtn", "ExplorerBtn", "ClearBtn", "DeleteBtn"]:
                 btn = self.findChild(QPushButton, btn_name)
                 if btn:
                     btn.setFixedSize(30, 30)
                     btn.setIconSize(QSize(16, 16))
         else:
-            self.layout_main.setContentsMargins(15, 12, 15, 12)
+            self.layout_main.setContentsMargins(18, 14, 18, 14)
             self.avatar_label.setFixedSize(50, 50)
-            self.btn_launch.setFixedSize(130, 38)
+            self.status_label.setFixedWidth(124)
+            self.btn_launch.setFixedSize(138, 40)
             for btn_name in ["LoginBtn", "SessionBtn", "EditBtn", "DeviceBtn", "PromptBtn", "NotesBtn", "CheckBtn", "ExplorerBtn", "ClearBtn", "DeleteBtn"]:
                 btn = self.findChild(QPushButton, btn_name)
                 if btn:
@@ -245,18 +275,22 @@ class TelegramAccountRow(QFrame):
                 proto, rest = self.proxy_url.split("://", 1)
                 display_proxy = f"{proto}://****************"
             else: display_proxy = "****************"
-        
-        name_fs = 12 if self.is_compact else 14
-        workdir_fs = 9 if self.is_compact else 10
-        
-        self.label_name.setStyleSheet(f"font-size: {name_fs}px; font-weight: bold; color: {styles.COLOR_PRIMARY};")
-        
-        if self.proxy_url:
-            self.label_details.setText(f"<span style='color: {styles.COLOR_TEXT_DISABLED};'> {self.workdir}</span> &nbsp;|&nbsp; <span style='color: {styles.COLOR_PRIMARY_DARK};'>🌐 {display_proxy}</span>")
-        else:
-            self.label_details.setText(f"{self.workdir}")
-            
-        self.label_details.setStyleSheet(f"color: {styles.COLOR_TEXT_MUTED}; font-size: {workdir_fs}px;")
+
+        self.label_name.setText(self.name)
+        self.label_path.setText(self.workdir)
+
+        self._set_badge_state(self.badge_proxy, f"Proxy: {display_proxy}" if self.proxy_url else "Proxy: off", bool(self.proxy_url))
+        device_text = self.device_name.strip() if self.device_name else f"PC-{self.name}"
+        self._set_badge_state(self.badge_device, f"Device: {device_text}", bool(self.device_name))
+        self._set_badge_state(self.badge_notes, "Notes: yes" if self.notes else "Notes: empty", bool(self.notes))
+        self._set_badge_state(self.badge_prompt, "AI: custom" if self.ai_prompt else "AI: default", bool(self.ai_prompt))
+
+    def _set_badge_state(self, label, text, is_active):
+        label.setText(text)
+        label.setProperty("active", is_active)
+        label.style().unpolish(label)
+        label.style().polish(label)
+        label.update()
 
     def set_proxy_hidden(self, hidden):
         self.proxy_hidden = hidden
@@ -270,6 +304,8 @@ class TelegramAccountRow(QFrame):
                 self.ai_prompt = new_prompt
                 self.btn_prompt.setProperty("status", "success" if new_prompt else "default")
                 self.refresh_btn_style(self.btn_prompt)
+                self.update_label_text()
+                self.profile_data_changed.emit()
 
     def edit_proxy(self):
         new_proxy, ok = QInputDialog.getText(self, "Изменить прокси", "HTTP Proxy:", text=self.proxy_url or "")
@@ -280,6 +316,7 @@ class TelegramAccountRow(QFrame):
                 self.update_label_text()
                 self.btn_check.setVisible(bool(self.proxy_url))
                 self.refresh_btn_style(self.btn_check)
+                self.profile_data_changed.emit()
 
     def edit_device_name(self):
         new_name, ok = QInputDialog.getText(self, "Имя устройства", "Hostname:", text=self.device_name or "")
@@ -288,6 +325,8 @@ class TelegramAccountRow(QFrame):
             if account_manager.update_device_info(CONFIG_FILE, self.workdir, new_name):
                 self.device_name = new_name
                 self.btn_session.setToolTip(f"Устройство: {self.device_name}")
+                self.update_label_text()
+                self.profile_data_changed.emit()
 
     def edit_notes(self):
         new_notes, ok = QInputDialog.getMultiLineText(self, "Заметки", "Текст:", text=self.notes or "")
@@ -295,6 +334,10 @@ class TelegramAccountRow(QFrame):
             new_notes = new_notes.strip() or None
             if account_manager.update_notes(CONFIG_FILE, self.workdir, new_notes):
                 self.notes = new_notes
+                self.btn_notes.setProperty("status", "success" if new_notes else "default")
+                self.refresh_btn_style(self.btn_notes)
+                self.update_label_text()
+                self.profile_data_changed.emit()
 
     def confirm_delete(self):
         if process_manager.is_process_running(self.tg_process):
@@ -402,6 +445,8 @@ class TelegramAccountRow(QFrame):
                 
                 # Scale for UI display
                 display_size = 36 if getattr(self, 'is_compact', False) else 50
+                self.avatar_label.setText("")
+                self.avatar_label.setStyleSheet("")
                 self.avatar_label.setPixmap(rounded_pixmap.scaled(display_size, display_size, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
                 return
         
@@ -489,8 +534,10 @@ class TelegramAccountRow(QFrame):
         self.status_label.setObjectName("StatusRunning" if is_running else "StatusStopped")
         self.btn_launch.setText("Закрыть" if is_running else "Запустить")
         self.btn_launch.setIcon(get_icon(CANCEL_ICON_PATH if is_running else START_ICON_PATH))
-        self.btn_launch.setStyleSheet("background-color: #FF5252; color: #000000; font-weight: bold;" if is_running else "")
+        self.btn_launch.setProperty("running", is_running)
         self.status_label.style().unpolish(self.status_label); self.status_label.style().polish(self.status_label)
+        self.btn_launch.style().unpolish(self.btn_launch); self.btn_launch.style().polish(self.btn_launch)
+        self.running_state_changed.emit(is_running)
 
     def check_status(self):
         if self.tg_process and not process_manager.is_process_running(self.tg_process):

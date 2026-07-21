@@ -137,25 +137,96 @@ def check_proxy_validity(proxy_url: Optional[str]) -> bool:
             return False
 
 
+def _detect_gost_version() -> int:
+    """Определяет мажорную версию gost (2 или 3). По умолчанию 3."""
+    try:
+        result = subprocess.run(
+            ["gost", "-V"], capture_output=True, text=True, timeout=5
+        )
+        output = (result.stdout + result.stderr).strip()
+        # gost 3.x: "gost 3.2.6 (...)"
+        # gost 2.x: "gost 2.11.5 (...)"
+        for token in output.split():
+            if token[0].isdigit():
+                return int(token.split(".")[0])
+    except Exception:
+        pass
+    return 3
+
+
 def _setup_gost_proxy(
     workdir: Path, proxy_url: str, local_port: int
 ) -> Optional[subprocess.Popen]:
-    """Настройка Gost прокси"""
+    """Настройка Gost прокси (автоматическая поддержка gost v2 и v3)"""
     try:
         normalized_url = normalize_proxy_url(proxy_url)
-        config_path = workdir / "gost.json"
+        gost_major = _detect_gost_version()
         
-        gost_config = {
-            "ServeNodes": [
-                f"socks5://127.0.0.1:{local_port}"
-            ],
-            "ChainNodes": [
-                normalized_url
-            ]
-        }
-        
-        with open(config_path, "w", encoding="utf-8") as f:
-            json.dump(gost_config, f)
+        if gost_major >= 3:
+            # === gost v3: YAML config ===
+            import yaml
+            config_path = workdir / "gost.yaml"
+            
+            # Парсим normalized_url: scheme://user:pass@host:port
+            from urllib.parse import urlparse
+            parsed = urlparse(normalized_url)
+            chain_scheme = parsed.scheme or "http"
+            chain_host = parsed.hostname or ""
+            chain_port = parsed.port or 1080
+            chain_addr = f"{chain_host}:{chain_port}"
+            
+            hop_node = {
+                "name": "node-0",
+                "addr": chain_addr,
+                "connector": {"type": chain_scheme},
+                "dialer": {"type": "tcp"},
+            }
+            
+            # Если есть авторизация — добавляем auth
+            if parsed.username:
+                hop_node["connector"]["auth"] = {
+                    "username": parsed.username,
+                    "password": parsed.password or "",
+                }
+            
+            gost_config = {
+                "services": [
+                    {
+                        "name": "service-0",
+                        "addr": f":{local_port}",
+                        "handler": {
+                            "type": "socks5",
+                            "chain": "chain-0",
+                        },
+                        "listener": {
+                            "type": "tcp",
+                        },
+                    }
+                ],
+                "chains": [
+                    {
+                        "name": "chain-0",
+                        "hops": [
+                            {
+                                "name": "hop-0",
+                                "nodes": [hop_node],
+                            }
+                        ],
+                    }
+                ],
+            }
+            
+            with open(config_path, "w", encoding="utf-8") as f:
+                yaml.dump(gost_config, f, default_flow_style=False, allow_unicode=True)
+        else:
+            # === gost v2: JSON config ===
+            config_path = workdir / "gost.json"
+            gost_config = {
+                "ServeNodes": [f"socks5://127.0.0.1:{local_port}"],
+                "ChainNodes": [normalized_url],
+            }
+            with open(config_path, "w", encoding="utf-8") as f:
+                json.dump(gost_config, f)
             
         log_path = workdir / "gost.log"
         with open(log_path, "w") as log_file:
@@ -165,8 +236,6 @@ def _setup_gost_proxy(
                 stderr=log_file,
                 start_new_session=True,
             )
-
-        import time
 
         port_ready = False
         for _ in range(30):  # Максимум 3 секунды (30 * 0.1)
@@ -183,13 +252,21 @@ def _setup_gost_proxy(
             time.sleep(0.1)
 
         if not port_ready or gost_process.poll() is not None:
-            logger.error("gost упал или порт не открылся.")
+            # Читаем лог gost для диагностики
+            gost_log_content = ""
+            try:
+                with open(log_path, "r") as f:
+                    gost_log_content = f.read().strip()[:500]
+            except:
+                pass
+            logger.error(f"gost v{gost_major} упал или порт {local_port} не открылся. Лог: {gost_log_content or '(пусто)'}")
             try:
                 gost_process.terminate()
             except:
                 pass
             return None
 
+        logger.info(f"gost v{gost_major} запущен на порту {local_port}")
         return gost_process
     except Exception as e:
         logger.error(f"Ошибка прокси: {e}")

@@ -1,16 +1,32 @@
-from src.core.constants import *
-from src.ui.icon_cache import get_icon
 import os
-import markdown
-from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QTextBrowser, QPushButton, 
-    QHBoxLayout, QScrollArea, QFrame, QLabel, QTreeWidget, QTreeWidgetItem
-)
-from PyQt6.QtCore import Qt, QSize, QUrl, pyqtSignal
-from PyQt6.QtGui import QIcon, QFont
+import webbrowser
 
-from src.core.constants import FOLDER_ICON_PATH, LOGO_PATH, SERVER_ICON_PATH, MODULS_ICON_PATH, SETTINGS_ICON_PATH
+import markdown
+from PyQt6.QtCore import QSize, Qt, QUrl, pyqtSignal
+from PyQt6.QtGui import QIcon
+from PyQt6.QtWidgets import (
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QTextBrowser,
+    QTreeWidget,
+    QTreeWidgetItem,
+    QVBoxLayout,
+    QWidget,
+)
+
 from src import styles
+from src.core.constants import (
+    CANCEL_ICON_PATH,
+    FOLDER_ICON_PATH,
+    LOGO_PATH,
+    MODULS_ICON_PATH,
+    SERVER_ICON_PATH,
+    SETTINGS_ICON_PATH,
+)
+from src.ui.icon_cache import get_icon
+
 
 class DocsPage(QWidget):
     back_requested = pyqtSignal()
@@ -18,133 +34,97 @@ class DocsPage(QWidget):
     def __init__(self):
         super().__init__()
         self.setObjectName("DocsPage")
+        self.setStyleSheet(styles.DOCS_STYLESHEET)
         self.current_file = ""
         self.init_ui()
         self.load_file("documentation/START.md")
 
     def init_ui(self):
-        main_h_layout = QHBoxLayout(self)
-        main_h_layout.setContentsMargins(0, 0, 0, 0)
-        main_h_layout.setSpacing(0)
+        main_layout = QHBoxLayout(self)
+        main_layout.setContentsMargins(22, 22, 22, 22)
+        main_layout.setSpacing(20)
 
-        # ЛЕВАЯ ПАНЕЛЬ (Навигация)
         sidebar = QFrame()
         sidebar.setObjectName("DocsSidebar")
-        sidebar.setFixedWidth(300)
-        sidebar.setStyleSheet(f"""
-            QFrame#DocsSidebar {{
-                background-color: {styles.COLOR_ACCENT_BG};
-                border-right: 1px solid {styles.COLOR_BORDER};
-            }}
-            QLabel#DocsSidebarTitle {{
-                color: {styles.COLOR_PRIMARY};
-                font-size: 18px;
-                font-weight: bold;
-                padding-bottom: 15px;
-                border-bottom: 1px solid {styles.COLOR_BORDER};
-            }}
-            QTreeWidget {{
-                background-color: transparent;
-                border: none;
-                color: {styles.COLOR_TEXT_MAIN};
-                font-size: 14px;
-                outline: none;
-            }}
-            QTreeWidget::item {{
-                padding: 8px;
-                border-radius: 6px;
-            }}
-            QTreeWidget::item:selected {{
-                background-color: {styles.COLOR_PRIMARY};
-                color: #ffffff;
-            }}
-            QTreeWidget::item:hover:!selected {{
-                background-color: {styles.COLOR_HOVER_BG};
-            }}
-        """)
+        sidebar.setFixedWidth(320)
         sidebar_layout = QVBoxLayout(sidebar)
-        sidebar_layout.setContentsMargins(20, 30, 20, 20)
-        sidebar_layout.setSpacing(15)
+        sidebar_layout.setContentsMargins(20, 22, 20, 20)
+        sidebar_layout.setSpacing(16)
 
         sidebar_title = QLabel("ShadowGram Wiki")
         sidebar_title.setObjectName("DocsSidebarTitle")
-        sidebar_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         sidebar_layout.addWidget(sidebar_title)
+
+        sidebar_hint = QLabel("Навигация по документации, функциям и модулям")
+        sidebar_hint.setObjectName("DocsHint")
+        sidebar_hint.setWordWrap(True)
+        sidebar_layout.addWidget(sidebar_hint)
 
         self.tree = QTreeWidget()
         self.tree.setObjectName("DocsTree")
         self.tree.setHeaderHidden(True)
-        self.tree.setIndentation(20)
+        self.tree.setIndentation(18)
         self.tree.setAnimated(True)
-        self.tree.setIconSize(QSize(20, 20))
+        self.tree.setIconSize(QSize(18, 18))
         self.tree.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.tree.itemClicked.connect(self.on_item_clicked)
-        
         self.setup_navigation()
-        sidebar_layout.addWidget(self.tree)
-        sidebar_layout.addStretch()
-        
-        self.btn_close = QPushButton("Вернуться назад")
+        sidebar_layout.addWidget(self.tree, 1)
+
+        self.btn_close = QPushButton("Вернуться к аккаунтам")
+        self.btn_close.setObjectName("DocsCloseBtn")
         self.btn_close.setIcon(QIcon(str(CANCEL_ICON_PATH)))
-        self.btn_close.setObjectName("SecondaryBtn")
-        self.btn_close.setFixedHeight(45)
-        self.btn_close.setStyleSheet(f"""
-            QPushButton#SecondaryBtn {{
-                background-color: {styles.COLOR_SELECT_BG};
-                color: #ffffff;
-                border: none;
-                border-radius: 8px;
-                font-size: 15px;
-                font-weight: bold;
-            }}
-            QPushButton#SecondaryBtn:hover {{
-                background-color: {styles.COLOR_HOVER_BG};
-            }}
-        """)
+        self.btn_close.setFixedHeight(44)
         self.btn_close.clicked.connect(self.back_requested.emit)
         sidebar_layout.addWidget(self.btn_close)
 
-        main_h_layout.addWidget(sidebar)
+        main_layout.addWidget(sidebar)
 
-        # ПРАВАЯ ПАНЕЛЬ (Контент)
-        content_area = QFrame()
-        content_area.setStyleSheet(f"background-color: {styles.COLOR_BG};")
-        content_layout = QVBoxLayout(content_area)
-        content_layout.setContentsMargins(40, 40, 40, 40)
+        content_shell = QFrame()
+        content_shell.setObjectName("DocsContentShell")
+        content_layout = QVBoxLayout(content_shell)
+        content_layout.setContentsMargins(20, 20, 20, 20)
+        content_layout.setSpacing(16)
+
+        toolbar = QFrame()
+        toolbar.setObjectName("DocsToolbar")
+        toolbar_layout = QHBoxLayout(toolbar)
+        toolbar_layout.setContentsMargins(18, 16, 18, 16)
+        toolbar_layout.setSpacing(12)
+
+        title_layout = QVBoxLayout()
+        title_layout.setSpacing(4)
+
+        toolbar_hint = QLabel("СПРАВКА")
+        toolbar_hint.setObjectName("DocsHint")
+        title_layout.addWidget(toolbar_hint)
+
+        self.title_label = QLabel("Документация")
+        self.title_label.setObjectName("DocsTitle")
+        title_layout.addWidget(self.title_label)
+
+        self.path_label = QLabel("documentation/START.md")
+        self.path_label.setObjectName("DocsPath")
+        self.path_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        title_layout.addWidget(self.path_label)
+
+        toolbar_layout.addLayout(title_layout, 1)
+
+        self.btn_back_to_top = QPushButton("Наверх")
+        self.btn_back_to_top.setObjectName("GhostBtn")
+        self.btn_back_to_top.setFixedHeight(40)
+        self.btn_back_to_top.clicked.connect(self.scroll_to_top)
+        toolbar_layout.addWidget(self.btn_back_to_top)
+
+        content_layout.addWidget(toolbar)
 
         self.browser = QTextBrowser()
         self.browser.setObjectName("DocsBrowser")
-        self.browser.setOpenExternalLinks(False) 
+        self.browser.setOpenExternalLinks(False)
         self.browser.anchorClicked.connect(self.on_anchor_clicked)
-        self.browser.setStyleSheet(f"""
-            QTextBrowser {{
-                background-color: transparent;
-                border: none;
-                color: {styles.COLOR_TEXT_MAIN};
-                font-size: 15px;
-                line-height: 1.6;
-            }}
-            QScrollBar:vertical {{
-                background: {styles.COLOR_BG};
-                width: 12px;
-                margin: 0px 0px 0px 0px;
-                border-radius: 6px;
-            }}
-            QScrollBar::handle:vertical {{
-                background: {styles.COLOR_BORDER};
-                min-height: 20px;
-                border-radius: 6px;
-            }}
-            QScrollBar::handle:vertical:hover {{
-                background-color: {styles.COLOR_PRIMARY_LIGHT};
-            }}
-            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
-                height: 0px;
-            }}
-        """)
-        content_layout.addWidget(self.browser)
+        content_layout.addWidget(self.browser, 1)
 
-        main_h_layout.addWidget(content_area, 1)
+        main_layout.addWidget(content_shell, 1)
 
     def setup_navigation(self):
         folder_icon = get_icon(FOLDER_ICON_PATH)
@@ -153,94 +133,146 @@ class DocsPage(QWidget):
         module_icon = get_icon(MODULS_ICON_PATH)
         settings_icon = get_icon(SETTINGS_ICON_PATH)
 
-        def create_selectable_item(parent, name, path, icon=None):
-            item = QTreeWidgetItem(parent, [name])
-            if icon: item.setIcon(0, icon)
-            item.setData(0, Qt.ItemDataRole.UserRole, path)
-            return item
+        sections = [
+            (
+                "Введение",
+                home_icon,
+                [
+                    ("Обзор ShadowGram", "documentation/START.md"),
+                    ("Быстрый старт", "documentation/getting_started/first_start.md"),
+                ],
+            ),
+            (
+                "Управление профилями",
+                folder_icon,
+                [
+                    ("Создание профиля", "documentation/profiles/create_profile.md"),
+                    ("Кнопки управления", "documentation/profiles/profile_actions.md"),
+                ],
+            ),
+            (
+                "Настройки программы",
+                settings_icon,
+                [
+                    ("Глобальные настройки", "documentation/settings/global_settings.md"),
+                ],
+            ),
+            (
+                "Функции",
+                module_icon,
+                [
+                    ("Сценарии", "documentation/features/scenarios.md"),
+                ],
+            ),
+            (
+                "Защита от банов",
+                folder_icon,
+                [
+                    ("Anti-Ban & Fingerprint", "documentation/best_practices/anti_ban.md"),
+                ],
+            ),
+            (
+                "Управление сервером",
+                server_icon,
+                [
+                    ("Настройка сервера", "documentation/server/server_setup.md"),
+                ],
+            ),
+            (
+                "Решение проблем",
+                settings_icon,
+                [
+                    ("Ошибки и ограничения", "documentation/troubleshooting/errors.md"),
+                ],
+            ),
+            (
+                "Для разработчиков",
+                folder_icon,
+                [
+                    ("Создание плагинов", "documentation/developers/plugin_development_guide.md"),
+                    ("Справочник Hydrogram API", "documentation/developers/hydrogram_api_reference.md"),
+                ],
+            ),
+        ]
 
-        def create_category(name, icon):
-            item = QTreeWidgetItem(self.tree, [name])
-            item.setIcon(0, icon)
-            item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsSelectable)
-            # Expand by default
-            item.setExpanded(True)
-            return item
+        for title, icon, items in sections:
+            category = self._create_category(title, icon)
+            for item_title, path in items:
+                self._create_selectable_item(category, item_title, path)
+            if category.childCount() == 0:
+                index = self.tree.indexOfTopLevelItem(category)
+                self.tree.takeTopLevelItem(index)
 
-        # 1. Введение
-        cat_intro = create_category("Введение", home_icon)
-        create_selectable_item(cat_intro, "Обзор ShadowGram", "documentation/START.md")
-        create_selectable_item(cat_intro, "🎯 Быстрый старт (Первый запуск)", "documentation/getting_started/first_start.md")
-
-        # 2. Профили
-        cat_profiles = create_category("Управление профилями", folder_icon)
-        create_selectable_item(cat_profiles, "Создание профиля", "documentation/profiles/create_profile.md")
-        create_selectable_item(cat_profiles, "Кнопки управления", "documentation/profiles/profile_actions.md")
-
-        # 3. Настройки
-        cat_settings = create_category("Настройки программы", settings_icon)
-        create_selectable_item(cat_settings, "Глобальные настройки", "documentation/settings/global_settings.md")
-
-        # 4. Модули
-        cat_modules = create_category("Модули автоматизации", module_icon)
         modules_dir = "documentation/modules"
         if os.path.exists(modules_dir):
-            for file in sorted(os.listdir(modules_dir)):
-                if file.endswith(".md"):
-                    name = file.replace(".md", "").replace("_", " ").title()
-                    create_selectable_item(cat_modules, name, os.path.join(modules_dir, file))
+            modules_category = self._create_category("Модули автоматизации", module_icon)
+            for file_name in sorted(os.listdir(modules_dir)):
+                if not file_name.endswith(".md"):
+                    continue
+                readable_name = file_name.replace(".md", "").replace("_", " ").title()
+                self._create_selectable_item(
+                    modules_category,
+                    readable_name,
+                    os.path.join(modules_dir, file_name),
+                )
+            if modules_category.childCount() == 0:
+                index = self.tree.indexOfTopLevelItem(modules_category)
+                self.tree.takeTopLevelItem(index)
 
-        # 5. Сценарии
-        cat_features = create_category("Функции", module_icon)
-        create_selectable_item(cat_features, "Сценарии (Scenarios)", "documentation/features/scenarios.md")
+    def _create_category(self, name, icon):
+        item = QTreeWidgetItem(self.tree, [name])
+        item.setIcon(0, icon)
+        item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsSelectable)
+        item.setExpanded(True)
+        return item
 
-        # 6. Практики и Защита (Anti-Ban)
-        cat_best_practices = create_category("Защита от банов", folder_icon)
-        create_selectable_item(cat_best_practices, "Anti-Ban & Fingerprint", "documentation/best_practices/anti_ban.md")
+    def _create_selectable_item(self, parent, name, path, icon=None):
+        if not os.path.exists(path):
+            return None
+        item = QTreeWidgetItem(parent, [name])
+        if icon:
+            item.setIcon(0, icon)
+        item.setData(0, Qt.ItemDataRole.UserRole, path)
+        return item
 
-        # 7. Сервер
-        cat_server = create_category("Управление сервером", server_icon)
-        create_selectable_item(cat_server, "Настройка сервера", "documentation/server/server_setup.md")
-
-        # 8. Ошибки и Решения
-        cat_troubleshooting = create_category("Решение проблем", settings_icon)
-        create_selectable_item(cat_troubleshooting, "Ошибки (FloodWait и др.)", "documentation/troubleshooting/errors.md")
-
-        # 9. Разработка
-        cat_dev = create_category("Для разработчиков", folder_icon)
-        create_selectable_item(cat_dev, "Создание плагинов", "documentation/developers/plugin_development_guide.md")
-        create_selectable_item(cat_dev, "Справочник Hydrogram API", "documentation/developers/hydrogram_api_reference.md")
-        
     def on_anchor_clicked(self, url: QUrl):
         link = url.toString()
         if link.startswith("http"):
-            import webbrowser
             webbrowser.open(link)
-        else:
-            current_dir = os.path.dirname(self.current_file)
-            new_path = os.path.normpath(os.path.join(current_dir, link))
-            if os.path.exists(new_path):
-                self.load_file(new_path)
-                self.sync_tree_selection(new_path)
+            return
+
+        if link.startswith("#"):
+            self.browser.scrollToAnchor(link[1:])
+            return
+
+        current_dir = os.path.dirname(self.current_file)
+        path_part, _, anchor = link.partition("#")
+        new_path = os.path.normpath(os.path.join(current_dir, path_part))
+        if not os.path.exists(new_path):
+            return
+
+        self.load_file(new_path)
+        self.sync_tree_selection(new_path)
+        if anchor:
+            self.browser.scrollToAnchor(anchor)
 
     def sync_tree_selection(self, file_path):
         def scan_items(parent_item):
-            for i in range(parent_item.childCount()):
-                child = parent_item.child(i)
+            for index in range(parent_item.childCount()):
+                child = parent_item.child(index)
                 if child.data(0, Qt.ItemDataRole.UserRole) == file_path:
                     self.tree.setCurrentItem(child)
                     return True
-                if scan_items(child): return True
+                if scan_items(child):
+                    return True
             return False
-        
-        for i in range(self.tree.topLevelItemCount()):
-            item = self.tree.topLevelItem(i)
-            if item.data(0, Qt.ItemDataRole.UserRole) == file_path:
-                self.tree.setCurrentItem(item)
-                break
-            if scan_items(item): break
 
-    def on_item_clicked(self, item, column):
+        for index in range(self.tree.topLevelItemCount()):
+            item = self.tree.topLevelItem(index)
+            if scan_items(item):
+                break
+
+    def on_item_clicked(self, item, _column):
         if item.childCount() > 0:
             item.setExpanded(not item.isExpanded())
             return
@@ -250,47 +282,155 @@ class DocsPage(QWidget):
             self.load_file(file_path)
 
     def load_file(self, file_path):
-        if os.path.exists(file_path):
-            try:
-                self.current_file = file_path
-                with open(file_path, "r", encoding="utf-8") as f:
-                    md_text = f.read()
-                    
-                    extensions = ['fenced_code', 'codehilite', 'tables', 'nl2br', 'toc']
-                    extension_configs = {
-                        'codehilite': {
-                            'noclasses': True,
-                            'pygments_style': 'monokai'
-                        }
+        if not os.path.exists(file_path):
+            self.title_label.setText("Документ не найден")
+            self.path_label.setText(file_path)
+            self.browser.setHtml(self._build_message_html("Документ не найден", file_path))
+            return
+
+        try:
+            self.current_file = file_path
+            with open(file_path, "r", encoding="utf-8") as file:
+                md_text = file.read()
+
+            html = markdown.markdown(
+                md_text,
+                extensions=["fenced_code", "codehilite", "tables", "nl2br", "toc"],
+                extension_configs={
+                    "codehilite": {
+                        "noclasses": True,
+                        "pygments_style": "monokai",
                     }
-                    
-                    html = markdown.markdown(md_text, extensions=extensions, extension_configs=extension_configs)
-                    
-                    # Wrap in a modern body style
-                    html = f"""
-                    <html><head><style>
-                        body {{ font-family: 'Inter', sans-serif; color: {styles.COLOR_TEXT_MAIN}; }}
-                        h1, h2, h3 {{ color: {styles.COLOR_PRIMARY}; border-bottom: 1px solid {styles.COLOR_BORDER}; padding-bottom: 5px; }}
-                        a {{ color: {styles.COLOR_PRIMARY_LIGHT}; text-decoration: none; }}
-                        a:hover {{ text-decoration: underline; }}
-                        pre {{ background-color: {styles.COLOR_CONSOLE_BG}; padding: 15px; border-radius: 8px; border: 1px solid {styles.COLOR_BORDER}; overflow-x: auto; }}
-                        code {{ background-color: {styles.COLOR_CONSOLE_BG}; padding: 2px 6px; border-radius: 4px; color: {styles.COLOR_SUCCESS}; font-family: 'Consolas', monospace; }}
-                        blockquote {{ border-left: 4px solid {styles.COLOR_PRIMARY}; padding-left: 15px; color: #888888; font-style: italic; background-color: {styles.COLOR_ACCENT_BG}; padding: 10px; border-radius: 4px; }}
-                        table {{ border-collapse: collapse; width: 100%; margin-top: 15px; }}
-                        th, td {{ border: 1px solid {styles.COLOR_BORDER}; padding: 10px; text-align: left; }}
-                        th {{ background-color: {styles.COLOR_ACCENT_BG}; color: {styles.COLOR_PRIMARY}; }}
-                        li {{ margin-bottom: 8px; }}
-                    </style></head><body>
-                    {html}
-                    <br><br><br>
-                    </body></html>
-                    """
-                    
-                    base_url = QUrl.fromLocalFile(os.path.abspath(file_path))
-                    self.browser.document().setBaseUrl(base_url)
-                    self.browser.setHtml(html)
-                    self.browser.verticalScrollBar().setValue(0)
-            except Exception as e:
-                self.browser.setHtml(f"<h2 style='color: #f44336;'>Ошибка чтения файла:</h2><p>{e}</p>")
-        else:
-            self.browser.setHtml(f"<h2 style='color: #f44336;'>Документ не найден:</h2><p>{file_path}</p>")
+                },
+            )
+
+            self.title_label.setText(self._extract_title(md_text, file_path))
+            self.path_label.setText(file_path)
+
+            base_url = QUrl.fromLocalFile(os.path.abspath(file_path))
+            self.browser.document().setBaseUrl(base_url)
+            self.browser.setHtml(self._wrap_markdown_html(html))
+            self.sync_tree_selection(file_path)
+            self.browser.verticalScrollBar().setValue(0)
+        except Exception as error:
+            self.title_label.setText("Ошибка чтения")
+            self.path_label.setText(file_path)
+            self.browser.setHtml(self._build_message_html("Ошибка чтения файла", str(error)))
+
+    def scroll_to_top(self):
+        self.browser.verticalScrollBar().setValue(0)
+
+    def _extract_title(self, md_text, file_path):
+        for line in md_text.splitlines():
+            stripped = line.strip()
+            if stripped.startswith("# "):
+                return stripped[2:].strip()
+        return os.path.splitext(os.path.basename(file_path))[0].replace("_", " ").title()
+
+    def _wrap_markdown_html(self, html):
+        return f"""
+        <html>
+            <head>
+                <style>
+                    body {{
+                        color: {styles.COLOR_TEXT_MAIN};
+                        font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+                        font-size: 15px;
+                        line-height: 1.75;
+                    }}
+                    h1, h2, h3 {{
+                        color: {styles.COLOR_PRIMARY_LIGHT};
+                        margin-top: 28px;
+                        margin-bottom: 14px;
+                    }}
+                    h1 {{
+                        font-size: 30px;
+                        border-bottom: 1px solid {styles.COLOR_BORDER};
+                        padding-bottom: 10px;
+                    }}
+                    h2 {{
+                        font-size: 22px;
+                    }}
+                    h3 {{
+                        font-size: 18px;
+                    }}
+                    p {{
+                        margin: 10px 0 16px 0;
+                    }}
+                    a {{
+                        color: {styles.COLOR_PRIMARY_LIGHT};
+                        text-decoration: none;
+                    }}
+                    a:hover {{
+                        text-decoration: underline;
+                    }}
+                    ul, ol {{
+                        margin: 0 0 16px 22px;
+                    }}
+                    li {{
+                        margin-bottom: 8px;
+                    }}
+                    pre {{
+                        background-color: {styles.COLOR_CONSOLE_BG};
+                        border: 1px solid {styles.COLOR_BORDER};
+                        border-radius: 12px;
+                        padding: 16px;
+                        overflow-x: auto;
+                    }}
+                    code {{
+                        background-color: {styles.COLOR_CONSOLE_BG};
+                        border: 1px solid {styles.COLOR_BORDER};
+                        border-radius: 6px;
+                        padding: 2px 6px;
+                        color: {styles.COLOR_SUCCESS};
+                        font-family: 'Consolas', 'JetBrains Mono', monospace;
+                    }}
+                    pre code {{
+                        border: none;
+                        padding: 0;
+                    }}
+                    blockquote {{
+                        margin: 18px 0;
+                        padding: 14px 16px;
+                        border-left: 3px solid {styles.COLOR_PRIMARY};
+                        background-color: {styles.COLOR_ACCENT_BG};
+                        color: {styles.COLOR_TEXT_MUTED};
+                        border-radius: 10px;
+                    }}
+                    table {{
+                        width: 100%;
+                        border-collapse: collapse;
+                        margin: 18px 0 24px 0;
+                    }}
+                    th, td {{
+                        border: 1px solid {styles.COLOR_BORDER};
+                        padding: 12px 14px;
+                        text-align: left;
+                    }}
+                    th {{
+                        background-color: {styles.COLOR_ACCENT_BG};
+                        color: {styles.COLOR_PRIMARY_LIGHT};
+                    }}
+                    hr {{
+                        border: none;
+                        border-top: 1px solid {styles.COLOR_BORDER};
+                        margin: 28px 0;
+                    }}
+                </style>
+            </head>
+            <body>
+                {html}
+                <br><br>
+            </body>
+        </html>
+        """
+
+    def _build_message_html(self, title, text):
+        return f"""
+        <html>
+            <body style="font-family: 'Segoe UI', sans-serif; color: {styles.COLOR_TEXT_MAIN};">
+                <h2 style="color: {styles.COLOR_DANGER};">{title}</h2>
+                <p style="color: {styles.COLOR_TEXT_MUTED};">{text}</p>
+            </body>
+        </html>
+        """

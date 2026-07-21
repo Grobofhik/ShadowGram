@@ -179,6 +179,37 @@ QFrame#AccountRow:hover {{
     background-color: {COLOR_HOVER_BG};
 }}
 
+QWidget#PageRoot {{
+    background-color: transparent;
+}}
+
+QFrame#PageHero,
+QFrame#PageCard,
+QFrame#ToolbarCard,
+QFrame#StatCard,
+QFrame#EmptyStateCard,
+QFrame#ServiceCard,
+QFrame#DocsContentShell,
+QFrame#SidebarSurface,
+QFrame#RowActionsFrame,
+QFrame#DocsToolbar {{
+    background-color: {GRADIENT_ACCENT};
+    border: 1px solid {COLOR_BORDER};
+    border-top: 1px solid {COLOR_BORDER_LIGHT};
+    border-radius: 16px;
+}}
+
+QFrame#ToolbarCard,
+QFrame#StatCard,
+QFrame#RowActionsFrame,
+QFrame#DocsToolbar {{
+    border-radius: 12px;
+}}
+
+QFrame#PageHero {{
+    border-radius: 20px;
+}}
+
 /* General Buttons (Tactile and Premium) */
 QPushButton {{
     background-color: {GRADIENT_BTN};
@@ -237,6 +268,79 @@ QPushButton#LaunchBtn:pressed {{
     color: {COLOR_TEXT_MAIN};
     padding-top: 9px;
     padding-bottom: 7px;
+}}
+
+QPushButton#LaunchBtn[running="true"] {{
+    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #F87171, stop:1 {COLOR_DANGER});
+    border: 1px solid #DC2626;
+    border-bottom: 2px solid #991B1B;
+    color: #FFFFFF;
+}}
+
+QPushButton#LaunchBtn[running="true"]:hover {{
+    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #FCA5A5, stop:1 #F87171);
+    border: 1px solid #FCA5A5;
+    border-bottom: 2px solid #DC2626;
+}}
+
+QPushButton#LaunchBtn[running="true"]:pressed {{
+    background-color: #DC2626;
+    border: 1px solid #991B1B;
+    border-top: 2px solid #991B1B;
+}}
+
+QPushButton#GhostBtn,
+QPushButton#PillBtn,
+QPushButton#NavButton {{
+    background-color: transparent;
+}}
+
+QPushButton#GhostBtn {{
+    border: 1px solid {COLOR_BORDER};
+    border-bottom: 2px solid {COLOR_BORDER_DARK};
+    color: {COLOR_TEXT_MAIN};
+}}
+
+QPushButton#GhostBtn:hover {{
+    border-color: {COLOR_BORDER_LIGHT};
+    color: {COLOR_PRIMARY_LIGHT};
+}}
+
+QPushButton#PillBtn {{
+    background-color: {hex_to_rgba(COLOR_PRIMARY, 0.08)};
+    border: 1px solid {hex_to_rgba(COLOR_PRIMARY, 0.25)};
+    border-bottom: 2px solid {hex_to_rgba(COLOR_PRIMARY, 0.35)};
+    border-radius: 999px;
+    padding: 8px 16px;
+}}
+
+QPushButton#PillBtn:hover {{
+    background-color: {hex_to_rgba(COLOR_PRIMARY, 0.12)};
+    border-color: {COLOR_PRIMARY};
+}}
+
+QPushButton#NavButton {{
+    border: 1px solid transparent;
+    border-bottom: 1px solid transparent;
+    border-radius: 10px;
+    padding: 10px 12px;
+    text-align: left;
+    font-size: 13px;
+    font-weight: bold;
+    color: {COLOR_TEXT_MUTED};
+}}
+
+QPushButton#NavButton:hover {{
+    background-color: {COLOR_HOVER_BG};
+    border-color: {COLOR_BORDER};
+    color: {COLOR_TEXT_MAIN};
+}}
+
+QPushButton#NavButton:checked {{
+    background-color: {hex_to_rgba(COLOR_PRIMARY, 0.12)};
+    border-color: {hex_to_rgba(COLOR_PRIMARY, 0.28)};
+    border-bottom: 2px solid {hex_to_rgba(COLOR_PRIMARY, 0.4)};
+    color: {COLOR_PRIMARY_LIGHT};
 }}
 
 /* Secondary Buttons */
@@ -313,6 +417,14 @@ QPushButton#CheckBtn[status="checking"] {{
     border: 1px solid {hex_to_rgba(COLOR_WARNING, 0.4)};
     border-bottom: 2px solid {hex_to_rgba(COLOR_WARNING, 0.6)};
     color: {COLOR_WARNING};
+}}
+
+QPushButton#PromptBtn[status="success"],
+QPushButton#NotesBtn[status="success"] {{
+    background-color: {BTN_SUCCESS_BG};
+    border: 1px solid {hex_to_rgba(COLOR_PRIMARY, 0.35)};
+    border-bottom: 2px solid {hex_to_rgba(COLOR_PRIMARY, 0.5)};
+    color: {COLOR_PRIMARY_LIGHT};
 }}
 
 /* Session Button Default */
@@ -461,10 +573,72 @@ QComboBox QAbstractItemView {{
 /* Typography */
 QLabel#Title {{
     color: {COLOR_PRIMARY};
-    font-size: 28px;
+    font-size: 24px;
     font-weight: bold;
     font-family: '{TITLE_FONT_NAME}';
-    letter-spacing: 3px;
+    letter-spacing: 2px;
+}}
+
+QLabel#NavHint,
+QLabel#PageEyebrow,
+QLabel#SidebarSectionTitle,
+QLabel#StatLabel,
+QLabel#StatHint,
+QLabel#DocsHint,
+QLabel#ServiceCategory {{
+    color: {COLOR_TEXT_MUTED};
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+}}
+
+QLabel#PageTitle {{
+    color: {COLOR_TEXT_MAIN};
+    font-size: 24px;
+    font-weight: bold;
+}}
+
+QLabel#PageSubtitle,
+QLabel#EmptyStateText,
+QLabel#ServiceDescription,
+QLabel#DocsPath {{
+    color: {COLOR_TEXT_MUTED};
+    font-size: 13px;
+}}
+
+QLabel#StatValue {{
+    color: {COLOR_PRIMARY_LIGHT};
+    font-size: 20px;
+    font-weight: bold;
+}}
+
+QLabel#EmptyStateTitle,
+QLabel#DocsTitle,
+QLabel#ServiceTitle,
+QLabel#AccountName {{
+    color: {COLOR_TEXT_MAIN};
+    font-size: 18px;
+    font-weight: bold;
+}}
+
+QLabel#AccountPath {{
+    color: {COLOR_TEXT_MUTED};
+    font-size: 11px;
+}}
+
+QLabel#MetaBadge {{
+    background-color: {hex_to_rgba(COLOR_PRIMARY, 0.08)};
+    border: 1px solid {hex_to_rgba(COLOR_PRIMARY, 0.18)};
+    border-radius: 999px;
+    color: {COLOR_PRIMARY_LIGHT};
+    font-size: 11px;
+    font-weight: bold;
+    padding: 4px 10px;
+}}
+
+QLabel#DocsTitle {{
+    font-size: 24px;
 }}
 
 QLabel#SettingLabel {{
@@ -494,8 +668,8 @@ QLabel#StatusRunning {{
     font-weight: bold;
     font-size: 11px;
     background-color: {COLOR_PRIMARY_DARK};
-    padding: 5px 14px;
-    border-radius: 12px;
+    padding: 6px 14px;
+    border-radius: 14px;
 }}
 
 QLabel#StatusStopped {{ 
@@ -503,8 +677,8 @@ QLabel#StatusStopped {{
     font-size: 11px;
     font-weight: bold;
     background-color: {COLOR_BG};
-    padding: 5px 14px;
-    border-radius: 12px;
+    padding: 6px 14px;
+    border-radius: 14px;
     border: 1px solid {COLOR_BORDER};
 }}
 
@@ -516,6 +690,15 @@ QFrame#CreateSection {{
     border-radius: 14px;
     padding: 28px;
     margin-top: 16px;
+}}
+
+QFrame#Sidebar {{
+    background-color: {COLOR_ACCENT_BG};
+    border-right: 1px solid {COLOR_BORDER};
+}}
+
+QFrame#RowActionsFrame {{
+    background-color: {hex_to_rgba(COLOR_BG, 0.55)};
 }}
 
 /* Scrollbars */

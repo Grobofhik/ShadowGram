@@ -129,12 +129,15 @@ def start_telegram(
     if device_name_from_hw:
         device_name = device_name_from_hw
 
+    logger.error(f"[DEBUG] fake_vendor={fake_vendor}, fake_model={fake_model}, device_name={device_name}")
+
     gost_process: Optional[subprocess.Popen] = None
     tg_bin = (
         shutil.which("telegram-desktop")
         or shutil.which("Telegram")
         or "telegram-desktop"
     )
+    logger.error(f"[DEBUG] Telegram binary: {tg_bin} (exists={Path(tg_bin).exists() if '/' in tg_bin else 'which-fallback'})")
     tg_cmd = [tg_bin, "-workdir", str(workdir)]
 
     local_port: Optional[int] = None
@@ -169,12 +172,12 @@ def start_telegram(
 
     if timezone:
         env["TZ"] = timezone
-        logger.error(f"[STEALTH] Подмена часового пояса на: {timezone}")
+        logger.info(f"[STEALTH] Подмена часового пояса на: {timezone}")
     if country_code:
         locale_str = map_country_code_to_locale(country_code)
         env["LANG"] = locale_str
         env["LC_ALL"] = locale_str
-        logger.error(f"[STEALTH] Подмена локали на: {locale_str}")
+        logger.info(f"[STEALTH] Подмена локали на: {locale_str}")
 
     if device_name:
         env.update(
@@ -188,29 +191,27 @@ def start_telegram(
     
     # bwrap pipes setup
     pipes_fds = None
-    r1, w1, r2, w2, r3, w3 = None, None, None, None, None, None
+    r1, w1, r2, w2 = None, None, None, None
     
     if fake_vendor and fake_model and shutil.which("bwrap"):
         try:
             r1, w1 = os.pipe()
             r2, w2 = os.pipe()
-            if timezone:
-                r3, w3 = os.pipe()
-                pipes_fds = (r1, r2, r3)
-            else:
-                pipes_fds = (r1, r2)
+            pipes_fds = (r1, r2)
         except Exception as pipe_e:
             logger.warning(f"Не удалось создать pipes для bwrap: {pipe_e}")
-            for fd in [r1, w1, r2, w2, r3, w3]:
+            for fd in [r1, w1, r2, w2]:
                 if fd is not None:
                     try:
                         os.close(fd)
                     except:
                         pass
-            r1, w1, r2, w2, r3, w3 = None, None, None, None, None, None
+            r1, w1, r2, w2 = None, None, None, None
             pipes_fds = None
 
     final_cmd = _build_final_command(tg_cmd, device_name, fake_vendor, fake_model, pipes_fds, timezone)
+    logger.error(f"[DEBUG] Final command: {' '.join(str(c) for c in final_cmd)}")
+    logger.error(f"[DEBUG] pipes_fds={pipes_fds}")
 
     try:
         with open(err_log, "w") as f_err:
@@ -227,24 +228,40 @@ def start_telegram(
                 os.close(w1)
                 os.write(w2, f"{fake_model}\n".encode())
                 os.close(w2)
-                if w3 is not None and timezone:
-                    os.write(w3, f"{timezone}\n".encode())
-                    os.close(w3)
                 
                 # Close read ends in parent
                 os.close(r1)
                 os.close(r2)
-                if r3 is not None:
-                    os.close(r3)
             else:
                 tg_process = subprocess.Popen(
                     final_cmd, stdout=subprocess.DEVNULL, stderr=f_err, env=env
                 )
+
+        logger.error(f"[DEBUG] Telegram process started: pid={tg_process.pid}, alive={tg_process.poll() is None}")
+        
+        # Check if process died immediately
+        import time
+        time.sleep(1.0)
+        exit_code = tg_process.poll()
+        if exit_code is not None:
+            logger.error(f"[DEBUG] Telegram process DIED immediately! exit_code={exit_code}")
+            try:
+                with open(err_log, "r") as f:
+                    err_content = f.read().strip()
+                if err_content:
+                    logger.error(f"[DEBUG] stderr: {err_content[:1000]}")
+            except Exception:
+                pass
+        else:
+            logger.error(f"[DEBUG] Telegram process alive after 1s, pid={tg_process.pid}")
+
         return tg_process, gost_process
     except Exception as e:
-        logger.error(f"Критическая ошибка: {e}")
+        logger.error(f"[DEBUG] Критическая ошибка при запуске Telegram: {type(e).__name__}: {e}")
+        import traceback
+        logger.error(f"[DEBUG] Traceback:\n{traceback.format_exc()}")
         if pipes_fds:
-            for fd in [r1, r2, r3, w1, w2, w3]:
+            for fd in [r1, r2, w1, w2]:
                 if fd is not None:
                     try:
                         os.close(fd)
@@ -436,9 +453,6 @@ def _build_final_command(
             host_zoneinfo = Path("/usr/share/zoneinfo") / timezone
             if host_zoneinfo.exists():
                 bwrap_cmd.extend(["--ro-bind", str(host_zoneinfo), "/etc/localtime"])
-            if len(pipes_fds) > 2:
-                r3 = pipes_fds[2]
-                bwrap_cmd.extend(["--ro-bind-data", str(r3), "/etc/timezone"])
 
         if device_name:
             bwrap_cmd.extend(["--unshare-uts", "--hostname", device_name])

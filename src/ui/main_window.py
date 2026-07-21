@@ -43,23 +43,13 @@ class TelegramManager(QWidget):
         self.timer.start(1000)
 
     def clear_nav_selection(self):
-        self.btn_dashboard.setChecked(False)
-        self.btn_accounts.setChecked(False)
-        self.btn_create_profile.setChecked(False)
-        self.btn_server.setChecked(False)
-        self.btn_modules.setChecked(False)
-        self.btn_table.setChecked(False)
-        self.btn_services.setChecked(False)
-        self.btn_neiro.setChecked(False)
-        self.btn_ai_assistant.setChecked(False)
-        self.btn_node_editor.setChecked(False)
-        self.btn_docs.setChecked(False)
-        self.btn_settings.setChecked(False)
+        for btn in getattr(self, "nav_buttons", []):
+            if btn.isCheckable():
+                btn.setChecked(False)
 
     def show_dashboard(self):
-        self.clear_nav_selection()
-        self.btn_dashboard.setChecked(True)
-        self.stack.setCurrentWidget(self.dashboard_page)
+        self.update_nav_buttons(self.btn_dashboard)
+        self.switch_page(self.dashboard_page)
 
     def init_ui(self):
         self.setWindowTitle("Shadowgram")
@@ -73,20 +63,25 @@ class TelegramManager(QWidget):
         self.sidebar = QFrame()
         self.sidebar.setObjectName("Sidebar")
         self.sidebar.setFixedWidth(270)
-        self.sidebar.setStyleSheet(f"QFrame#Sidebar {{ background-color: {styles.COLOR_ACCENT_BG}; border-right: 1px solid {styles.COLOR_BORDER}; }}")
         
         sidebar_layout = QVBoxLayout(self.sidebar)
-        sidebar_layout.setContentsMargins(10, 30, 10, 30)
-        sidebar_layout.setSpacing(15)
+        sidebar_layout.setContentsMargins(12, 18, 12, 18)
+        sidebar_layout.setSpacing(10)
 
         # Логотип и заголовок
+        sidebar_intro = QFrame()
+        sidebar_intro.setObjectName("SidebarSurface")
+        intro_layout = QVBoxLayout(sidebar_intro)
+        intro_layout.setContentsMargins(14, 14, 14, 14)
+        intro_layout.setSpacing(10)
+
         logo_layout = QHBoxLayout()
-        logo_layout.setSpacing(10)
+        logo_layout.setSpacing(8)
         
         logo_label = QLabel()
         logo_pix = QPixmap(str(LOGO_PATH))
         if not logo_pix.isNull():
-            logo_label.setPixmap(logo_pix.scaled(80, 80, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+            logo_label.setPixmap(logo_pix.scaled(56, 56, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
         logo_label.setAlignment(Qt.AlignmentFlag.AlignVCenter)
         logo_label.setStyleSheet("background-color: transparent;")
         logo_label.installEventFilter(self)
@@ -94,67 +89,89 @@ class TelegramManager(QWidget):
 
         title_label = QLabel("Shadowgram")
         title_label.setObjectName("Title")
-        title_label.setStyleSheet("font-size: 24px; background-color: transparent;")
+        title_label.setStyleSheet("font-size: 22px; background-color: transparent;")
         logo_layout.addWidget(title_label)
         logo_layout.addStretch()
-        
-        sidebar_layout.addLayout(logo_layout)
-        
-        sidebar_layout.addSpacing(10)
+
+        intro_layout.addLayout(logo_layout)
+
+        sidebar_layout.addWidget(sidebar_intro)
 
         # Навигационные кнопки
-        self.btn_accounts = self.create_nav_button(" Аккаунты", USERS_ICON_PATH)
+        sidebar_layout.addWidget(self.create_sidebar_section("Основное"))
+
+        self.btn_accounts = self.create_nav_button("Аккаунты", USERS_ICON_PATH)
         self.btn_accounts.clicked.connect(self.show_list)
         self.btn_accounts.setChecked(True)
         sidebar_layout.addWidget(self.btn_accounts)
 
-        self.btn_create_profile = self.create_nav_button(" Создать профиль", FOLDER_ICON_PATH)
+        self.btn_create_profile = self.create_nav_button("Создать", FOLDER_ICON_PATH)
+        self.btn_create_profile.setCheckable(False)
         self.btn_create_profile.clicked.connect(self.open_create_profile)
         sidebar_layout.addWidget(self.btn_create_profile)
-
-        self.btn_server = self.create_nav_button(" Сервер", SERVER_ICON_PATH)
-        self.btn_server.clicked.connect(self.show_server)
-        sidebar_layout.addWidget(self.btn_server)
-
-        self.btn_modules = self.create_nav_button(" Модули", MODULS_ICON_PATH)
-        self.btn_modules.clicked.connect(self.show_modules)
-        sidebar_layout.addWidget(self.btn_modules)
         
-        self.btn_dashboard = self.create_nav_button(" Дашборд", SEARCH_ICON_PATH)
+        self.btn_dashboard = self.create_nav_button("Дашборд", SEARCH_ICON_PATH)
         self.btn_dashboard.clicked.connect(self.show_dashboard)
         sidebar_layout.addWidget(self.btn_dashboard)
 
-        self.btn_table = self.create_nav_button(" Табличный Вид", NOTE_ICON_PATH)
+        self.btn_table = self.create_nav_button("Таблица", NOTE_ICON_PATH)
         self.btn_table.clicked.connect(self.show_table)
         sidebar_layout.addWidget(self.btn_table)
 
-        self.btn_neiro = self.create_nav_button(" Нейрокомментинг", NEIRO_ICON_PATH)
+        sidebar_layout.addWidget(self.create_sidebar_section("Инструменты"))
+
+        self.btn_server = self.create_nav_button("Сервер", SERVER_ICON_PATH)
+        self.btn_server.clicked.connect(self.show_server)
+        sidebar_layout.addWidget(self.btn_server)
+
+        self.btn_modules = self.create_nav_button("Модули", MODULS_ICON_PATH)
+        self.btn_modules.clicked.connect(self.show_modules)
+        sidebar_layout.addWidget(self.btn_modules)
+
+        self.btn_neiro = self.create_nav_button("Нейрокомм.", NEIRO_ICON_PATH)
         self.btn_neiro.clicked.connect(self.show_neiro)
         sidebar_layout.addWidget(self.btn_neiro)
 
-        self.btn_ai_assistant = self.create_nav_button(" ИИ Ассистент", ROBOT_ICON_PATH)
+        self.btn_ai_assistant = self.create_nav_button("Ассистент", ROBOT_ICON_PATH)
         self.btn_ai_assistant.clicked.connect(self.show_ai_assistant)
         sidebar_layout.addWidget(self.btn_ai_assistant)
 
-        self.btn_node_editor = self.create_nav_button(" Node-Сценарист", ROCKET_ICON_PATH)
+        self.btn_node_editor = self.create_nav_button("Сценарист", ROCKET_ICON_PATH)
         self.btn_node_editor.clicked.connect(self.show_node_editor)
         sidebar_layout.addWidget(self.btn_node_editor)
 
         # Меню доп сервисов
-        self.btn_services = self.create_nav_button(" Доп сервисы", MODULS_ICON_PATH)
+        self.btn_services = self.create_nav_button("Доп. сервисы", MODULS_ICON_PATH)
         self.btn_services.clicked.connect(self.show_services)
         sidebar_layout.addWidget(self.btn_services)
 
         sidebar_layout.addStretch()
 
         # Кнопки внизу (Документация и Настройки)
-        self.btn_docs = self.create_nav_button(" Документация", NOTE_ICON_PATH)
+        sidebar_layout.addWidget(self.create_sidebar_section("Система"))
+
+        self.btn_docs = self.create_nav_button("Документация", NOTE_ICON_PATH)
         self.btn_docs.clicked.connect(self.show_docs)
         sidebar_layout.addWidget(self.btn_docs)
 
-        self.btn_settings = self.create_nav_button(" Настройки", SETTINGS_ICON_PATH)
+        self.btn_settings = self.create_nav_button("Настройки", SETTINGS_ICON_PATH)
         self.btn_settings.clicked.connect(self.show_settings)
         sidebar_layout.addWidget(self.btn_settings)
+
+        self.nav_buttons = [
+            self.btn_accounts,
+            self.btn_create_profile,
+            self.btn_dashboard,
+            self.btn_table,
+            self.btn_server,
+            self.btn_modules,
+            self.btn_neiro,
+            self.btn_ai_assistant,
+            self.btn_node_editor,
+            self.btn_services,
+            self.btn_docs,
+            self.btn_settings,
+        ]
 
         main_layout.addWidget(self.sidebar)
 
@@ -207,40 +224,30 @@ class TelegramManager(QWidget):
 
     def create_nav_button(self, text, icon_path):
         btn = QPushButton(text)
+        btn.setObjectName("NavButton")
         btn.setIcon(get_icon(icon_path))
-        btn.setIconSize(QSize(20, 20))
-        btn.setFixedHeight(45)
-        btn.setStyleSheet(f"""
-            QPushButton {{
-                background-color: transparent;
-                border: none;
-                text-align: left;
-                padding-left: 10px;
-                font-size: 14px;
-                font-weight: bold;
-                border-radius: 8px;
-            }}
-            QPushButton:hover {{
-                background-color: {styles.COLOR_HOVER_BG};
-                border: 1px solid {styles.COLOR_BORDER};
-            }}
-            QPushButton::menu-indicator {{
-                image: none;
-            }}
-        """)
+        btn.setIconSize(QSize(18, 18))
+        btn.setFixedHeight(40)
+        btn.setCheckable(True)
+        btn.setCursor(Qt.CursorShape.PointingHandCursor)
         return btn
+
+    def create_sidebar_section(self, text):
+        label = QLabel(text)
+        label.setObjectName("SidebarSectionTitle")
+        return label
 
     def init_audio(self):
         self.sound_path = str(SOUND_PATH)
 
     def show_settings(self):
         self.settings_page.load_settings()
-        self.switch_page(self.settings_page)
         self.update_nav_buttons(self.btn_settings)
+        self.switch_page(self.settings_page)
 
     def show_services(self):
-        self.switch_page(self.services_page)
         self.update_nav_buttons(self.btn_services)
+        self.switch_page(self.services_page)
 
     def update_nav_buttons(self, active_btn):
         self.clear_nav_selection()
@@ -319,7 +326,8 @@ class TelegramManager(QWidget):
         super().closeEvent(event)
 
     def show_list(self):
-        self.stack.setCurrentWidget(self.acc_list_page)
+        self.update_nav_buttons(self.btn_accounts)
+        self.switch_page(self.acc_list_page)
 
     def show_table(self):
         self.update_nav_buttons(self.btn_table)
@@ -354,6 +362,7 @@ class TelegramManager(QWidget):
         self.settings_page = SettingsPage()
         self.settings_page.back_requested.connect(self.show_list)
         self.settings_page.settings_saved.connect(self.reload_all_windows)
+        self.settings_page.docs_requested.connect(self.show_docs)
         self.stack.addWidget(self.settings_page)
         self.stack.removeWidget(old_settings)
         old_settings.deleteLater()
@@ -386,47 +395,29 @@ class TelegramManager(QWidget):
         self.acc_list_page.refresh_accounts()
         
         # Показываем главную страницу
-        self.stack.setCurrentWidget(self.acc_list_page)
+        self.show_list()
 
 
     def apply_theme(self):
-        from src import styles
-        # Применяем стили к Sidebar
-        self.sidebar.setStyleSheet(f"QFrame#Sidebar {{ background-color: {styles.COLOR_ACCENT_BG}; border-right: 1px solid {styles.COLOR_BORDER}; }}")
-        
-        # Стили кнопок навигации
-        btn_style = f"""
-            QPushButton {{
-                background-color: transparent;
-                color: {styles.COLOR_PRIMARY};
-                border: none;
-                border-radius: 8px;
-                padding: 12px 20px;
-                text-align: left;
-                font-size: 15px;
-            }}
-            QPushButton:hover {{
-                background-color: {styles.COLOR_SELECT_BG};
-            }}
-            QPushButton:checked {{
-                background-color: {styles.COLOR_HOVER_BG};
-                color: {styles.COLOR_PRIMARY};
-                font-weight: bold;
-            }}
-        """
-        for btn in [self.btn_dashboard, self.btn_accounts, self.btn_create_profile, self.btn_server, self.btn_modules, self.btn_table, self.btn_services, self.btn_neiro, self.btn_ai_assistant, self.btn_node_editor, self.btn_docs, self.btn_settings]:
-            btn.setStyleSheet(btn_style)
+        widgets = [self.sidebar, *getattr(self, "nav_buttons", [])]
+        for widget in widgets:
+            widget.style().unpolish(widget)
+            widget.style().polish(widget)
+            widget.update()
 
 
     def show_docs(self):
-        self.stack.setCurrentWidget(self.docs_page)
+        self.update_nav_buttons(self.btn_docs)
+        self.switch_page(self.docs_page)
 
     def show_modules(self):
         self.modules_page.load_accounts()
-        self.stack.setCurrentWidget(self.modules_page)
+        self.update_nav_buttons(self.btn_modules)
+        self.switch_page(self.modules_page)
 
     def show_server(self):
-        self.stack.setCurrentWidget(self.server_page)
+        self.update_nav_buttons(self.btn_server)
+        self.switch_page(self.server_page)
 
     def open_create_profile(self):
         self.acc_list_page.open_create_profile_dialog()
@@ -495,7 +486,7 @@ class TelegramManager(QWidget):
     def open_api_generator(self):
         from src.ui.api_generator_window import ApiGeneratorWindow
         service = ApiGeneratorWindow(self)
-        self._embed_service_page(service, "Генератор API ID/HASH")
+        self._embed_service_page(service, "Fallback API")
 
     def open_prompt_generator(self):
         from src.services.ai_prompt_generator import AIPromptGeneratorService

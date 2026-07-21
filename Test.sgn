@@ -1,0 +1,292 @@
+{
+    "nodes": [
+        {
+            "id": "8973abe3-5cee-4bc4-8978-3512937e4761",
+            "type": "join_chat",
+            "title": "Вступить в чат",
+            "pos_x": 1567.0,
+            "pos_y": 22.0,
+            "params": {
+                "chat_link": ""
+            },
+            "outputs": [
+                "next"
+            ]
+        },
+        {
+            "id": "a498be78-2616-4e24-b8d8-ed8e326849e8",
+            "type": "end",
+            "title": "Конец",
+            "pos_x": 1563.0,
+            "pos_y": -92.0,
+            "params": {},
+            "outputs": []
+        },
+        {
+            "id": "8c68b9d2-e913-41fb-ad2f-1d7bff16c5b1",
+            "type": "check_channel_subscription",
+            "title": "Подписка на канал",
+            "pos_x": 1371.0,
+            "pos_y": 141.0,
+            "params": {
+                "chat_id": "",
+                "user_id": ""
+            },
+            "outputs": [
+                "subscribed",
+                "not_subscribed"
+            ]
+        },
+        {
+            "id": "c068d776-2caa-441c-88e0-17fdb5e1995b",
+            "type": "if_condition",
+            "title": "Условие ЕСЛИ",
+            "pos_x": 1374.0,
+            "pos_y": 22.0,
+            "params": {
+                "condition": ""
+            },
+            "outputs": [
+                "true",
+                "false"
+            ]
+        },
+        {
+            "id": "9529e941-8603-4dd3-a295-a1d4c40c68b2",
+            "type": "random_delay",
+            "title": "Случайная пауза",
+            "pos_x": 1182.0,
+            "pos_y": 25.0,
+            "params": {
+                "min_seconds": 5,
+                "max_seconds": 15
+            },
+            "outputs": [
+                "next"
+            ]
+        },
+        {
+            "id": "a48de48e-6070-4a64-a452-d7c1eeb7eaea",
+            "type": "end",
+            "title": "Конец",
+            "pos_x": 993.0,
+            "pos_y": 136.0,
+            "params": {},
+            "outputs": []
+        },
+        {
+            "id": "cb96c77d-0461-41ad-a484-7206ad152e9d",
+            "type": "set_username",
+            "title": "Установить юзернейм",
+            "pos_x": 986.0,
+            "pos_y": 26.0,
+            "params": {
+                "username": "",
+                "file_path": ""
+            },
+            "outputs": [
+                "next"
+            ]
+        },
+        {
+            "id": "928a8ae0-cdb5-44c1-a081-2cff1c9c1e01",
+            "type": "check_username",
+            "title": "Доступность юзернейма",
+            "pos_x": 792.0,
+            "pos_y": 252.0,
+            "params": {
+                "username": "shadowgram_test"
+            },
+            "outputs": [
+                "available",
+                "taken"
+            ]
+        },
+        {
+            "id": "cd4101dc-182f-4ff4-b5dd-a406c2da6eb8",
+            "type": "if_condition",
+            "title": "Условие ЕСЛИ",
+            "pos_x": 795.0,
+            "pos_y": 136.0,
+            "params": {
+                "condition": ""
+            },
+            "outputs": [
+                "true",
+                "false"
+            ]
+        },
+        {
+            "id": "661d7e76-ecbe-4f45-bab8-83dd48d16590",
+            "type": "random_delay",
+            "title": "Случайная пауза",
+            "pos_x": 598.0,
+            "pos_y": 140.0,
+            "params": {
+                "min_seconds": 5,
+                "max_seconds": 15
+            },
+            "outputs": [
+                "next"
+            ]
+        },
+        {
+            "id": "2a894aab-8fbe-46f7-948c-86464f652df2",
+            "type": "set_bio",
+            "title": "Установить БИО",
+            "pos_x": 412.0,
+            "pos_y": 142.0,
+            "params": {
+                "bio_text": "",
+                "file_path": ""
+            },
+            "outputs": [
+                "next"
+            ]
+        },
+        {
+            "id": "fd5bb10d-28e0-4998-8079-1477f46fd171",
+            "type": "random_delay",
+            "title": "Случайная пауза",
+            "pos_x": 224.0,
+            "pos_y": 142.0,
+            "params": {
+                "min_seconds": 5,
+                "max_seconds": 15
+            },
+            "outputs": [
+                "next"
+            ]
+        },
+        {
+            "id": "f2dcfc3e-3ac4-48d5-8640-660f3f7a1154",
+            "type": "set_avatar",
+            "title": "Установить аватар",
+            "pos_x": 35.0,
+            "pos_y": 143.0,
+            "params": {
+                "avatars_dir": "avatars"
+            },
+            "outputs": [
+                "next"
+            ]
+        },
+        {
+            "id": "e8e8303f-c81c-4da8-9b2c-a598acccb367",
+            "type": "random_delay",
+            "title": "Случайная пауза",
+            "pos_x": -155.0,
+            "pos_y": 141.0,
+            "params": {
+                "min_seconds": 5,
+                "max_seconds": 15
+            },
+            "outputs": [
+                "next"
+            ]
+        },
+        {
+            "id": "bffb53b0-f9ae-4cb3-9bf3-b0821b2eab52",
+            "type": "start",
+            "title": "Старт",
+            "pos_x": -352.0,
+            "pos_y": 141.0,
+            "params": {},
+            "outputs": [
+                "next"
+            ]
+        }
+    ],
+    "connections": [
+        {
+            "from_node": "8973abe3-5cee-4bc4-8978-3512937e4761",
+            "from_port": "next",
+            "to_node": "a498be78-2616-4e24-b8d8-ed8e326849e8",
+            "to_port": "prev"
+        },
+        {
+            "from_node": "8c68b9d2-e913-41fb-ad2f-1d7bff16c5b1",
+            "from_port": "subscribed",
+            "to_node": "c068d776-2caa-441c-88e0-17fdb5e1995b",
+            "to_port": "condition"
+        },
+        {
+            "from_node": "c068d776-2caa-441c-88e0-17fdb5e1995b",
+            "from_port": "true",
+            "to_node": "a498be78-2616-4e24-b8d8-ed8e326849e8",
+            "to_port": "prev"
+        },
+        {
+            "from_node": "c068d776-2caa-441c-88e0-17fdb5e1995b",
+            "from_port": "false",
+            "to_node": "8973abe3-5cee-4bc4-8978-3512937e4761",
+            "to_port": "prev"
+        },
+        {
+            "from_node": "9529e941-8603-4dd3-a295-a1d4c40c68b2",
+            "from_port": "next",
+            "to_node": "c068d776-2caa-441c-88e0-17fdb5e1995b",
+            "to_port": "prev"
+        },
+        {
+            "from_node": "cb96c77d-0461-41ad-a484-7206ad152e9d",
+            "from_port": "next",
+            "to_node": "9529e941-8603-4dd3-a295-a1d4c40c68b2",
+            "to_port": "prev"
+        },
+        {
+            "from_node": "928a8ae0-cdb5-44c1-a081-2cff1c9c1e01",
+            "from_port": "available",
+            "to_node": "cd4101dc-182f-4ff4-b5dd-a406c2da6eb8",
+            "to_port": "condition"
+        },
+        {
+            "from_node": "cd4101dc-182f-4ff4-b5dd-a406c2da6eb8",
+            "from_port": "true",
+            "to_node": "cb96c77d-0461-41ad-a484-7206ad152e9d",
+            "to_port": "prev"
+        },
+        {
+            "from_node": "cd4101dc-182f-4ff4-b5dd-a406c2da6eb8",
+            "from_port": "false",
+            "to_node": "a48de48e-6070-4a64-a452-d7c1eeb7eaea",
+            "to_port": "prev"
+        },
+        {
+            "from_node": "661d7e76-ecbe-4f45-bab8-83dd48d16590",
+            "from_port": "next",
+            "to_node": "cd4101dc-182f-4ff4-b5dd-a406c2da6eb8",
+            "to_port": "prev"
+        },
+        {
+            "from_node": "2a894aab-8fbe-46f7-948c-86464f652df2",
+            "from_port": "next",
+            "to_node": "661d7e76-ecbe-4f45-bab8-83dd48d16590",
+            "to_port": "prev"
+        },
+        {
+            "from_node": "fd5bb10d-28e0-4998-8079-1477f46fd171",
+            "from_port": "next",
+            "to_node": "2a894aab-8fbe-46f7-948c-86464f652df2",
+            "to_port": "prev"
+        },
+        {
+            "from_node": "f2dcfc3e-3ac4-48d5-8640-660f3f7a1154",
+            "from_port": "next",
+            "to_node": "fd5bb10d-28e0-4998-8079-1477f46fd171",
+            "to_port": "prev"
+        },
+        {
+            "from_node": "e8e8303f-c81c-4da8-9b2c-a598acccb367",
+            "from_port": "next",
+            "to_node": "f2dcfc3e-3ac4-48d5-8640-660f3f7a1154",
+            "to_port": "prev"
+        },
+        {
+            "from_node": "bffb53b0-f9ae-4cb3-9bf3-b0821b2eab52",
+            "from_port": "next",
+            "to_node": "e8e8303f-c81c-4da8-9b2c-a598acccb367",
+            "to_port": "prev"
+        }
+    ]
+}

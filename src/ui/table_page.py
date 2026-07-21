@@ -256,7 +256,7 @@ class AccountTablePage(QWidget):
             QMessageBox.warning(self, "Внимание", "Выберите хотя бы один аккаунт (поставьте галочку в первом столбце)!")
             return
             
-        reply = QMessageBox.question(self, "Подтверждение", f"Сгенерировать случайные официальные API ключи для {len(workdirs)} аккаунтов?", QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        reply = QMessageBox.question(self, "Подтверждение", f"Назначить локальные vetted fallback API-пары для {len(workdirs)} аккаунтов?", QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
         if reply == QMessageBox.StandardButton.Yes:
             from src.core.managers import account_manager
             from src.core.managers.api_manager import get_dynamic_api_credentials
@@ -268,7 +268,7 @@ class AccountTablePage(QWidget):
                 creds = get_dynamic_api_credentials(seed)
                 account_manager.update_api_credentials(CONFIG_FILE, wd, str(creds['api_id']), creds['api_hash'])
             self.refresh_data()
-            QMessageBox.information(self, "Успех", f"Официальные API ключи присвоены {len(workdirs)} аккаунтам!")
+            QMessageBox.information(self, "Успех", f"Fallback API-пары присвоены {len(workdirs)} аккаунтам!")
 
     def check_all_proxies(self):
         items_to_check = []

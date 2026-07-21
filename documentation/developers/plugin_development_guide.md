@@ -1,69 +1,80 @@
-# 💻 Разработка собственных модулей
+# Разработка плагинов
 
-ShadowGram обладает открытой архитектурой (Plugin API), позволяющей разработчикам на Python создавать собственные сценарии для автоматизации действий. 
+## Где лежат плагины
 
-Все пользовательские модули загружаются автоматически при старте приложения, если они расположены в директории `src/modules/`.
+Локальные плагины грузятся из:
 
----
+```text
+src/modules/plugins/
+```
 
-## 🏗 Базовая структура модуля
+Менеджер ищет `*.py`, импортирует модуль и ищет классы-наследники `BaseModule`.
 
-Каждый модуль должен наследоваться от базового класса `BaseModule` и реализовывать асинхронный метод `run()`.
+## Минимальный каркас
 
 ```python
 from src.core.base_module import BaseModule
-import asyncio
 
-class MyCustomModule(BaseModule):
-    name = "💡 Мой кастомный модуль"
-    description = "Краткое описание того, что делает плагин."
-    
-    # Определение полей для графического интерфейса
-    fields = [
-        {"name": "target_username", "label": "Юзернейм цели:", "type": "text", "default": "@durov"},
-        {"name": "delay", "label": "Задержка (сек):", "type": "number", "default": "5"}
-    ]
+class MyModule(BaseModule):
+    MODULE_NAME = "Мой модуль"
+    MODULE_DESC = "Что делает модуль."
+    PARAMS = []
 
-    async def run(self, client, config):
-        """
-        Основной метод выполнения.
-        :param client: Объект hydrogram.Client (уже авторизованный)
-        :param config: Словарь с параметрами, переданными из UI
-        """
-        target = config.get("target_username")
-        delay = int(config.get("delay", 5))
-
-        self.log(f"Начинаем работу с {target}...")
-        
-        # Пример: Отправка сообщения
+    def run(self):
+        self.log("Старт")
+        client = self.init_client()
         try:
-            await client.send_message(target, "Привет из ShadowGram!")
-            self.log(f"✅ Сообщение успешно отправлено!", level="success")
-        except Exception as e:
-            self.log(f"❌ Ошибка отправки: {e}", level="error")
-            
-        await asyncio.sleep(delay)
-        self.log("Работа модуля завершена.")
+            # работа
+            pass
+        finally:
+            self.cleanup()
 ```
 
-## 🛠 API и Инструменты
+## Важные поля
 
-### Логирование
-Вместо стандартного `print()` всегда используйте встроенный метод `self.log()`. Это гарантирует, что ваше сообщение появится в графическом интерфейсе пользователя (в Консоли) и будет записано в системные логи.
-*   `level="info"` (по умолчанию)
-*   `level="success"` (зеленый текст)
-*   `level="error"` (красный текст)
-*   `level="warning"` (желтый текст)
+- `MODULE_NAME`
+- `MODULE_DESC`
+- `PARAMS`
+- `SINGLE_ACCOUNT`
+- `ALLOW_PARALLEL`
+- `START_DELAY`
+- `IS_CYCLIC`
+- `CYCLE_DELAY`
 
-### Объект `client`
-Модулю передается полностью инициализированный и подключенный к прокси клиент `hydrogram.Client`. Вы можете использовать все стандартные методы Hydrogram API (например, `client.join_chat()`, `client.get_messages()`, `client.resolve_peer()`).
+## Что даёт `BaseModule`
 
-### Взаимодействие с UI
-Список `fields` определяет, какие элементы управления будут показаны пользователю при выборе вашего модуля:
-*   `text`: Однострочное текстовое поле (QLineEdite).
-*   `number`: Поле ввода только чисел.
-*   `textarea`: Многострочное поле для списков или больших текстов.
-*   `checkbox`: Галочка (True/False).
+- доступ к данным аккаунта
+- `init_client()` с созданием Hydrogram-клиента
+- proxy routing
+- поддержку HTTP/HTTPS proxy через `gost`
+- `sleep()` с учётом `stealth_mode`
+- логирование
+- cleanup клиента и proxy tunnel
 
-## 🚀 Деплой
-Просто сохраните ваш скрипт как `my_module.py` в папку `src/modules/` и перезапустите ShadowGram. Если синтаксических ошибок нет, ваш плагин автоматически появится в левом меню!
+## Данные аккаунта внутри модуля
+
+Обычно доступны:
+
+- `self.account`
+- `self.workdir`
+- `self.proxy_url`
+- `self.device_name`
+- `self.api_id`
+- `self.api_hash`
+
+## Формат `PARAMS`
+
+Проект использует UI-описание параметров. Смотри реальные примеры в существующих плагинах:
+
+- `follower.py`
+- `ai_commenter.py`
+- `channel_monitor.py`
+- `smart_warmer.py`
+
+## Практические правила
+
+- всегда вызывать `cleanup()`
+- не обещать UI-параметры, которых нет в `PARAMS`
+- не жёстко кодировать чужие пути
+- уважать flood wait и timeout
+- писать понятные логи для пользователя
