@@ -151,7 +151,9 @@ class NeuroEngineThread(QThread):
                 gost_process.wait()
             return
             
-        hw = get_hardware_profile(CONFIG_FILE, workdir)
+        from src.core.managers.runtime_hw_manager import apply_runtime_hw_overrides
+
+        hw = apply_runtime_hw_overrides(get_hardware_profile(CONFIG_FILE, workdir))
 
         client = Client(
             name=session_file.stem,

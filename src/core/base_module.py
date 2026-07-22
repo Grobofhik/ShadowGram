@@ -242,8 +242,9 @@ class BaseModule:
                 return proxy_info
             return False
 
-        import shutil
-        if not shutil.which("gost"):
+        from src.core.managers.proxy_manager import resolve_gost_binary
+        gost_path = resolve_gost_binary()
+        if not gost_path:
             self.log("Gost не найден!", "error")
             return False
 
@@ -263,7 +264,7 @@ class BaseModule:
             log_path = os.path.join(self.workdir, "gost_module.log")
             log_file = open(log_path, "w")
             self.gost_process = subprocess.Popen(
-                ["gost", "-L", f"socks5://127.0.0.1:{self.local_port}", "-F", normalized_url],
+                [gost_path, "-L", f"socks5://127.0.0.1:{self.local_port}", "-F", normalized_url],
                 stdout=log_file, stderr=log_file, start_new_session=True
             )
             time.sleep(0.5)
@@ -298,10 +299,15 @@ class BaseModule:
         except: pass
         
         try:
+            from pathlib import Path
+
             from src.core.constants import CONFIG_FILE
             from src.core.managers.account_manager import get_hardware_profile
-            hw_profile = get_hardware_profile(CONFIG_FILE, os.path.dirname(session_path))
-            from pathlib import Path
+            from src.core.managers.runtime_hw_manager import apply_runtime_hw_overrides
+
+            hw_profile = apply_runtime_hw_overrides(
+                get_hardware_profile(CONFIG_FILE, os.path.dirname(session_path))
+            )
             session_stem = Path(session_path).stem
             session_dir = str(Path(session_path).parent)
             

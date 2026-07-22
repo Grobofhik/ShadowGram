@@ -30,6 +30,7 @@ from src.core.auth import AuthWorker
 from src.core.constants import CONFIG_FILE
 from src.core.managers.api_manager import get_api_fallback_candidates
 from src.core.managers.config_manager import _read_config
+from src.core.managers.runtime_hw_manager import apply_runtime_hw_overrides
 from src.core.utils import find_session_file
 
 
@@ -115,13 +116,22 @@ class AuthCodeReader:
             gost_process = None
             try:
                 gost_process, hydrogram_proxy = await cls._build_proxy(account_data.get("proxy_url"))
+                hw_profile = apply_runtime_hw_overrides(
+                    account_data.get("hardware_profile", {})
+                )
                 client = Client(
                     name=session_path.stem,
                     workdir=str(session_path.parent),
                     api_id=int(creds["api_id"]),
                     api_hash=creds["api_hash"],
                     proxy=hydrogram_proxy,
-                    device_model=account_data.get("device_name") or "ShadowGram-PC",
+                    app_version=hw_profile.get("app_version", "1.0"),
+                    device_model=hw_profile.get(
+                        "device_model",
+                        account_data.get("device_name") or "ShadowGram-PC",
+                    ),
+                    system_version=hw_profile.get("system_version", "Windows"),
+                    lang_code=hw_profile.get("lang_code", "en"),
                 )
                 await client.connect()
 

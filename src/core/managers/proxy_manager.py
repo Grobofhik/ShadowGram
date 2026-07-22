@@ -54,6 +54,36 @@ def normalize_proxy_url(proxy_url: str) -> str:
     return f"{prefix}{proxy_url}"
 
 
+def resolve_gost_binary() -> Optional[str]:
+    """Находит gost/gost.exe в env, bundled путях или PATH."""
+    env_override = os.environ.get("SHADOWGRAM_GOST_BIN", "").strip()
+    if env_override:
+        override_path = Path(env_override)
+        if override_path.exists():
+            return str(override_path)
+        resolved_override = shutil.which(env_override)
+        if resolved_override:
+            return resolved_override
+
+    names = ["gost.exe", "gost"] if os.name == "nt" else ["gost", "gost.exe"]
+    candidate_dirs = [
+        RESOURCE_DIR / "bin" / "windows" if os.name == "nt" else RESOURCE_DIR / "bin" / "linux",
+        RESOURCE_DIR / "bin",
+        BASE_DIR,
+    ]
+    for directory in candidate_dirs:
+        for name in names:
+            candidate = directory / name
+            if candidate.exists():
+                return str(candidate)
+
+    for name in names:
+        resolved = shutil.which(name)
+        if resolved:
+            return resolved
+    return None
+
+
 def parse_proxy_url(proxy_url: str) -> Optional[dict]:
     """Разбирает URL прокси в словарь для Hydrogram/Pyrogram/Proxychains"""
     if not proxy_url:
@@ -94,7 +124,7 @@ def _configure_socks_proxy_commands(
     password = proxy_info.get("password")
     scheme = proxy_info.get("scheme", "socks5")
     
-    if shutil.which("proxychains4"):
+    if os.name != "nt" and shutil.which("proxychains4"):
         pc_conf_path = workdir / "proxychains.conf"
         with open(pc_conf_path, "w") as f:
             f.write("strict_chain\n")
@@ -140,8 +170,9 @@ def check_proxy_validity(proxy_url: Optional[str]) -> bool:
 def _detect_gost_version() -> int:
     """Определяет мажорную версию gost (2 или 3). По умолчанию 3."""
     try:
+        gost_bin = resolve_gost_binary() or ("gost.exe" if os.name == "nt" else "gost")
         result = subprocess.run(
-            ["gost", "-V"], capture_output=True, text=True, timeout=5
+            [gost_bin, "-V"], capture_output=True, text=True, timeout=5
         )
         output = (result.stdout + result.stderr).strip()
         # gost 3.x: "gost 3.2.6 (...)"
@@ -229,9 +260,10 @@ def _setup_gost_proxy(
                 json.dump(gost_config, f)
             
         log_path = workdir / "gost.log"
+        gost_bin = resolve_gost_binary() or ("gost.exe" if os.name == "nt" else "gost")
         with open(log_path, "w") as log_file:
             gost_process = subprocess.Popen(
-                ["gost", "-C", str(config_path)],
+                [gost_bin, "-C", str(config_path)],
                 stdout=log_file,
                 stderr=log_file,
                 start_new_session=True,
@@ -277,7 +309,7 @@ def _configure_proxy_commands(
     tg_cmd: List[str], workdir: Path, local_port: int
 ) -> List[str]:
     """Конфигурация прокси команд для Telegram"""
-    if shutil.which("proxychains4"):
+    if os.name != "nt" and shutil.which("proxychains4"):
         pc_conf_path = workdir / "proxychains.conf"
         with open(pc_conf_path, "w") as f:
             f.write("strict_chain\n")
@@ -291,5 +323,3 @@ def _configure_proxy_commands(
 
     tg_cmd.extend(["-proxy-server", f"127.0.0.1:{local_port}", "-proxy-type", "socks5"])
     return tg_cmd
-
-

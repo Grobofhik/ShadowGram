@@ -180,12 +180,17 @@ def start_telegram(
         logger.info(f"[STEALTH] Подмена локали на: {locale_str}")
 
     if device_name:
-        env.update(
-            {
-                "HOSTNAME": device_name,
-                "QT_QPA_PLATFORM": "xcb",
-            }
-        )
+        env["HOSTNAME"] = device_name
+        env["SHADOWGRAM_DEVICE_NAME"] = device_name
+        if os.name == "nt":
+            env["COMPUTERNAME"] = device_name
+        else:
+            env["QT_QPA_PLATFORM"] = "xcb"
+
+    if fake_vendor:
+        env["SHADOWGRAM_FAKE_VENDOR"] = fake_vendor
+    if fake_model:
+        env["SHADOWGRAM_FAKE_MODEL"] = fake_model
 
     err_log = workdir / "telegram_error.log"
     
@@ -395,6 +400,13 @@ def open_explorer(workdir: Union[str, Path]) -> bool:
     if not workdir.exists():
         workdir.mkdir(parents=True, exist_ok=True)
         
+    if os.name == "nt":
+        try:
+            os.startfile(workdir)
+            return True
+        except Exception as e:
+            logger.error(f"Не удалось открыть папку через os.startfile: {e}")
+
     file_managers = ["thunar", "nautilus", "dolphin", "nemo", "xdg-open", "explorer.exe"]
     
     for fm in file_managers:
@@ -441,6 +453,9 @@ def _build_final_command(
     """Построение финальной команды для запуска"""
     if fake_vendor and fake_model and pipes_fds and shutil.which("bwrap"):
         r1, r2 = pipes_fds[0], pipes_fds[1]
+        if os.name == "nt":
+            return tg_cmd
+
         bwrap_cmd = [
             "bwrap",
             "--dev-bind", "/", "/",
@@ -449,7 +464,7 @@ def _build_final_command(
         ]
         
         # Подмена таймзоны внутри контейнера bwrap
-        if timezone:
+        if os.name != "nt" and timezone:
             host_zoneinfo = Path("/usr/share/zoneinfo") / timezone
             if host_zoneinfo.exists():
                 bwrap_cmd.extend(["--ro-bind", str(host_zoneinfo), "/etc/localtime"])
@@ -458,7 +473,7 @@ def _build_final_command(
             bwrap_cmd.extend(["--unshare-uts", "--hostname", device_name])
         return bwrap_cmd + tg_cmd
 
-    if device_name and shutil.which("firejail"):
+    if os.name != "nt" and device_name and shutil.which("firejail"):
         firejail_cmd = [
             "firejail",
             "--noprofile",
@@ -471,7 +486,7 @@ def _build_final_command(
         if timezone:
             firejail_cmd.append(f"--env=TZ={timezone}")
         return firejail_cmd + tg_cmd
-    elif device_name and shutil.which("unshare"):
+    elif os.name != "nt" and device_name and shutil.which("unshare"):
         set_hostname_py = (
             "import ctypes, socket; "
             "try: "
@@ -491,5 +506,3 @@ def _build_final_command(
         ]
     else:
         return tg_cmd
-
-

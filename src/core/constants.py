@@ -45,9 +45,12 @@ ACTIVE_FARM_FILE: Final[Path] = BASE_DIR / "active_farm.txt"
 AVATARS_DIR: Final[Path] = BASE_DIR / "avatars"
 
 SYSTEM_RESOURCE_DIR: Final[Path] = Path("/usr/share/shadowgram/resources")
-RESOURCE_DIR: Final[Path] = (
-    LOCAL_RESOURCE_DIR if LOCAL_RESOURCE_DIR.exists() else SYSTEM_RESOURCE_DIR
-)
+if LOCAL_RESOURCE_DIR.exists():
+    RESOURCE_DIR: Final[Path] = LOCAL_RESOURCE_DIR
+elif os.name != "nt":
+    RESOURCE_DIR: Final[Path] = SYSTEM_RESOURCE_DIR
+else:
+    RESOURCE_DIR: Final[Path] = LOCAL_RESOURCE_DIR
 
 CURRENT_THEME = "green"
 try:
@@ -137,4 +140,3 @@ CALL_ICON_PATH: Final = ThemeIconPath("call_icon.png")
 # Другие ресурсы
 SOUND_PATH: Final[Path] = RESOURCE_DIR / "sounds" / "Nuya.mp3"
 FONTS_DIR: Final[Path] = RESOURCE_DIR / "fonts"
-

@@ -145,7 +145,11 @@ class AIRunner:
                                 logger.error(f"Файл сессии не найден для {acc['workdir']}")
                                 continue
                                 
-                            hw_profile = get_hardware_profile(CONFIG_FILE, acc["workdir"])
+                            from src.core.managers.runtime_hw_manager import apply_runtime_hw_overrides
+
+                            hw_profile = apply_runtime_hw_overrides(
+                                get_hardware_profile(CONFIG_FILE, acc["workdir"])
+                            )
                                 
                             client = Client(
                                 name=session_file.stem,
@@ -238,7 +242,9 @@ class AIRunner:
                 logger.error(f"Файл сессии не найден для {workdir}")
                 continue
                 
-            hw = acc_config.get("hardware_profile", {})
+            from src.core.managers.runtime_hw_manager import apply_runtime_hw_overrides
+
+            hw = apply_runtime_hw_overrides(acc_config.get("hardware_profile", {}))
             
             client = Client(
                 name=session_file.stem,

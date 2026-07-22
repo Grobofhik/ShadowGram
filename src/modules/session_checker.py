@@ -173,7 +173,9 @@ async def check_account(
 
         from src.core.constants import CONFIG_FILE
         from src.core.managers.account_manager import get_hardware_profile
-        hw_profile = get_hardware_profile(CONFIG_FILE, workdir)
+        from src.core.managers.runtime_hw_manager import apply_runtime_hw_overrides
+
+        hw_profile = apply_runtime_hw_overrides(get_hardware_profile(CONFIG_FILE, workdir))
 
         client = Client(
             name=session_file.stem,

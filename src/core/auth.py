@@ -162,8 +162,11 @@ class AuthWorker(QObject):
 
     def _get_hw_profile(self) -> Dict[str, Any]:
         from src.core.managers.account_manager import get_hardware_profile
+        from src.core.managers.runtime_hw_manager import apply_runtime_hw_overrides
 
-        return get_hardware_profile(CONFIG_FILE, self.workdir)
+        return apply_runtime_hw_overrides(
+            get_hardware_profile(CONFIG_FILE, self.workdir)
+        )
 
     def _build_api_attempts(self):
         attempts = [{"api_id": int(self.api_id), "api_hash": self.api_hash, "label": "configured"}]
