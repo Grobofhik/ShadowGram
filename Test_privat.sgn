@@ -1,0 +1,94 @@
+{
+    "nodes": [
+        {
+            "id": "47b631bf-3276-4c18-9e3b-abd9ccc92d73",
+            "type": "end",
+            "title": "Конец",
+            "pos_x": 492.0,
+            "pos_y": 164.0,
+            "params": {},
+            "outputs": []
+        },
+        {
+            "id": "78ab442c-ea76-4bd8-a3d9-09c0498beccc",
+            "type": "random_delay",
+            "title": "Случайная пауза",
+            "pos_x": 305.0,
+            "pos_y": 163.0,
+            "params": {
+                "min_seconds": 5,
+                "max_seconds": 15
+            },
+            "outputs": [
+                "next"
+            ]
+        },
+        {
+            "id": "a1cdf532-7ac6-4c4b-91a1-d5a8024885e1",
+            "type": "random_delay",
+            "title": "Случайная пауза",
+            "pos_x": -82.0,
+            "pos_y": 167.0,
+            "params": {
+                "min_seconds": 5,
+                "max_seconds": 15
+            },
+            "outputs": [
+                "next"
+            ]
+        },
+        {
+            "id": "0aaac004-3772-44b1-ad54-577fe299403c",
+            "type": "set_privacy",
+            "title": "Настройки приватности",
+            "pos_x": 112.0,
+            "pos_y": 165.0,
+            "params": {
+                "phone_number": 3,
+                "chat_invite": 2,
+                "status_timestamp": 3,
+                "phone_call": 2
+            },
+            "outputs": [
+                "next"
+            ]
+        },
+        {
+            "id": "6e2d8e71-f446-4ecb-9e5d-93838d6bbb42",
+            "type": "start",
+            "title": "Старт",
+            "pos_x": -280.0,
+            "pos_y": 169.0,
+            "params": {},
+            "outputs": [
+                "next"
+            ]
+        }
+    ],
+    "connections": [
+        {
+            "from_node": "78ab442c-ea76-4bd8-a3d9-09c0498beccc",
+            "from_port": "next",
+            "to_node": "47b631bf-3276-4c18-9e3b-abd9ccc92d73",
+            "to_port": "prev"
+        },
+        {
+            "from_node": "a1cdf532-7ac6-4c4b-91a1-d5a8024885e1",
+            "from_port": "next",
+            "to_node": "0aaac004-3772-44b1-ad54-577fe299403c",
+            "to_port": "prev"
+        },
+        {
+            "from_node": "0aaac004-3772-44b1-ad54-577fe299403c",
+            "from_port": "next",
+            "to_node": "78ab442c-ea76-4bd8-a3d9-09c0498beccc",
+            "to_port": "prev"
+        },
+        {
+            "from_node": "6e2d8e71-f446-4ecb-9e5d-93838d6bbb42",
+            "from_port": "next",
+            "to_node": "a1cdf532-7ac6-4c4b-91a1-d5a8024885e1",
+            "to_port": "prev"
+        }
+    ]
+}

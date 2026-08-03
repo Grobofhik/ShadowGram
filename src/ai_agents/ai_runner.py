@@ -123,7 +123,6 @@ class AIRunner:
                         try:
                             from src.core.managers import proxy_manager
                             from src.core.managers.account_manager import get_hardware_profile
-                            from src.core.constants import CONFIG_FILE
                             
                             proxy_dict = None
                             gost_process = None

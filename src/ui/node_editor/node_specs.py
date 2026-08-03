@@ -543,6 +543,15 @@ NODE_SPECS = {
             "chat_id": {"label": "Юзернейм или ID чата", "type": "str", "default": ""}
         }
     },
+    "mute_chat": {
+        "title": "Мьют уведомлений (Mute)",
+        "category": "Активность",
+        "inputs": ["prev"],
+        "outputs": ["next"],
+        "params": {
+            "chat_id": {"label": "Ссылка на канал или Юзернейм/ID", "type": "str", "default": ""}
+        }
+    },
     "auto_react": {
         "title": "Авто-Реакции",
         "category": "Активность",
@@ -708,8 +717,9 @@ NODE_SPECS = {
         "inputs": ["prev"],
         "outputs": ["next"],
         "params": {
-            "bot_username": {"label": "Юзернейм бота", "type": "str", "default": ""},
-            "button_text": {"label": "Текст кнопки (или индекс 0, 1...)", "type": "str", "default": ""}
+            "post_url": {"label": "Ссылка на пост или Юзернейм/ID бота", "type": "str", "default": ""},
+            "button_target": {"label": "Номер кнопки (1, 2...) или Текст", "type": "str", "default": "1"},
+            "timeout": {"label": "Ожидание появления (сек)", "type": "int", "default": 15}
         }
     },
     "bot_click_keyboard": {
@@ -1277,6 +1287,48 @@ NODE_SPECS = {
                 "default": "sequential"
             },
             "var_name": {"label": "Сохранить в переменную", "type": "str", "default": "resource_val"}
+        }
+    },
+    "parse_json": {
+        "title": "Распарсить JSON",
+        "category": "Данные",
+        "inputs": ["prev"],
+        "outputs": ["next"],
+        "params": {
+            "json_string": {"label": "JSON строка", "type": "str", "default": "{http_response}"},
+            "key_path": {"label": "Путь к ключу (напр. user.id или 0.name)", "type": "str", "default": "data.id"},
+            "var_name": {"label": "Сохранить в переменную", "type": "str", "default": "parsed_val"}
+        }
+    },
+    "regex_extract": {
+        "title": "Регулярное выражение (Regex)",
+        "category": "Данные",
+        "inputs": ["prev"],
+        "outputs": ["found", "not_found"],
+        "params": {
+            "text": {"label": "Исходный текст", "type": "str", "default": "{file_content}"},
+            "pattern": {"label": "Regex шаблон (c группой ())", "type": "str", "default": r"code: (\d+)"},
+            "var_name": {"label": "Сохранить результат в", "type": "str", "default": "extracted_val"}
+        }
+    },
+    "wait_for_message": {
+        "title": "Ожидать сообщение",
+        "category": "Активность",
+        "inputs": ["prev"],
+        "outputs": ["received", "timeout"],
+        "params": {
+            "chat_id": {"label": "Юзернейм или ID чата", "type": "str", "default": ""},
+            "timeout": {"label": "Таймаут ожидания (сек)", "type": "int", "default": 30},
+            "var_name": {"label": "Сохранить сообщение в", "type": "str", "default": "incoming_message"}
+        }
+    },
+    "execute_sub_scenario": {
+        "title": "Выполнить подсценарий",
+        "category": "Управление",
+        "inputs": ["prev"],
+        "outputs": ["next", "error"],
+        "params": {
+            "scenario_path": {"label": "Путь к файлу сценария (.sgn)", "type": "file", "default": ""}
         }
     }
 }

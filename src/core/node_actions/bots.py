@@ -1,4 +1,5 @@
 import os
+import time
 import random
 
 async def bot_start(executor, params):
@@ -51,34 +52,128 @@ async def bot_send_command(executor, params):
     return "next"
 
 async def bot_click_inline(executor, params):
-    bot_username = executor.resolve_string(params.get("bot_username", "")).strip()
-    btn_match = executor.resolve_string(params.get("button_text", "")).strip()
-    if not bot_username or not btn_match:
-        executor.log("Пропуск: юзернейм бота или текст кнопки пустые.", "warning")
+    post_url_or_chat = executor.resolve_string(params.get("post_url", params.get("bot_username", ""))).strip()
+    btn_target = executor.resolve_string(params.get("button_target", params.get("button_text", ""))).strip()
+    
+    if not post_url_or_chat or not btn_target:
+        executor.log("Пропуск: Ссылка/Чат или номер/текст кнопки не заполнены.", "warning")
         return "next"
     
     try:
-        found = False
-        async for message in executor.client.get_chat_history(bot_username, limit=10):
-            if message.reply_markup and message.reply_markup.inline_keyboard:
-                for row_idx, row in enumerate(message.reply_markup.inline_keyboard):
-                    for col_idx, button in enumerate(row):
-                        match_idx_str_1 = str(row_idx * len(row) + col_idx)
-                        match_idx_str_2 = f"{row_idx},{col_idx}"
-                        
-                        if (btn_match.lower() in button.text.lower()) or (btn_match == match_idx_str_1) or (btn_match == match_idx_str_2):
-                            await message.click(row_idx, col_idx)
-                            executor.log(f"Успешно нажата inline-кнопка '{button.text}' у бота {bot_username}", "success")
-                            found = True
-                            break
-                    if found:
-                        break
-            if found:
+        chat_id = None
+        message_id = None
+
+        # 1. Распарсим прямую ссылку на пост вида https://t.me/c/12345/678 или https://t.me/username/678
+        import re
+        link_match = re.match(r"https?://t\.me/(?:c/(\d+)|([a-zA-Z0-9_]+))/(\d+)", post_url_or_chat)
+        if link_match:
+            channel_id_num, channel_username, msg_id_str = link_match.groups()
+            chat_id = int(f"-100{channel_id_num}") if channel_id_num else f"@{channel_username}"
+            message_id = int(msg_id_str)
+        else:
+            chat_id = post_url_or_chat
+
+        # Единичная попытка получить конкретное сообщение по ID из ссылки
+        target_message = None
+        if message_id:
+            try:
+                target_message = await executor.client.get_messages(chat_id, message_id)
+            except Exception as msg_err:
+                executor.log(f"Не удалось получить сообщение по ID {message_id}: {msg_err}", "warning")
+        
+        # Если это бот или ссылка без message_id, запускаем динамический опрос (polling) до timeout секунд
+        timeout_sec = int(params.get("timeout", 15))
+        start_time = time.time()
+        
+        while not target_message or not (target_message.reply_markup and target_message.reply_markup.inline_keyboard):
+            async for msg in executor.client.get_chat_history(chat_id, limit=10):
+                if msg.reply_markup and msg.reply_markup.inline_keyboard:
+                    target_message = msg
+                    break
+
+            if target_message and target_message.reply_markup and target_message.reply_markup.inline_keyboard:
                 break
-        if not found:
-            executor.log(f"Не удалось найти inline-кнопку по запросу '{btn_match}' у последних сообщений {bot_username}", "warning")
+
+            if (time.time() - start_time) > timeout_sec:
+                break
+                
+            await executor.sleep(1.5)
+
+        if not target_message or not (target_message.reply_markup and target_message.reply_markup.inline_keyboard):
+            executor.log(f"Таймаут ({timeout_sec} сек): Не найдено сообщений с inline-кнопками в {chat_id}", "warning")
+            return "next"
+
+        keyboard = target_message.reply_markup.inline_keyboard
+        flattened_buttons = []
+        for row_idx, row in enumerate(keyboard):
+            for col_idx, button in enumerate(row):
+                flattened_buttons.append((row_idx, col_idx, button))
+
+        selected_row = None
+        selected_col = None
+        selected_button = None
+
+        # Проверка: указан ли порядок по номеру (например 1, 2, 3...)
+        if btn_target.isdigit():
+            idx = int(btn_target) - 1 # 1-based index
+            if 0 <= idx < len(flattened_buttons):
+                selected_row, selected_col, selected_button = flattened_buttons[idx]
+        else:
+            # Поиск по тексту кнопки (без учета регистра)
+            for row_idx, col_idx, button in flattened_buttons:
+                if btn_target.lower() in button.text.lower():
+                    selected_row = row_idx
+                    selected_col = col_idx
+                    selected_button = button
+                    break
+
+        if selected_button and selected_row is not None and selected_col is not None:
+            await executor.sleep(random.randint(1, 3))
+            feedback = ""
+            click_success = False
+
+            # 1. Запрос через raw Telegram MTProto GetBotCallbackAnswer
+            try:
+                from hydrogram.raw.functions.messages import GetBotCallbackAnswer
+                peer = await executor.client.resolve_peer(chat_id)
+                data_bytes = selected_button.callback_data
+                if isinstance(data_bytes, str):
+                    data_bytes = data_bytes.encode("utf-8")
+
+                res = await executor.client.invoke(
+                    GetBotCallbackAnswer(
+                        peer=peer,
+                        msg_id=target_message.id,
+                        data=data_bytes
+                    )
+                )
+                if hasattr(res, 'message') and res.message:
+                    feedback = f" (Ответ: {res.message})"
+                click_success = True
+            except Exception as raw_err:
+                executor.log(f"MTProto GetBotCallbackAnswer exception: {raw_err}", "info")
+
+            # 2. Фолбэк через client.request_callback_answer
+            if not click_success:
+                try:
+                    res = await executor.client.request_callback_answer(
+                        chat_id=chat_id,
+                        message_id=target_message.id,
+                        callback_data=selected_button.callback_data
+                    )
+                    if hasattr(res, 'text') and res.text:
+                        feedback = f" (Ответ: {res.text})"
+                    click_success = True
+                except Exception as cb_err:
+                    executor.log(f"Callback answer warning: {cb_err}", "info")
+
+            if click_success:
+                executor.log(f"Успешно нажата inline-кнопка '{selected_button.text}' в {chat_id}{feedback}", "success")
+        else:
+            executor.log(f"Кнопка '{btn_target}' не найдена среди {len(flattened_buttons)} доступных кнопок.", "warning")
+
     except Exception as e:
-        executor.log(f"Ошибка при нажатии inline-кнопки у {bot_username}: {e}", "error")
+        executor.log(f"Ошибка при клике по inline-кнопке: {e}", "error")
     return "next"
 
 async def bot_click_keyboard(executor, params):

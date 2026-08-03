@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 from typing import Any, List, Dict, Tuple, Optional
 from src.core.base_module import BaseModule
+from src.core.constants import CONFIG_FILE
 from hydrogram.errors import FloodWait, RPCError
 
 class SmartCommenterPlugin(BaseModule):
@@ -177,7 +178,6 @@ class SmartCommenterPlugin(BaseModule):
         pending_followups = []
         
         # Загрузим дефолтные глобальные настройки AI
-        from src.core.constants import CONFIG_FILE
         from src.core.managers.config_manager import _read_config
         
         global_defaults = {}

@@ -18,9 +18,20 @@ class SilencedEventLoopPolicy(asyncio.DefaultEventLoopPolicy):
 
 asyncio.set_event_loop_policy(SilencedEventLoopPolicy())
 
+import os
+os.environ["QTWEBENGINE_DISABLE_SANDBOX"] = "1"
+os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--disable-gpu --disable-software-rasterizer --no-sandbox"
+
+try:
+    from PyQt6.QtWebEngineWidgets import QWebEngineView
+except Exception:
+    pass
+
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtGui import QFontDatabase
 from PyQt6.QtCore import QObject, QEvent, Qt
+
+QApplication.setAttribute(Qt.ApplicationAttribute.AA_ShareOpenGLContexts, True)
 
 from src.core.constants import CONFIG_FILE, CONFIG_DIR, FONTS_DIR
 

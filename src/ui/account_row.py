@@ -79,6 +79,10 @@ class TelegramAccountRow(QFrame):
         self.proxy_check_finished.connect(self.on_proxy_check_finished)
         self.session_check_finished.connect(self.on_session_check_finished)
 
+    @property
+    def is_running(self):
+        return process_manager.is_process_running(self.tg_process)
+
     def init_ui(self):
         self.layout_main = QHBoxLayout(self)
         self.layout_main.setContentsMargins(18, 14, 18, 14)

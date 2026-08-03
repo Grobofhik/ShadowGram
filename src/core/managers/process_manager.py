@@ -180,12 +180,17 @@ def start_telegram(
         logger.info(f"[STEALTH] Подмена локали на: {locale_str}")
 
     if device_name:
-        env.update(
-            {
-                "HOSTNAME": device_name,
-                "QT_QPA_PLATFORM": "xcb",
-            }
-        )
+        env["HOSTNAME"] = device_name
+            
+    # Ensure DISPLAY and XAUTHORITY are inherited for Qt XCB GUI
+    if "DISPLAY" in os.environ:
+        env["DISPLAY"] = os.environ["DISPLAY"]
+    if "XAUTHORITY" in os.environ:
+        env["XAUTHORITY"] = os.environ["XAUTHORITY"]
+    if "WAYLAND_DISPLAY" in os.environ:
+        env["WAYLAND_DISPLAY"] = os.environ["WAYLAND_DISPLAY"]
+    if "XDG_RUNTIME_DIR" in os.environ:
+        env["XDG_RUNTIME_DIR"] = os.environ["XDG_RUNTIME_DIR"]
 
     err_log = workdir / "telegram_error.log"
     
@@ -448,6 +453,10 @@ def _build_final_command(
             "--ro-bind-data", str(r2), "/sys/devices/virtual/dmi/id/product_name"
         ]
         
+        # Ensure X11 socket is available inside bwrap if present
+        if Path("/tmp/.X11-unix").exists():
+            bwrap_cmd.extend(["--bind", "/tmp/.X11-unix", "/tmp/.X11-unix"])
+            
         # Подмена таймзоны внутри контейнера bwrap
         if timezone:
             host_zoneinfo = Path("/usr/share/zoneinfo") / timezone

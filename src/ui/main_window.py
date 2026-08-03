@@ -132,6 +132,10 @@ class TelegramManager(QWidget):
         self.btn_neiro.clicked.connect(self.show_neiro)
         sidebar_layout.addWidget(self.btn_neiro)
 
+        self.btn_mass_sender = self.create_nav_button("Рассылка", ROCKET_ICON_PATH)
+        self.btn_mass_sender.clicked.connect(self.show_mass_sender)
+        sidebar_layout.addWidget(self.btn_mass_sender)
+
         self.btn_ai_assistant = self.create_nav_button("Ассистент", ROBOT_ICON_PATH)
         self.btn_ai_assistant.clicked.connect(self.show_ai_assistant)
         sidebar_layout.addWidget(self.btn_ai_assistant)
@@ -195,6 +199,8 @@ class TelegramManager(QWidget):
         self.table_page = AccountTablePage(self)
         self.docs_page = DocsPage()
         self.ai_page = AIPage(self)
+        from src.ui.mass_sender_page import MassSenderPage
+        self.mass_sender_page = MassSenderPage(self)
         self.neuro_page = NeuroCommentingPage(self)
         
         from src.ui.node_editor.node_editor_window import NodeEditorWindow
@@ -215,6 +221,7 @@ class TelegramManager(QWidget):
         self.stack.addWidget(self.docs_page)
         self.stack.addWidget(self.ai_page)
         self.stack.addWidget(self.neuro_page)
+        self.stack.addWidget(self.mass_sender_page)
         self.stack.addWidget(self.node_editor_page)
 
         main_layout.addWidget(self.stack, 1) # 1 - растягивать контент
@@ -248,6 +255,11 @@ class TelegramManager(QWidget):
     def show_services(self):
         self.update_nav_buttons(self.btn_services)
         self.switch_page(self.services_page)
+
+    def show_mass_sender(self):
+        self.mass_sender_page.load_accounts()
+        self.update_nav_buttons(self.btn_mass_sender)
+        self.switch_page(self.mass_sender_page)
 
     def update_nav_buttons(self, active_btn):
         self.clear_nav_selection()
@@ -390,6 +402,20 @@ class TelegramManager(QWidget):
         self.stack.addWidget(self.docs_page)
         self.stack.removeWidget(old_docs)
         old_docs.deleteLater()
+
+        # Пересоздаём node_editor_page (Сценарист)
+        from src.ui.node_editor.node_editor_window import NodeEditorWindow
+        old_node_editor = self.node_editor_page
+        self.node_editor_page = NodeEditorWindow(manager=self)
+        self.stack.addWidget(self.node_editor_page)
+        self.stack.removeWidget(old_node_editor)
+        old_node_editor.deleteLater()
+
+        # Обновляем аккаунты на странице рассылок и таблиц
+        if hasattr(self, 'mass_sender_page'):
+            self.mass_sender_page.load_accounts()
+        if hasattr(self, 'table_page'):
+            self.table_page.refresh_data()
 
         # Восстанавливаем текущую страницу аккаунтов
         self.acc_list_page.refresh_accounts()

@@ -2,6 +2,7 @@ import asyncio
 from hydrogram import Client, raw
 from src.core.logger import logger
 from src.core.managers.account_manager import update_privacy_guard
+from src.core.constants import CONFIG_FILE
 
 async def run(client: Client, params: dict, context: dict) -> bool:
     """
@@ -45,8 +46,7 @@ async def run(client: Client, params: dict, context: dict) -> bool:
         
         logger.info(f"[{me.first_name}] ✅ Приватность успешно настроена!")
         
-        # Обновляем БД, если нужно
-        from src.core.constants import CONFIG_FILE
+        # Обновляем БД
         update_privacy_guard(CONFIG_FILE, client.workdir, True)
         
         return True

@@ -72,7 +72,44 @@ async def if_condition(executor, params):
     eval_result = True
     if condition:
         try:
-            eval_result = bool(eval(condition, {"__builtins__": None}, {}))
+            import ast
+            def safe_eval(node):
+                if isinstance(node, ast.Expression):
+                    return safe_eval(node.body)
+                elif isinstance(node, ast.Constant):
+                    return node.value
+                elif isinstance(node, ast.UnaryOp):
+                    op = safe_eval(node.operand)
+                    if isinstance(node.op, ast.Not): return not op
+                    elif isinstance(node.op, ast.USub): return -op
+                elif isinstance(node, ast.BinOp):
+                    left = safe_eval(node.left)
+                    right = safe_eval(node.right)
+                    if isinstance(node.op, ast.Add): return left + right
+                    elif isinstance(node.op, ast.Sub): return left - right
+                    elif isinstance(node.op, ast.Mult): return left * right
+                    elif isinstance(node.op, ast.Div): return left / right
+                elif isinstance(node, ast.Compare):
+                    left = safe_eval(node.left)
+                    for op, comparator in zip(node.ops, node.comparators):
+                        right = safe_eval(comparator)
+                        if isinstance(op, ast.Eq) and not (left == right): return False
+                        elif isinstance(op, ast.NotEq) and not (left != right): return False
+                        elif isinstance(op, ast.Gt) and not (left > right): return False
+                        elif isinstance(op, ast.GtE) and not (left >= right): return False
+                        elif isinstance(op, ast.Lt) and not (left < right): return False
+                        elif isinstance(op, ast.LtE) and not (left <= right): return False
+                        left = right
+                    return True
+                elif isinstance(node, ast.BoolOp):
+                    if isinstance(node.op, ast.And):
+                        return all(safe_eval(v) for v in node.values)
+                    elif isinstance(node.op, ast.Or):
+                        return any(safe_eval(v) for v in node.values)
+                raise ValueError("Unsupported AST node")
+
+            parsed = ast.parse(condition, mode='eval')
+            eval_result = bool(safe_eval(parsed))
         except Exception:
             eval_result = (condition.lower() not in ["false", "0", "no", ""])
             

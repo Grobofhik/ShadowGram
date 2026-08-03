@@ -1,0 +1,138 @@
+{
+    "nodes": [
+        {
+            "id": "71160e44-b28a-4d42-a9f3-f26e099387e4",
+            "type": "end",
+            "title": "Конец",
+            "pos_x": 496.0,
+            "pos_y": 34.0,
+            "params": {},
+            "outputs": []
+        },
+        {
+            "id": "8feec392-c2b4-4e91-aab1-1e35d15e2bb1",
+            "type": "bot_click_inline",
+            "title": "Нажать inline-кнопку",
+            "pos_x": 305.0,
+            "pos_y": 37.0,
+            "params": {
+                "post_url": "https://t.me/Imiss009/76208",
+                "button_target": "1"
+            },
+            "outputs": [
+                "next"
+            ]
+        },
+        {
+            "id": "1bc21e54-41f4-4be4-b2bc-841a78048130",
+            "type": "random_delay",
+            "title": "Случайная пауза",
+            "pos_x": 511.0,
+            "pos_y": 167.0,
+            "params": {
+                "min_seconds": 5,
+                "max_seconds": 15
+            },
+            "outputs": [
+                "next"
+            ]
+        },
+        {
+            "id": "8fa38b66-7a58-461f-a1e7-62b854a8bc53",
+            "type": "join_chat",
+            "title": "Вступить в чат",
+            "pos_x": 305.0,
+            "pos_y": 167.0,
+            "params": {
+                "chat_link": "https://t.me/Imiss009"
+            },
+            "outputs": [
+                "next"
+            ]
+        },
+        {
+            "id": "b16a966e-38e6-4ac8-b46b-b1ff987feaea",
+            "type": "check_channel_subscription",
+            "title": "Подписка на канал",
+            "pos_x": 99.0,
+            "pos_y": 167.0,
+            "params": {
+                "chat_id": "https://t.me/Imiss009",
+                "user_id": ""
+            },
+            "outputs": [
+                "subscribed",
+                "not_subscribed"
+            ]
+        },
+        {
+            "id": "756cad85-a233-4a12-b16d-88ba348563ef",
+            "type": "random_delay",
+            "title": "Случайная пауза",
+            "pos_x": -98.0,
+            "pos_y": 169.0,
+            "params": {
+                "min_seconds": 5,
+                "max_seconds": 15
+            },
+            "outputs": [
+                "next"
+            ]
+        },
+        {
+            "id": "079c3655-4567-40bf-9f23-5a0e9b45f3dc",
+            "type": "start",
+            "title": "Старт",
+            "pos_x": -298.0,
+            "pos_y": 171.0,
+            "params": {},
+            "outputs": [
+                "next"
+            ]
+        }
+    ],
+    "connections": [
+        {
+            "from_node": "8feec392-c2b4-4e91-aab1-1e35d15e2bb1",
+            "from_port": "next",
+            "to_node": "71160e44-b28a-4d42-a9f3-f26e099387e4",
+            "to_port": "prev"
+        },
+        {
+            "from_node": "1bc21e54-41f4-4be4-b2bc-841a78048130",
+            "from_port": "next",
+            "to_node": "8feec392-c2b4-4e91-aab1-1e35d15e2bb1",
+            "to_port": "prev"
+        },
+        {
+            "from_node": "8fa38b66-7a58-461f-a1e7-62b854a8bc53",
+            "from_port": "next",
+            "to_node": "1bc21e54-41f4-4be4-b2bc-841a78048130",
+            "to_port": "prev"
+        },
+        {
+            "from_node": "b16a966e-38e6-4ac8-b46b-b1ff987feaea",
+            "from_port": "subscribed",
+            "to_node": "8feec392-c2b4-4e91-aab1-1e35d15e2bb1",
+            "to_port": "prev"
+        },
+        {
+            "from_node": "b16a966e-38e6-4ac8-b46b-b1ff987feaea",
+            "from_port": "not_subscribed",
+            "to_node": "8fa38b66-7a58-461f-a1e7-62b854a8bc53",
+            "to_port": "prev"
+        },
+        {
+            "from_node": "756cad85-a233-4a12-b16d-88ba348563ef",
+            "from_port": "next",
+            "to_node": "b16a966e-38e6-4ac8-b46b-b1ff987feaea",
+            "to_port": "prev"
+        },
+        {
+            "from_node": "079c3655-4567-40bf-9f23-5a0e9b45f3dc",
+            "from_port": "next",
+            "to_node": "756cad85-a233-4a12-b16d-88ba348563ef",
+            "to_port": "prev"
+        }
+    ]
+}

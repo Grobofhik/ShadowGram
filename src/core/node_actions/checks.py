@@ -424,17 +424,36 @@ async def check_channel_subscription(executor, params):
         executor.log("Пропуск: не указан чат/канал для проверки подписки.", "warning")
         return "not_subscribed"
         
-    if not user_id_str:
-        user_id_str = "me"
+    if not user_id_str or user_id_str == "me":
+        me = await executor.client.get_me()
+        user_id_str = me.id
+
+    # Нормализация ссылки на канал (например: https://t.me/Imiss009 -> Imiss009)
+    clean_target = chat_id
+    if "t.me/" in clean_target:
+        clean_target = clean_target.split("t.me/")[-1].replace("+", "").replace("joinchat/", "").strip("/")
         
     try:
-        member = await executor.client.get_chat_member(chat_id, user_id_str)
-        if member.status in [ChatMemberStatus.BANNED, ChatMemberStatus.LEFT]:
-            executor.log(f"Пользователь {user_id_str} НЕ подписан на канал {chat_id}.", "info")
+        member = await executor.client.get_chat_member(clean_target, user_id_str)
+        status_name = getattr(member.status, "value", str(member.status)).lower()
+        if "banned" in status_name or "left" in status_name:
+            executor.log(f"Пользователь НЕ подписан на канал {chat_id}.", "info")
             return "not_subscribed"
         else:
-            executor.log(f"Пользователь {user_id_str} подписан на канал {chat_id} (статус: {member.status}).", "success")
+            executor.log(f"Пользователь подписан на канал {chat_id} (статус: {member.status}).", "success")
             return "subscribed"
-    except Exception:
-        executor.log(f"Пользователь {user_id_str} НЕ подписан на канал {chat_id} (ошибка или не найден в подписчиках).", "info")
-        return "not_subscribed"
+    except Exception as e:
+        # Вторая попытка по объекту чата напрямую
+        try:
+            chat = await executor.client.get_chat(clean_target)
+            member = await executor.client.get_chat_member(chat.id, user_id_str)
+            status_name = getattr(member.status, "value", str(member.status)).lower()
+            if "banned" in status_name or "left" in status_name:
+                executor.log(f"Пользователь НЕ подписан на канал {chat_id}.", "info")
+                return "not_subscribed"
+            else:
+                executor.log(f"Пользователь подписан на канал {chat_id} (статус: {member.status}).", "success")
+                return "subscribed"
+        except Exception as err2:
+            executor.log(f"Пользователь НЕ подписан на канал {chat_id} ({err2}).", "info")
+            return "not_subscribed"

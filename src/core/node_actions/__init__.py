@@ -9,10 +9,13 @@ from .admin import (create_group, create_channel, set_chat_title, set_chat_descr
 from .activity import (join_chat, leave_chat, auto_react, ai_reply, read_chat_history, 
                       archive_chats, unarchive_chats, scrape_chat_members, pin_chat, 
                       unpin_chat, download_media, comment_channel_post, forward_channel_post, 
-                      react_to_post, share_post_link, view_user_stories)
+                      react_to_post, share_post_link, view_user_stories, mute_chat)
 from .bots import bot_start, bot_send_command, bot_click_inline, bot_click_keyboard, bot_open_web_app, bot_inline_query
 from .premium import send_premium_message, send_premium_reaction, set_emoji_status
-from .utilities import get_post_comments, ai_prompt, string_contains, write_file, read_file, get_chat_history_messages, get_unread_dialogs, read_line, get_file_from_folder, http_request, set_global_var, increase_global_counter, get_from_resource
+from .utilities import (get_post_comments, ai_prompt, string_contains, write_file, read_file, 
+                      get_chat_history_messages, get_unread_dialogs, read_line, get_file_from_folder, 
+                      http_request, set_global_var, increase_global_counter, get_from_resource,
+                      parse_json, regex_extract, wait_for_message, execute_sub_scenario)
 from .checks import (check_avatar, check_username, check_user_status, check_is_member, 
                      check_is_premium, check_bio_link, check_is_admin, check_chat_type, 
                      check_is_restricted, check_is_contact, check_is_bot, check_message_contains,
@@ -22,6 +25,11 @@ from .checks import (check_avatar, check_username, check_user_status, check_is_m
                      check_profile_is_mutual, check_channel_subscription)
 
 ACTION_HANDLERS = {
+    "parse_json": parse_json,
+    "regex_extract": regex_extract,
+    "wait_for_message": wait_for_message,
+    "execute_sub_scenario": execute_sub_scenario,
+
     # 1. Flow Control / Управление
     "start": start,
     "end": end,
@@ -164,7 +172,8 @@ ACTION_HANDLERS = {
     "check_profile_is_scam": check_profile_is_scam,
     "check_profile_stories_enabled": check_profile_stories_enabled,
     "check_profile_is_mutual": check_profile_is_mutual,
-    "check_channel_subscription": check_channel_subscription
+    "check_channel_subscription": check_channel_subscription,
+    "mute_chat": mute_chat
 }
 
 # Dynamically merge custom action handlers

@@ -6,8 +6,21 @@ async def join_chat(executor, params):
         executor.log("Пропуск: ссылка на чат пустая.", "warning")
     else:
         await executor.sleep(random.randint(1, 4))
-        chat = await executor.client.join_chat(chat_link)
-        executor.log(f"Успешное вступление в чат: {chat.title}", "success")
+        # Очистка и нормализация ссылки (например: https://t.me/Imiss009 -> Imiss009)
+        clean_target = chat_link
+        if "t.me/" in clean_target:
+            clean_target = clean_target.split("t.me/")[-1].replace("+", "").replace("joinchat/", "").strip("/")
+            
+        try:
+            chat = await executor.client.join_chat(clean_target)
+            executor.log(f"Успешное вступление в чат: {chat.title}", "success")
+        except Exception as e:
+            # Фолбэк на исходную ссылку
+            try:
+                chat = await executor.client.join_chat(chat_link)
+                executor.log(f"Успешное вступление в чат: {chat.title}", "success")
+            except Exception as err2:
+                executor.log(f"Не удалось вступить в чат {chat_link}: {err2}", "error")
     return "next"
 
 async def leave_chat(executor, params):
@@ -290,4 +303,30 @@ async def view_user_stories(executor, params):
             executor.log(f"У пользователя {chat_id} нет активных историй для просмотра.", "info")
     except Exception as e:
         executor.log(f"Ошибка просмотра историй {chat_id}: {e}", "error")
+    return "next"
+
+async def mute_chat(executor, params):
+    chat_id = executor.resolve_string(params.get("chat_id", "")).strip()
+    if not chat_id:
+        executor.log("Пропуск: не указан канал/чат для отключения уведомлений.", "warning")
+        return "next"
+
+    clean_target = chat_id
+    if "t.me/" in clean_target:
+        clean_target = clean_target.split("t.me/")[-1].replace("+", "").replace("joinchat/", "").strip("/")
+
+    try:
+        from hydrogram.raw.functions.account import UpdateNotifySettings
+        from hydrogram.raw.types import InputNotifyPeer, InputPeerNotifySettings
+
+        peer = await executor.client.resolve_peer(clean_target)
+        await executor.client.invoke(
+            UpdateNotifySettings(
+                peer=InputNotifyPeer(peer=peer),
+                settings=InputPeerNotifySettings(mute_until=2147483647) # Mute forever
+            )
+        )
+        executor.log(f"Уведомления канала {chat_id} успешно отключены (Mute)", "success")
+    except Exception as e:
+        executor.log(f"Не удалось отключить уведомления канала {chat_id}: {e}", "error")
     return "next"

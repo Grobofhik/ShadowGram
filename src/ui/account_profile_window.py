@@ -189,14 +189,29 @@ class AccountProfileWindow(QDialog):
         self.main_layout.setContentsMargins(0, 0, 0, 0)
         self.main_layout.setSpacing(0)
         
+        self.tg_container_widget = None
+        self.tg_embedded_window = None
+        self.tg_embed_timer = None
+        
+        # Horizontal Splitter Layout (Profile Info Left | Embedded Telegram Right)
+        self.split_layout = QHBoxLayout()
+        self.split_layout.setContentsMargins(0, 0, 0, 0)
+        self.split_layout.setSpacing(0)
+        
+        # Left Panel (Profile Scroll Area)
+        self.left_profile_widget = QWidget()
+        self.left_profile_layout = QVBoxLayout(self.left_profile_widget)
+        self.left_profile_layout.setContentsMargins(0, 0, 0, 0)
+        self.left_profile_layout.setSpacing(0)
+        
         # 1. Header (Avatar + Name)
         self.setup_header()
+        self.left_profile_layout.addWidget(self.header_frame)
         
         # 2. Scrollable Content Area
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
         self.scroll_area.setFrameShape(QFrame.Shape.NoFrame)
-        # Inherit scrollbar styles from main app if possible, or basic dark scrollbar
         self.scroll_area.setStyleSheet(f"""
             QScrollBar:vertical {{
                 background: {COLOR_BG};
@@ -226,7 +241,10 @@ class AccountProfileWindow(QDialog):
         
         self.scroll_layout.addStretch()
         self.scroll_area.setWidget(self.scroll_widget)
-        self.main_layout.addWidget(self.scroll_area)
+        self.left_profile_layout.addWidget(self.scroll_area)
+        
+        self.split_layout.addWidget(self.left_profile_widget, 1)
+        self.main_layout.addLayout(self.split_layout)
         
     def setup_header(self):
         self.header_frame = QFrame()
@@ -663,20 +681,20 @@ class AccountProfileWindow(QDialog):
         self.btn_bio = ActionButton("Generate Random Bio")
         self.btn_export = ActionButton("Export Session (ZIP)")
         
-        grid.addWidget(self.btn_start, 0, 0)
-        grid.addWidget(self.btn_stop, 0, 1)
-        grid.addWidget(self.btn_check, 1, 0, 1, 2)
-        grid.addWidget(self.btn_clear, 2, 0)
-        grid.addWidget(self.btn_export, 2, 1)
-        grid.addWidget(self.btn_bio, 3, 0, 1, 2)
+        grid.addWidget(self.btn_start, 0, 0, 1, 2)
+        grid.addWidget(self.btn_stop, 1, 0, 1, 2)
+        grid.addWidget(self.btn_check, 2, 0, 1, 2)
+        grid.addWidget(self.btn_clear, 3, 0)
+        grid.addWidget(self.btn_export, 3, 1)
+        grid.addWidget(self.btn_bio, 4, 0, 1, 2)
         
         # Connect buttons to parent (TelegramAccountRow) methods
         parent_row = self.parent()
         if parent_row:
             self.btn_start.clicked.connect(parent_row.toggle_telegram)
+            self.btn_stop.clicked.connect(parent_row.toggle_telegram)
             self.btn_check.clicked.connect(parent_row.run_session_check)
             self.btn_clear.clicked.connect(parent_row.clear_account_cache)
-            # Other buttons can be wired later as functionality is implemented
             
         self.btn_bio.clicked.connect(self.generate_random_bio)
         

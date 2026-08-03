@@ -28,33 +28,18 @@ class ProxyCheckThread(QThread):
         self._is_running = False
         
     def run(self):
+        from src.core.managers import proxy_manager
         for row, proxy_str in self.items_to_check:
             if not self._is_running:
                 break
                 
             if not proxy_str or proxy_str.strip() == "":
+                self.result_signal.emit(row, False)
                 continue
                 
-            alive = False
-            try:
-                # Basic IP/Port extraction logic
-                match = re.search(r'(?:(?:socks5|http)://)?(?:[^:@]+:[^:@]+@)?([\d\.]+):(\d+)', proxy_str)
-                if not match:
-                    match = re.search(r'([\d\.]+):(\d+)', proxy_str)
-                    
-                if match:
-                    ip = match.group(1)
-                    port = int(match.group(2))
-                    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    s.settimeout(10.0)
-                    s.connect((ip, port))
-                    s.close()
-                    alive = True
-            except Exception:
-                alive = False
-                
+            alive = proxy_manager.check_proxy_validity(proxy_str)
             self.result_signal.emit(row, alive)
-            time.sleep(0.3)
+            time.sleep(0.1)
             
         self.finished_signal.emit()
 

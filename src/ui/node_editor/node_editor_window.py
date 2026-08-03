@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                              QPushButton, QFrame, QSplitter, 
                              QMessageBox, QLineEdit, QTextEdit, QSpinBox, 
-                             QFileDialog, QScrollArea, QMenu)
+                             QFileDialog, QScrollArea, QMenu, QDialog)
 from PyQt6.QtCore import Qt, QPointF, QMetaObject, Q_ARG, pyqtSlot
 from PyQt6.QtGui import QIcon, QFont
 
@@ -293,6 +293,8 @@ class NodeEditorWindow(QWidget):
         act_join.triggered.connect(lambda: self.add_node_by_type("join_chat"))
         act_leave = sub_act_join.addAction("Выйти из чата")
         act_leave.triggered.connect(lambda: self.add_node_by_type("leave_chat"))
+        act_mute = sub_act_join.addAction("Мьют уведомлений (Mute)")
+        act_mute.triggered.connect(lambda: self.add_node_by_type("mute_chat"))
         
         # Submenu: Взаимодействие
         sub_act_int = menu_activity.addMenu("Взаимодействие")
@@ -706,6 +708,32 @@ class NodeEditorWindow(QWidget):
             QMessageBox.warning(self, "Внимание", "Не выбрано ни одного аккаунта для запуска сценария!\nСначала отметьте нужные аккаунты на вкладке 'Аккаунты'.")
             return
             
+        # 1. Поиск незаполненных (пустых) строковых полей/ссылок для быстрой подстановки перед стартом
+        empty_params = []
+        nodes_items = [item for item in self.scene.items() if isinstance(item, NodeBlockItem)]
+        for node_item in nodes_items:
+            spec = NODE_SPECS.get(node_item.node_type, {})
+            for p_name, p_info in spec.get("params", {}).items():
+                p_type = p_info.get("type", "str")
+                if p_type in ["str", "textarea"]:
+                    val = str(node_item.params.get(p_name, "")).strip()
+                    if not val:
+                        empty_params.append({
+                            "node_item": node_item,
+                            "param_name": p_name,
+                            "param_info": p_info,
+                            "current_value": val
+                        })
+
+        if empty_params:
+            from src.ui.node_editor.dialogs.empty_params_dialog import EmptyParamsFillDialog
+            dialog = EmptyParamsFillDialog(empty_params, self)
+            if dialog.exec() != QDialog.DialogCode.Accepted:
+                return # Пользователь отменил запуск
+
+            # Пересобираем графовые данные после подстановки значений
+            graph_data = self.get_graph_data()
+
         # Проверка отсутствующих необходимых файлов
         missing_files = []
         for n in graph_data["nodes"]:
@@ -812,13 +840,22 @@ class NodeEditorWindow(QWidget):
                     except Exception as e:
                         log_f(f"Критическая ошибка: {e}", acc_data["name"])
                         
+                from src.core.base_module import BaseModule
+                min_stagger, max_stagger = getattr(BaseModule, "START_DELAY", (5, 25))
+                if isinstance(min_stagger, (int, float)) and isinstance(max_stagger, (int, float)):
+                    pass
+                else:
+                    min_stagger, max_stagger = 5, 25
+
                 stagger_delay = 0.0
-                for acc in accounts:
+                for idx, acc in enumerate(accounts):
                     t = loop.create_task(wrapped_run(acc, stagger_delay))
                     self.local_tasks[task_id]["tasks"].append(t)
                     tasks.append(t)
-                    # Шахматный интервал задержки между запуском сессий аккаунтов (3-6 секунд)
-                    stagger_delay += round(random.uniform(3.0, 6.0), 2)
+                    # Если аккаунтов больше 1, ставим настраиваемую случайную задержку из BaseModule между запуском профилей
+                    if len(accounts) > 1 and idx < len(accounts) - 1:
+                        delay_step = round(random.uniform(float(min_stagger), float(max_stagger)), 2)
+                        stagger_delay += delay_step
                     
                 await asyncio.gather(*tasks)
                 
@@ -859,8 +896,11 @@ class NodeEditorWindow(QWidget):
             for task in info["tasks"]:
                 task.cancel()
             for inst in info["instances"]:
-                if loop:
-                    asyncio.run_coroutine_threadsafe(inst.cleanup(), loop)
+                if loop and loop.is_running():
+                    try:
+                        asyncio.run_coroutine_threadsafe(inst.cleanup(), loop)
+                    except Exception:
+                        pass
                     
             if task_id in self.active_tasks_win.tabs:
                 self.active_tasks_win.tabs[task_id]["status"].setText("Статус: Остановлен")

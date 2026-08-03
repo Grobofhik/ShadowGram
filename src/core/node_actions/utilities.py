@@ -316,3 +316,104 @@ async def get_from_resource(executor, params):
         executor.log(f"Взято из ресурса '{resource_id}': '{val}' -> сохранено в {{{var_name}}}", "info" if val else "warning")
         
     return "next"
+
+async def parse_json(executor, params):
+    json_str = executor.resolve_string(params.get("json_string", "")).strip()
+    path = executor.resolve_string(params.get("key_path", "")).strip()
+    var_name = executor.resolve_string(params.get("var_name", "json_val")).strip()
+    
+    try:
+        data = json.loads(json_str)
+        curr = data
+        if path:
+            for key in path.split("."):
+                if isinstance(curr, dict) and key in curr:
+                    curr = curr[key]
+                elif isinstance(curr, list) and key.isdigit():
+                    curr = curr[int(key)]
+                else:
+                    curr = ""
+                    break
+        executor.variables[var_name] = str(curr) if curr is not None else ""
+        executor.log(f"JSON распарсен: {var_name} = '{executor.variables[var_name]}'", "success")
+    except Exception as e:
+        executor.variables[var_name] = ""
+        executor.log(f"Ошибка парсинга JSON: {e}", "error")
+    return "next"
+
+async def regex_extract(executor, params):
+    text = executor.resolve_string(params.get("text", "")).strip()
+    pattern = executor.resolve_string(params.get("pattern", "")).strip()
+    var_name = executor.resolve_string(params.get("var_name", "extracted_val")).strip()
+    
+    import re
+    try:
+        match = re.search(pattern, text)
+        if match:
+            val = match.group(1) if match.groups() else match.group(0)
+            executor.variables[var_name] = val
+            executor.log(f"Regex нашёл: '{val}' -> {{{var_name}}}", "success")
+            return "found"
+        else:
+            executor.variables[var_name] = ""
+            executor.log(f"Regex не прошёл по шаблону '{pattern}'", "info")
+            return "not_found"
+    except Exception as e:
+        executor.variables[var_name] = ""
+        executor.log(f"Ошибка Regex: {e}", "error")
+        return "not_found"
+
+async def wait_for_message(executor, params):
+    chat_id = executor.resolve_string(params.get("chat_id", "")).strip()
+    timeout = int(params.get("timeout", 30))
+    var_name = executor.resolve_string(params.get("var_name", "incoming_message")).strip()
+    
+    executor.log(f"Ожидание входящего сообщения из {chat_id} (таймаут {timeout}с)...", "info")
+    start_time = asyncio.get_event_loop().time()
+    
+    last_msg_id = getattr(executor, "last_message_id", 0) or 0
+    while (asyncio.get_event_loop().time() - start_time) < timeout:
+        try:
+            async for msg in executor.client.get_chat_history(chat_id, limit=1):
+                if msg.id > last_msg_id and msg.text:
+                    executor.variables[var_name] = msg.text
+                    executor.last_message_id = msg.id
+                    executor.log(f"Получено новое сообщение: '{msg.text[:30]}...'", "success")
+                    return "received"
+        except Exception:
+            pass
+        await asyncio.sleep(2)
+        
+    executor.log("Превышено время ожидания сообщения.", "warning")
+    executor.variables[var_name] = ""
+    return "timeout"
+
+async def execute_sub_scenario(executor, params):
+    scenario_path = executor.resolve_string(params.get("scenario_path", "")).strip()
+    if not scenario_path or not os.path.exists(scenario_path):
+        executor.log(f"Подсценарий '{scenario_path}' не найден!", "error")
+        return "error"
+        
+    try:
+        with open(scenario_path, "r", encoding="utf-8") as f:
+            sub_graph = json.load(f)
+            
+        sub_executor = executor.__class__(
+            account_data=executor.acc,
+            api_id=executor.api_id,
+            api_hash=executor.api_hash,
+            log_callback=executor.log_callback,
+            graph_data=sub_graph
+        )
+        sub_executor.client = executor.client
+        sub_executor.variables.update(executor.variables)
+        
+        executor.log(f"Запуск подсценария из '{os.path.basename(scenario_path)}'...", "info")
+        await sub_executor.run()
+        executor.variables.update(sub_executor.variables)
+        executor.log(f"Подсценарий '{os.path.basename(scenario_path)}' завершен.", "success")
+        return "next"
+    except Exception as e:
+        executor.log(f"Ошибка выполнения подсценария: {e}", "error")
+        return "error"
+
