@@ -417,3 +417,109 @@ async def execute_sub_scenario(executor, params):
         executor.log(f"Ошибка выполнения подсценария: {e}", "error")
         return "error"
 
+async def get_last_comment(executor, params):
+    post_url = executor.resolve_string(params.get("post_url", "")).strip()
+    fallback_number = int(params.get("default_number", 0))
+
+    if not post_url:
+        executor.log("Пропуск: не указана ссылка на пост.", "warning")
+        executor.variables["last_comment_text"] = ""
+        executor.variables["last_comment_number"] = fallback_number
+        return "next"
+
+    clean_target = post_url
+    if "t.me/" in clean_target:
+        clean_target = clean_target.split("t.me/")[-1]
+
+    parts = clean_target.strip("/").split("/")
+    if len(parts) < 2:
+        executor.log(f"Некорректная ссылка на пост: {post_url}", "error")
+        executor.variables["last_comment_text"] = ""
+        executor.variables["last_comment_number"] = fallback_number
+        return "next"
+
+    channel_ref = parts[0]
+    if channel_ref == "c" and len(parts) >= 3:
+        channel_ref = int("-100" + parts[1])
+        msg_id = int(parts[2])
+    else:
+        msg_id = int(parts[-1])
+
+    try:
+        last_comment = None
+        async for reply_msg in executor.client.get_discussion_replies(channel_ref, msg_id, limit=1):
+            last_comment = reply_msg
+            break
+
+        if last_comment and last_comment.text:
+            text = last_comment.text.strip()
+            executor.variables["last_comment_text"] = text
+            executor.log(f"Успешно считан последний комментарий: '{text}'", "success")
+        else:
+            executor.variables["last_comment_text"] = ""
+            executor.log(f"Комментарии под постом пока отсутствуют (используем дефолтное число {fallback_number}).", "info")
+    except Exception as e:
+        executor.log(f"Ошибка получения последнего комментария: {e}", "error")
+        executor.variables["last_comment_text"] = ""
+
+    return "next"
+
+async def extract_increment_number(executor, params):
+    input_text = executor.resolve_string(params.get("text", "")).strip()
+    increment = int(params.get("increment", 1))
+    default_number = int(params.get("default_number", 1))
+    format_template = params.get("template", "{result}")
+
+    import re
+    numbers = re.findall(r'\d+', input_text)
+    if numbers:
+        last_num = int(numbers[-1])
+        calculated = last_num + increment
+        executor.log(f"Найдено число {last_num}, расчитано новое значение: {calculated}", "info")
+    else:
+        calculated = default_number
+        executor.log(f"Числа не найдены в тексте '{input_text}', используется стартовое значение: {calculated}", "info")
+
+    result_str = format_template.replace("{result}", str(calculated))
+    executor.variables["next_number"] = calculated
+    executor.variables["calculated_text"] = result_str
+    executor.log(f"Сформирован итоговый текст: '{result_str}'", "success")
+    return "next"
+
+async def send_post_comment(executor, params):
+    post_url = executor.resolve_string(params.get("post_url", "")).strip()
+    text = executor.resolve_string(params.get("text", "")).strip()
+
+    if not post_url or not text:
+        executor.log("Пропуск: не заполнен post_url или текст комментария.", "warning")
+        return "next"
+
+    clean_target = post_url
+    if "t.me/" in clean_target:
+        clean_target = clean_target.split("t.me/")[-1]
+
+    parts = clean_target.strip("/").split("/")
+    if len(parts) < 2:
+        executor.log(f"Некорректная ссылка на пост: {post_url}", "error")
+        return "next"
+
+    channel_ref = parts[0]
+    if channel_ref == "c" and len(parts) >= 3:
+        channel_ref = int("-100" + parts[1])
+        msg_id = int(parts[2])
+    else:
+        msg_id = int(parts[-1])
+
+    try:
+        sent_msg = await executor.client.send_message(
+            chat_id=channel_ref,
+            text=text,
+            reply_to_message_id=msg_id
+        )
+        executor.variables["sent_comment_id"] = sent_msg.id
+        executor.log(f"Комментарий '{text}' успешно отправлен к посту!", "success")
+    except Exception as e:
+        executor.log(f"Ошибка отправки комментария к посту {post_url}: {e}", "error")
+
+    return "next"
+

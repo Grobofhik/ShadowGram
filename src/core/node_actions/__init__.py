@@ -15,7 +15,8 @@ from .premium import send_premium_message, send_premium_reaction, set_emoji_stat
 from .utilities import (get_post_comments, ai_prompt, string_contains, write_file, read_file, 
                       get_chat_history_messages, get_unread_dialogs, read_line, get_file_from_folder, 
                       http_request, set_global_var, increase_global_counter, get_from_resource,
-                      parse_json, regex_extract, wait_for_message, execute_sub_scenario)
+                      parse_json, regex_extract, wait_for_message, execute_sub_scenario,
+                      get_last_comment, extract_increment_number, send_post_comment)
 from .checks import (check_avatar, check_username, check_user_status, check_is_member, 
                      check_is_premium, check_bio_link, check_is_admin, check_chat_type, 
                      check_is_restricted, check_is_contact, check_is_bot, check_message_contains,
@@ -173,7 +174,10 @@ ACTION_HANDLERS = {
     "check_profile_stories_enabled": check_profile_stories_enabled,
     "check_profile_is_mutual": check_profile_is_mutual,
     "check_channel_subscription": check_channel_subscription,
-    "mute_chat": mute_chat
+    "mute_chat": mute_chat,
+    "get_last_comment": get_last_comment,
+    "extract_increment_number": extract_increment_number,
+    "send_post_comment": send_post_comment
 }
 
 # Dynamically merge custom action handlers

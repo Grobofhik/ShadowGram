@@ -1330,6 +1330,38 @@ NODE_SPECS = {
         "params": {
             "scenario_path": {"label": "Путь к файлу сценария (.sgn)", "type": "file", "default": ""}
         }
+    },
+    "get_last_comment": {
+        "title": "Прочитать последний комментарий",
+        "category": "Активность",
+        "inputs": ["prev"],
+        "outputs": ["next"],
+        "params": {
+            "post_url": {"label": "Ссылка на пост (например: https://t.me/channel/123)", "type": "str", "default": ""},
+            "default_number": {"label": "Стартовое число (если нет комментариев)", "type": "int", "default": 0}
+        }
+    },
+    "extract_increment_number": {
+        "title": "Извлечь и увеличить число",
+        "category": "Данные",
+        "inputs": ["prev"],
+        "outputs": ["next"],
+        "params": {
+            "text": {"label": "Исходный текст комментария", "type": "str", "default": "{last_comment_text}"},
+            "increment": {"label": "Прибавить к числу (+1, +2)", "type": "int", "default": 1},
+            "default_number": {"label": "Дефолтное число если чисел нет", "type": "int", "default": 1},
+            "template": {"label": "Шаблон ответа ({result})", "type": "str", "default": "{result}"}
+        }
+    },
+    "send_post_comment": {
+        "title": "Отправить комментарий к посту",
+        "category": "Сообщения",
+        "inputs": ["prev"],
+        "outputs": ["next"],
+        "params": {
+            "post_url": {"label": "Ссылка на пост (например: https://t.me/channel/123)", "type": "str", "default": ""},
+            "text": {"label": "Текст комментария", "type": "str", "default": "{calculated_text}"}
+        }
     }
 }
 

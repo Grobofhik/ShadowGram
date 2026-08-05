@@ -187,6 +187,8 @@ class NodeEditorWindow(QWidget):
         act_del_msg.triggered.connect(lambda: self.add_node_by_type("delete_messages"))
         act_draft = sub_send_msg.addAction("Сохранить черновик")
         act_draft.triggered.connect(lambda: self.add_node_by_type("save_draft"))
+        act_send_post_comment = sub_send_msg.addAction("Отправить комментарий к посту")
+        act_send_post_comment.triggered.connect(lambda: self.add_node_by_type("send_post_comment"))
         
         # Submenu: Медиафайлы
         sub_send_med = menu_sending.addMenu("Медиафайлы")
@@ -315,6 +317,10 @@ class NodeEditorWindow(QWidget):
         sub_act_chan = menu_activity.addMenu("Активность в каналах")
         act_comment = sub_act_chan.addAction("Оставить комментарий")
         act_comment.triggered.connect(lambda: self.add_node_by_type("comment_channel_post"))
+        act_get_last_comment = sub_act_chan.addAction("Прочитать последний комментарий")
+        act_get_last_comment.triggered.connect(lambda: self.add_node_by_type("get_last_comment"))
+        act_extract_num = sub_act_chan.addAction("Извлечь и увеличить число")
+        act_extract_num.triggered.connect(lambda: self.add_node_by_type("extract_increment_number"))
         act_forward = sub_act_chan.addAction("Переслать пост")
         act_forward.triggered.connect(lambda: self.add_node_by_type("forward_channel_post"))
         act_post_react = sub_act_chan.addAction("Реакция на пост")
@@ -840,21 +846,24 @@ class NodeEditorWindow(QWidget):
                     except Exception as e:
                         log_f(f"Критическая ошибка: {e}", acc_data["name"])
                         
-                from src.core.base_module import BaseModule
-                min_stagger, max_stagger = getattr(BaseModule, "START_DELAY", (5, 25))
-                if isinstance(min_stagger, (int, float)) and isinstance(max_stagger, (int, float)):
-                    pass
-                else:
-                    min_stagger, max_stagger = 5, 25
+                min_stagger = cfg.get("settings", {}).get("scenario_stagger_min", 3.0)
+                max_stagger = cfg.get("settings", {}).get("scenario_stagger_max", 10.0)
+                try:
+                    min_stagger = float(min_stagger)
+                    max_stagger = float(max_stagger)
+                    if min_stagger > max_stagger:
+                        min_stagger, max_stagger = max_stagger, min_stagger
+                except (ValueError, TypeError):
+                    min_stagger, max_stagger = 3.0, 10.0
 
                 stagger_delay = 0.0
                 for idx, acc in enumerate(accounts):
                     t = loop.create_task(wrapped_run(acc, stagger_delay))
                     self.local_tasks[task_id]["tasks"].append(t)
                     tasks.append(t)
-                    # Если аккаунтов больше 1, ставим настраиваемую случайную задержку из BaseModule между запуском профилей
+                    # Если аккаунтов больше 1, ставим настраиваемую случайную задержку из настроек (или BaseModule)
                     if len(accounts) > 1 and idx < len(accounts) - 1:
-                        delay_step = round(random.uniform(float(min_stagger), float(max_stagger)), 2)
+                        delay_step = round(random.uniform(min_stagger, max_stagger), 2)
                         stagger_delay += delay_step
                     
                 await asyncio.gather(*tasks)
