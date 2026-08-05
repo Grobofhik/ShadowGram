@@ -56,3 +56,12 @@ avatars/*
 shadowgram.desktop
 DEF_FARMS
 
+# Node / Electron
+node_modules/
+electron-app/node_modules/
+electron-app/dist/
+electron-app/dist-electron/
+electron-app/release/
+electron-app/*.tsbuildinfo
+
+
