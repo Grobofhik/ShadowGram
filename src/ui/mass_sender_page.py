@@ -261,11 +261,25 @@ class MassSenderPage(QWidget):
 
             for idx, acc in enumerate(self.accounts_data):
                 chk = QCheckBox()
-                chk.setChecked(True)
+                is_valid = acc.get("is_valid", True)
+                invalid_reason = acc.get("invalid_reason", "")
+                
+                chk.setChecked(is_valid)
                 self.table_accs.setCellWidget(idx, 0, chk)
                 
-                name_item = QTableWidgetItem(acc.get("name", "Unknown"))
+                name_text = acc.get("name", "Unknown")
+                if not is_valid:
+                    name_text += " (НЕВАЛИДЕН)"
+
+                name_item = QTableWidgetItem(name_text)
                 proxy_item = QTableWidgetItem(acc.get("proxy_url") or "Без прокси")
+                
+                if not is_valid:
+                    from PyQt6.QtGui import QColor
+                    name_item.setBackground(QColor(239, 68, 68, 45))
+                    proxy_item.setBackground(QColor(239, 68, 68, 45))
+                    name_item.setToolTip(f"⚠️ Невалидный аккаунт: {invalid_reason}")
+                    proxy_item.setToolTip(f"⚠️ Невалидный аккаунт: {invalid_reason}")
                 
                 self.table_accs.setItem(idx, 1, name_item)
                 self.table_accs.setItem(idx, 2, proxy_item)

@@ -16,8 +16,9 @@
             "pos_x": 305.0,
             "pos_y": 37.0,
             "params": {
-                "post_url": "https://t.me/Imiss009/76208",
-                "button_target": "1"
+                "post_url": "",
+                "button_target": "1",
+                "timeout": 15
             },
             "outputs": [
                 "next"
@@ -44,7 +45,7 @@
             "pos_x": 305.0,
             "pos_y": 167.0,
             "params": {
-                "chat_link": "https://t.me/Imiss009"
+                "chat_link": ""
             },
             "outputs": [
                 "next"
@@ -57,7 +58,7 @@
             "pos_x": 99.0,
             "pos_y": 167.0,
             "params": {
-                "chat_id": "https://t.me/Imiss009",
+                "chat_id": "",
                 "user_id": ""
             },
             "outputs": [

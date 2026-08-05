@@ -182,7 +182,7 @@ class PropertiesDock(QFrame):
                         sb.setRange(0, 100000)
                         sb.setValue(int(val))
                         sb.setStyleSheet(f"QSpinBox {{ background-color: {styles.COLOR_CONSOLE_BG}; border: 1px solid {styles.COLOR_BORDER}; border-radius: 4px; color: #e2e8f0; height: 26px; padding-left: 5px; }}")
-                        sb.valueChanged.connect(lambda _, n=p_name, w=sb: self.save_param_on_edit(n, w))
+                        sb.valueChanged.connect(lambda _, name=p_name, w=sb: self.save_param_on_edit(name, w))
                         field_layout.addWidget(sb)
                         self.active_params_widgets[p_name] = sb
                         
@@ -203,7 +203,7 @@ class PropertiesDock(QFrame):
                         te.setPlainText(str(val))
                         te.setStyleSheet(f"QTextEdit {{ background-color: {styles.COLOR_CONSOLE_BG}; border: 1px solid {styles.COLOR_BORDER}; border-radius: 4px; color: #e2e8f0; font-size: 12px; }}")
                         te.setFixedHeight(80)
-                        te.textChanged.connect(lambda n=p_name, w=te: self.save_param_on_edit(n, w))
+                        te.textChanged.connect(lambda name=p_name, w=te: self.save_param_on_edit(name, w))
                         field_layout.addWidget(te)
                         self.active_params_widgets[p_name] = te
                         
@@ -211,7 +211,7 @@ class PropertiesDock(QFrame):
                         le = QLineEdit()
                         le.setText(str(val))
                         le.setStyleSheet(f"QLineEdit {{ background-color: {styles.COLOR_CONSOLE_BG}; border: 1px solid {styles.COLOR_BORDER}; border-radius: 4px; color: #e2e8f0; height: 26px; padding-left: 5px; }}")
-                        le.textChanged.connect(lambda _, n=p_name, w=le: self.save_param_on_edit(n, w))
+                        le.textChanged.connect(lambda text_val, name=p_name, w=le: self.save_param_on_edit(name, w))
                         
                         inherited_val = self.find_upstream_param(self.selected_node, p_name)
                         if inherited_val:

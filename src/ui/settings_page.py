@@ -304,7 +304,7 @@ class SettingsPage(QWidget):
         # 2. Автоматизация и Безопасность
         tab_sec, l_sec = create_tab_container()
         
-        l_sec.addWidget(QLabel("⏱ Массовый запуск и Сценарии (Задержки)", objectName="SettingLabel"))
+        l_sec.addWidget(QLabel("⏱ Массовый запуск (Задержки)", objectName="SettingLabel"))
         delay_layout = QHBoxLayout()
         delay_layout.addWidget(QLabel("Задержка между запусками Telegram (сек):"))
         self.spin_launch_delay = QSpinBox()
@@ -313,23 +313,6 @@ class SettingsPage(QWidget):
         delay_layout.addWidget(self.spin_launch_delay)
         delay_layout.addStretch()
         l_sec.addLayout(delay_layout)
-
-        stagger_layout = QHBoxLayout()
-        stagger_layout.addWidget(QLabel("Задержка между аккаунтами в Сценариях (сек):"))
-        stagger_layout.addWidget(QLabel("От:"))
-        self.spin_scenario_stagger_min = QDoubleSpinBox()
-        self.spin_scenario_stagger_min.setRange(0.0, 300.0)
-        self.spin_scenario_stagger_min.setSingleStep(0.5)
-        self.spin_scenario_stagger_min.setValue(3.0)
-        stagger_layout.addWidget(self.spin_scenario_stagger_min)
-        stagger_layout.addWidget(QLabel("До:"))
-        self.spin_scenario_stagger_max = QDoubleSpinBox()
-        self.spin_scenario_stagger_max.setRange(0.0, 300.0)
-        self.spin_scenario_stagger_max.setSingleStep(0.5)
-        self.spin_scenario_stagger_max.setValue(10.0)
-        stagger_layout.addWidget(self.spin_scenario_stagger_max)
-        stagger_layout.addStretch()
-        l_sec.addLayout(stagger_layout)
 
         l_sec.addSpacing(15)
         l_sec.addWidget(QLabel("🚦 Лимиты модулей", objectName="SettingLabel"))
@@ -603,6 +586,13 @@ class SettingsPage(QWidget):
         btn_switch_farm.setFixedHeight(40)
         btn_switch_farm.clicked.connect(self.switch_farm)
         farm_select_layout.addWidget(btn_switch_farm)
+
+        btn_launch_farm = QPushButton("🚀 Открыть в новом окне")
+        btn_launch_farm.setFixedHeight(40)
+        btn_launch_farm.setStyleSheet(f"background-color: {styles.COLOR_ACCENT_BG}; color: {styles.COLOR_PRIMARY}; border: 1px solid {styles.COLOR_PRIMARY}; font-weight: bold; border-radius: 6px;")
+        btn_launch_farm.clicked.connect(self.launch_farm_window)
+        farm_select_layout.addWidget(btn_launch_farm)
+
         l_farms.addLayout(farm_select_layout)
         
         l_farms.addSpacing(15)
@@ -819,8 +809,6 @@ class SettingsPage(QWidget):
                 
                 # Security & Automation
                 self.spin_launch_delay.setValue(s.get("launch_delay", 2))
-                self.spin_scenario_stagger_min.setValue(float(s.get("scenario_stagger_min", 3.0)))
-                self.spin_scenario_stagger_max.setValue(float(s.get("scenario_stagger_max", 10.0)))
                 self.spin_flood_limit.setValue(s.get("max_flood_wait", 3600))
                 self.spin_max_tasks.setValue(s.get("max_concurrent_tasks", 10))
                 self.cb_stealth_mode.setChecked(s.get("stealth_mode", False))
@@ -886,8 +874,6 @@ class SettingsPage(QWidget):
                 "default_ai_model_name": self.input_ai_model_name.text().strip(),
                 "default_ai_persona_prompt": self.input_ai_persona_prompt.toPlainText().strip(),
                 "launch_delay": self.spin_launch_delay.value(),
-                "scenario_stagger_min": self.spin_scenario_stagger_min.value(),
-                "scenario_stagger_max": self.spin_scenario_stagger_max.value(),
                 "max_flood_wait": self.spin_flood_limit.value(),
                 "max_concurrent_tasks": self.spin_max_tasks.value(),
                 "stealth_mode": self.cb_stealth_mode.isChecked(),
@@ -998,6 +984,13 @@ class SettingsPage(QWidget):
                 QMessageBox.information(self, "Фермы", f"Вы успешно переключились на ферму '{target_farm}'!")
             else:
                 QMessageBox.critical(self, "Ошибка", "Не удалось переключить ферму.")
+
+    def launch_farm_window(self):
+        target_farm = self.combo_farms.currentText().strip()
+        if not target_farm:
+            return
+        farm_manager.launch_farm_window(target_farm)
+        QMessageBox.information(self, "Мульти-фермы", f"Запущено отдельное окно для фермы '{target_farm}'!")
 
     def create_farm(self):
         name = self.input_new_farm.text().strip()

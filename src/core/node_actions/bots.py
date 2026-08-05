@@ -128,6 +128,16 @@ async def bot_click_inline(executor, params):
                     break
 
         if selected_button and selected_row is not None and selected_col is not None:
+            # Если кнопка является URL-кнопкой (содержит ссылку на канал/чат), сохраняем ссылку в контекст
+            btn_url = getattr(selected_button, "url", None)
+            if btn_url:
+                executor.last_channel_url = btn_url
+                executor.last_chat_link = btn_url
+                executor.variables["channel_link"] = btn_url
+                executor.variables["chat_link"] = btn_url
+                executor.log(f"[Контекст]: Нажата URL-кнопка, извлечена ссылка для подписки: {btn_url}", "info")
+                return "next"
+
             await executor.sleep(random.randint(1, 3))
             feedback = ""
             click_success = False
@@ -147,8 +157,30 @@ async def bot_click_inline(executor, params):
                         data=data_bytes
                     )
                 )
-                if hasattr(res, 'message') and res.message:
-                    feedback = f" (Ответ: {res.message})"
+                cb_msg = getattr(res, 'message', None) or getattr(res, 'text', None) or ""
+                cb_url = getattr(res, 'url', None) or ""
+                if cb_msg:
+                    feedback = f" (Ответ: {cb_msg})"
+                if cb_url:
+                    feedback += f" (URL: {cb_url})"
+                    executor.last_channel_url = cb_url
+                    executor.last_chat_link = cb_url
+                    executor.variables["channel_link"] = cb_url
+                    executor.variables["chat_link"] = cb_url
+
+                # Если в тексте ответа есть ссылка (например, t.me/Imiss009 или https://t.me/...), вытаскиваем её
+                import re
+                urls = re.findall(r'(?:https?://)?t\.me/[a-zA-Z0-9_\+\-]+', cb_msg)
+                if urls:
+                    target_url = urls[0]
+                    if not target_url.startswith("http"):
+                        target_url = "https://" + target_url
+                    executor.last_channel_url = target_url
+                    executor.last_chat_link = target_url
+                    executor.variables["channel_link"] = target_url
+                    executor.variables["chat_link"] = target_url
+                    executor.log(f"[Контекст]: Из всплывающего ответа извлечена ссылка для подписки: {target_url}", "info")
+
                 click_success = True
             except Exception as raw_err:
                 executor.log(f"MTProto GetBotCallbackAnswer exception: {raw_err}", "info")
@@ -161,8 +193,29 @@ async def bot_click_inline(executor, params):
                         message_id=target_message.id,
                         callback_data=selected_button.callback_data
                     )
-                    if hasattr(res, 'text') and res.text:
-                        feedback = f" (Ответ: {res.text})"
+                    cb_msg = getattr(res, 'text', None) or getattr(res, 'message', None) or ""
+                    cb_url = getattr(res, 'url', None) or ""
+                    if cb_msg:
+                        feedback = f" (Ответ: {cb_msg})"
+                    if cb_url:
+                        feedback += f" (URL: {cb_url})"
+                        executor.last_channel_url = cb_url
+                        executor.last_chat_link = cb_url
+                        executor.variables["channel_link"] = cb_url
+                        executor.variables["chat_link"] = cb_url
+
+                    import re
+                    urls = re.findall(r'(?:https?://)?t\.me/[a-zA-Z0-9_\+\-]+', cb_msg)
+                    if urls:
+                        target_url = urls[0]
+                        if not target_url.startswith("http"):
+                            target_url = "https://" + target_url
+                        executor.last_channel_url = target_url
+                        executor.last_chat_link = target_url
+                        executor.variables["channel_link"] = target_url
+                        executor.variables["chat_link"] = target_url
+                        executor.log(f"[Контекст]: Из всплывающего ответа извлечена ссылка для подписки: {target_url}", "info")
+
                     click_success = True
                 except Exception as cb_err:
                     executor.log(f"Callback answer warning: {cb_err}", "info")

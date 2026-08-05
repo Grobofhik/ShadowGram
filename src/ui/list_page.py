@@ -427,6 +427,8 @@ class AccountListPage(QWidget):
         return any(query in value.lower() for value in haystacks if value)
 
     def on_profile_data_changed(self):
+        for row in self.rows:
+            row.update_label_text()
         if hasattr(self.mgr, 'table_page'):
             self.mgr.table_page.refresh_data()
         self.filter_accounts(self.search_input.text())

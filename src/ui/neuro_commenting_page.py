@@ -538,6 +538,9 @@ class NeuroCommentingPage(QWidget):
 
         for row_index, account in enumerate(accounts):
             account_name = account.get("name", f"Acc {row_index}")
+            is_valid = account.get("is_valid", True)
+            invalid_reason = account.get("invalid_reason", "")
+
             self.table.insertRow(row_index)
             self.table.setRowHeight(row_index, 48)
 
@@ -545,12 +548,20 @@ class NeuroCommentingPage(QWidget):
             checkbox_item.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled)
             checkbox_item.setCheckState(
                 Qt.CheckState.Checked
-                if account_name in self.selected_accounts_cache
+                if (account_name in self.selected_accounts_cache and is_valid)
                 else Qt.CheckState.Unchecked
             )
+            
+            if not is_valid:
+                checkbox_item.setBackground(QColor(239, 68, 68, 45))
+                checkbox_item.setToolTip(f"⚠️ Невалидный аккаунт: {invalid_reason}")
             self.table.setItem(row_index, 0, checkbox_item)
 
-            self.table.setItem(row_index, 1, QTableWidgetItem(account_name))
+            name_item = QTableWidgetItem(f"{account_name} (НЕВАЛИДЕН)" if not is_valid else account_name)
+            if not is_valid:
+                name_item.setBackground(QColor(239, 68, 68, 45))
+                name_item.setToolTip(f"⚠️ Невалидный аккаунт: {invalid_reason}")
+            self.table.setItem(row_index, 1, name_item)
 
             prompt_list = self.account_prompts.get(account_name, [])
             if not prompt_list:

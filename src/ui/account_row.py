@@ -283,6 +283,26 @@ class TelegramAccountRow(QFrame):
         self.label_name.setText(self.name)
         self.label_path.setText(self.workdir)
 
+        # Проверка невалидного статуса для подкрашивания карточки в красный цвет
+        from src.core.managers import config_manager
+        cfg = config_manager._read_config(CONFIG_FILE)
+        is_valid = True
+        invalid_reason = ""
+        for acc in cfg.get("accounts", []):
+            if acc.get("workdir") == self.workdir:
+                is_valid = acc.get("is_valid", True)
+                invalid_reason = acc.get("invalid_reason", "")
+                break
+
+        if not is_valid:
+            self.setStyleSheet("QFrame#AccountRow { border: 1.5px solid #ef4444 !important; background-color: rgba(239, 68, 68, 0.12) !important; border-radius: 8px; }")
+            self.setToolTip(f"⚠️ Невалидный аккаунт: {invalid_reason}")
+        else:
+            self.setStyleSheet("")
+            self.setToolTip("")
+        self.style().unpolish(self)
+        self.style().polish(self)
+
         self._set_badge_state(self.badge_proxy, f"Proxy: {display_proxy}" if self.proxy_url else "Proxy: off", bool(self.proxy_url))
         device_text = self.device_name.strip() if self.device_name else f"PC-{self.name}"
         self._set_badge_state(self.badge_device, f"Device: {device_text}", bool(self.device_name))
@@ -366,6 +386,13 @@ class TelegramAccountRow(QFrame):
         self.btn_check.setProperty("status", "success" if is_valid else "error")
         self.btn_check.setEnabled(True)
         self.refresh_btn_style(self.btn_check)
+        account_manager.mark_account_validity(
+            CONFIG_FILE, 
+            self.workdir, 
+            is_valid, 
+            "" if is_valid else "Нерабочий прокси"
+        )
+        self.profile_data_changed.emit()
 
     def run_session_check(self):
         self.btn_session.setEnabled(False)
@@ -407,8 +434,14 @@ class TelegramAccountRow(QFrame):
         self.btn_session.setProperty("status", st)
         self.refresh_btn_style(self.btn_session)
         TelegramAccountRow.status_cache[self.workdir] = message
+        
+        is_valid = (status == "Alive")
+        reason = "" if is_valid else message
+        account_manager.mark_account_validity(CONFIG_FILE, self.workdir, is_valid, reason)
+
         if status == "Alive": 
             self.load_avatar()
+        self.profile_data_changed.emit()
             
         if hasattr(self, 'profile_window') and self.profile_window:
             try:

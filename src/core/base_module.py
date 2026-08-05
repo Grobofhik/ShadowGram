@@ -34,9 +34,9 @@ class BaseModule:
 
     # --- Новая система жизненного цикла задач ---
     
-    # 1. Задержка перед самым первым запуском аккаунта (в секундах).
-    # Позволяет "размазать" массовый запуск (по умолчанию от 1 до 15 сек).
-    START_DELAY: Tuple[int, int] = (5, 250)
+    # 1. Задержка перед запуском следующего аккаунта в сценариях (в секундах).
+    # Позволяет сделать случайную паузу между аккаунтами (по умолчанию от 5 до 25 сек).
+    START_DELAY: Tuple[int, int] = (5, 25)
 
     # 2. Должен ли этот скрипт работать циклично (бесконечно)?
     IS_CYCLIC: bool = False
@@ -317,11 +317,17 @@ class BaseModule:
                 lang_code=hw_profile.get("lang_code", "en"),
                 sleep_threshold=60
             )
-            # Добавляем таймаут для предотвращения вечного зависания при недоступности прокси/сети
             await asyncio.wait_for(self.client.start(), timeout=20.0)
+            # Если подключение прошло успешно, восстанавливаем валидный статус
+            from src.core.constants import CONFIG_FILE
+            from src.core.managers.account_manager import mark_account_validity
+            mark_account_validity(CONFIG_FILE, self.workdir, True)
             return True
         except asyncio.TimeoutError:
-            self.log("Ошибка связи: превышено время ожидания подключения (проверьте прокси или сеть)", "error")
+            self.log("Ошибка связи: нерабочий прокси или таймаут сети", "error")
+            from src.core.constants import CONFIG_FILE
+            from src.core.managers.account_manager import mark_account_validity
+            mark_account_validity(CONFIG_FILE, self.workdir, False, "Нерабочий прокси / Таймаут")
             try:
                 await self.client.stop()
             except:
@@ -331,5 +337,15 @@ class BaseModule:
             self.log(f"Флуд-вейт {e.value} сек.", "warning")
             return False
         except Exception as e:
-            self.log(f"Ошибка связи: {e}", "error")
+            err_msg = str(e)
+            self.log(f"Ошибка связи: {err_msg}", "error")
+            from src.core.constants import CONFIG_FILE
+            from src.core.managers.account_manager import mark_account_validity
+            
+            if "AuthKeyUnregistered" in err_msg or "UserDeactivated" in err_msg or "SessionRevoked" in err_msg or "401" in err_msg:
+                mark_account_validity(CONFIG_FILE, self.workdir, False, "Нерабочая сессия / Забанен")
+            elif "Proxy" in err_msg or "Connection" in err_msg or "Timeout" in err_msg or "OSError" in err_msg:
+                mark_account_validity(CONFIG_FILE, self.workdir, False, "Нерабочий прокси")
+            else:
+                mark_account_validity(CONFIG_FILE, self.workdir, False, f"Ошибка: {err_msg[:40]}")
             return False

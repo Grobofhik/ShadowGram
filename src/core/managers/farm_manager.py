@@ -151,11 +151,31 @@ def switch_active_farm(name: str) -> bool:
         with open(CONFIG_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
         from src.core.managers.db_manager import mirror_to_sqlite
-        mirror_to_sqlite(CONFIG_FILE, data)
-        
         return True
     except Exception as e:
         logger.error(f"Ошибка переключения фермы: {e}")
         return False
+
+
+def launch_farm_window(name: str) -> bool:
+    """Запускает независимое новое окно ShadowGram для выбранной фермы"""
+    name = name.strip()
+    if not name:
+        return False
+    try:
+        # Сохраняем текущую конфигурацию
+        save_active_farm_config()
+        
+        main_script = BASE_DIR / "ShadowGram.py"
+        cmd = [sys.executable, str(main_script), "--farm", name]
+        
+        # Запускаем независимый процесс
+        subprocess.Popen(cmd, cwd=str(BASE_DIR))
+        logger.info(f"Запущено отдельное окно для фермы '{name}'")
+        return True
+    except Exception as e:
+        logger.error(f"Ошибка запуска окна фермы '{name}': {e}")
+        return False
+
 
 

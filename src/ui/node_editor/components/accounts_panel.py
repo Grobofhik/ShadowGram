@@ -112,8 +112,23 @@ class AccountItemWidget(QWidget):
         self.update_style()
 
     def update_style(self):
-        # Selected color highlighting depending on Cyber Green or Modern Blue theme
-        if self.selected:
+        is_valid = self.acc_data.get("is_valid", True)
+        invalid_reason = self.acc_data.get("invalid_reason", "")
+
+        if not is_valid:
+            self.setToolTip(f"⚠️ Невалидный аккаунт: {invalid_reason}")
+            self.setStyleSheet(f"""
+                QWidget#AccountCard {{
+                    background-color: rgba(239, 68, 68, 0.12);
+                    border: 1.5px solid #ef4444;
+                    border-radius: 8px;
+                }}
+                QWidget#AccountCard:hover {{
+                    background-color: rgba(239, 68, 68, 0.20);
+                }}
+            """)
+        elif self.selected:
+            self.setToolTip("")
             self.setStyleSheet(f"""
                 QWidget#AccountCard {{
                     background-color: {styles.COLOR_PRIMARY}26; /* 15% opacity primary */
@@ -125,6 +140,7 @@ class AccountItemWidget(QWidget):
                 }}
             """)
         else:
+            self.setToolTip("")
             self.setStyleSheet(f"""
                 QWidget#AccountCard {{
                     background-color: {styles.COLOR_BG};

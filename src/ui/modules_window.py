@@ -245,7 +245,15 @@ class ModulesPage(QWidget):
         for acc in accounts:
             card = QFrame()
             card.setObjectName("SectionFrame")
-            card.setStyleSheet("QFrame { background-color: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 6px; padding: 2px; } QFrame:hover { background-color: rgba(255, 255, 255, 0.07); border: 1px solid #6366f1; }")
+            
+            is_valid = acc.get("is_valid", True)
+            invalid_reason = acc.get("invalid_reason", "")
+            
+            if not is_valid:
+                card.setStyleSheet("QFrame { background-color: rgba(239, 68, 68, 0.12); border: 1.5px solid #ef4444; border-radius: 6px; padding: 2px; }")
+                card.setToolTip(f"⚠️ Невалидный аккаунт: {invalid_reason}")
+            else:
+                card.setStyleSheet("QFrame { background-color: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 6px; padding: 2px; } QFrame:hover { background-color: rgba(255, 255, 255, 0.07); border: 1px solid #6366f1; }")
             
             card_layout = QHBoxLayout(card)
             card_layout.setContentsMargins(8, 8, 8, 8)
@@ -255,8 +263,15 @@ class ModulesPage(QWidget):
             avatar.setStyleSheet("font-size: 16px; background: transparent; border: none;")
             card_layout.addWidget(avatar)
             
-            cb = QCheckBox(f"{acc['name']}")
-            cb.setStyleSheet("QCheckBox { background: transparent; border: none; font-weight: 500; font-size: 13px; } QCheckBox::indicator { width: 18px; height: 18px; border-radius: 4px; }")
+            check_label = acc['name']
+            if not is_valid:
+                check_label += f" (НЕВАЛИДЕН)"
+                
+            cb = QCheckBox(check_label)
+            if not is_valid:
+                cb.setStyleSheet("QCheckBox { color: #ef4444; background: transparent; border: none; font-weight: 600; font-size: 13px; } QCheckBox::indicator { width: 18px; height: 18px; border-radius: 4px; }")
+            else:
+                cb.setStyleSheet("QCheckBox { background: transparent; border: none; font-weight: 500; font-size: 13px; } QCheckBox::indicator { width: 18px; height: 18px; border-radius: 4px; }")
             cb.setProperty("acc_data", acc)
             cb.stateChanged.connect(lambda st, c=cb: self.on_account_toggled(st, c))
             

@@ -537,7 +537,7 @@ class NodeEditorWindow(QWidget):
         self.create_node("start", QPointF(150, 200))
         self.view.centerOn(150, 200)
 
-    def create_node(self, spec_key, pos):
+    def create_node(self, spec_key, pos, initial_params=None):
         spec = NODE_SPECS.get(spec_key)
         if not spec:
             return None
@@ -554,9 +554,11 @@ class NodeEditorWindow(QWidget):
         self.scene.addItem(node)
         node.setPos(pos)
         
-        # Initialize default parameters
+        # Initialize parameters: default spec params overridden by initial_params
         for p_name, p_info in spec["params"].items():
             node.params[p_name] = p_info["default"]
+        if initial_params:
+            node.params.update(initial_params)
             
         return node
 
@@ -641,11 +643,12 @@ class NodeEditorWindow(QWidget):
                     
             node_map = {}
             for n_data in graph.get("nodes", []):
-                node = self.create_node(n_data["type"], QPointF(n_data["pos_x"], n_data["pos_y"]))
+                loaded_params = dict(n_data.get("params", {}))
+                node = self.create_node(n_data["type"], QPointF(n_data["pos_x"], n_data["pos_y"]), initial_params=loaded_params)
                 if node:
                     node.id = n_data["id"]
                     node.title = n_data["title"]
-                    node.params = n_data.get("params", {})
+                    node.params = loaded_params
                     if "outputs" in n_data:
                         # Clear default outputs
                         for out_port in list(node.outputs):
@@ -680,7 +683,7 @@ class NodeEditorWindow(QWidget):
                 "id": node.id,
                 "type": node.node_type,
                 "title": node.title,
-                "params": node.params,
+                "params": dict(node.params),
                 "outputs": [port.name for port in node.outputs]
             })
             
@@ -846,27 +849,23 @@ class NodeEditorWindow(QWidget):
                     except Exception as e:
                         log_f(f"Критическая ошибка: {e}", acc_data["name"])
                         
-                min_stagger = cfg.get("settings", {}).get("scenario_stagger_min", 3.0)
-                max_stagger = cfg.get("settings", {}).get("scenario_stagger_max", 10.0)
+                from src.core.base_module import BaseModule
+                min_stagger, max_stagger = getattr(BaseModule, "START_DELAY", (5, 25))
                 try:
-                    min_stagger = float(min_stagger)
-                    max_stagger = float(max_stagger)
-                    if min_stagger > max_stagger:
-                        min_stagger, max_stagger = max_stagger, min_stagger
-                except (ValueError, TypeError):
-                    min_stagger, max_stagger = 3.0, 10.0
+                    min_stagger, max_stagger = float(min_stagger), float(max_stagger)
+                except Exception:
+                    min_stagger, max_stagger = 5.0, 25.0
 
-                stagger_delay = 0.0
                 for idx, acc in enumerate(accounts):
-                    t = loop.create_task(wrapped_run(acc, stagger_delay))
-                    self.local_tasks[task_id]["tasks"].append(t)
-                    tasks.append(t)
-                    # Если аккаунтов больше 1, ставим настраиваемую случайную задержку из настроек (или BaseModule)
-                    if len(accounts) > 1 and idx < len(accounts) - 1:
-                        delay_step = round(random.uniform(min_stagger, max_stagger), 2)
-                        stagger_delay += delay_step
+                    acc_task = loop.create_task(wrapped_run(acc, 0.0))
+                    self.local_tasks[task_id]["tasks"].append(acc_task)
+                    await acc_task
                     
-                await asyncio.gather(*tasks)
+                    # После того как 1-й аккаунт ВСЁ сделал, ставим задержку перед запуском следующего
+                    if idx < len(accounts) - 1:
+                        delay_after = round(random.uniform(min_stagger, max_stagger), 2)
+                        log_f(f"⏳ Аккаунт {acc.get('name', 'профиль')} завершил сценарий. Пауза {delay_after} сек. перед запуском следующего аккаунта...", "system")
+                        await asyncio.sleep(delay_after)
                 
             main_task = loop.create_task(run_all())
             self.running_tasks[task_id] = (main_task, loop)

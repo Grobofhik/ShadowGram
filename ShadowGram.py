@@ -3,20 +3,22 @@ import json
 from pathlib import Path
 import asyncio
 
-# Custom Event Loop Policy to suppress database closure errors from background update tasks in Hydrogram/Pyrogram
-class SilencedEventLoopPolicy(asyncio.DefaultEventLoopPolicy):
-    def new_event_loop(self):
-        loop = super().new_event_loop()
-        def handle_exception(loop, context):
+# Suppress background SQLite db close warnings from Hydrogram/Pyrogram in asyncio exception handler
+def _silence_db_close_errors():
+    try:
+        loop = asyncio.get_event_loop()
+        orig_handler = loop.get_exception_handler()
+        def custom_handler(loop, context):
             exception = context.get("exception")
             if exception and ("closed database" in str(exception) or "Cannot operate on a closed database" in str(exception)):
-                # Silence background updates sqlite db close errors
                 return
-            loop.default_exception_handler(context)
-        loop.set_exception_handler(handle_exception)
-        return loop
-
-asyncio.set_event_loop_policy(SilencedEventLoopPolicy())
+            if orig_handler:
+                orig_handler(loop, context)
+            else:
+                loop.default_exception_handler(context)
+        loop.set_exception_handler(custom_handler)
+    except Exception:
+        pass
 
 import os
 os.environ["QTWEBENGINE_DISABLE_SANDBOX"] = "1"
@@ -146,7 +148,19 @@ def main() -> None:
     except Exception:
         pass
         
+    # Обработка командной строки для переключения целевой фермы при открытии в новом окне
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--farm", type=str, default="", help="Имя фермы для изоляции окна")
+    args, _ = parser.parse_known_args()
+
+    if args.farm:
+        from src.core.managers.farm_manager import switch_active_farm
+        switch_active_farm(args.farm)
+
     window = TelegramManager()
+    if args.farm:
+        window.setWindowTitle(f"Shadowgram [Ферма: {args.farm}]")
     window.show()
 
     sys.exit(app.exec())

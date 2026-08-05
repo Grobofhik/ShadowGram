@@ -285,6 +285,15 @@ class NodeScenarioExecutor(BaseModule):
                     elif val_str and val_str.isdigit():
                         self.last_message_id = int(val_str)
                         
+                if "chat_link" in node_params:
+                    val = self.resolve_string(str(node_params["chat_link"])).strip()
+                    if not val and getattr(self, "last_chat_link", None):
+                        node_params["chat_link"] = self.last_chat_link
+                        self.log(f"[Контекст]: Унаследована ссылка на канал/чат (chat_link): {self.last_chat_link}", "info")
+                    elif val:
+                        self.last_chat_link = val
+                        self.last_channel_url = val
+                        
                 node_title = node.get("title", node_type)
                 
                 self.log(f"Шаг {self.step_count}: Блок '{node_title}' ({node_type})", "info")

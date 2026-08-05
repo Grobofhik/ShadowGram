@@ -185,6 +185,47 @@ def update_notes(
         return False
 
 
+def mark_account_validity(
+    config_file: Union[str, Path],
+    workdir: Union[str, Path],
+    is_valid: bool,
+    reason: str = ""
+) -> bool:
+    """Установка статуса валидности аккаунта (с учетом накопленных ошибок)"""
+    try:
+        config_file = Path(config_file)
+        workdir_path = Path(workdir).absolute()
+
+        data = _read_config(config_file)
+
+        for acc in data.get("accounts", []):
+            if Path(acc["workdir"]).absolute() == workdir_path:
+                current_reason = acc.get("invalid_reason", "")
+                
+                # Если пытаются пометить аккаунт "живым", проверяем, нет ли другой фундаментальной ошибки
+                if is_valid:
+                    # Например: если проверяем прокси, но у аккаунта "Нерабочая сессия", статус остается НЕВАЛИДНЫМ
+                    if "сесси" in current_reason.lower() or "забан" in current_reason.lower() or "authkey" in current_reason.lower():
+                        acc["is_valid"] = False
+                        acc["status"] = f"НЕВАЛИДЕН: {current_reason}"
+                        break
+                    else:
+                        acc["is_valid"] = True
+                        acc["invalid_reason"] = ""
+                        acc["status"] = "ГОТОВ"
+                else:
+                    acc["is_valid"] = False
+                    acc["invalid_reason"] = reason
+                    acc["status"] = f"НЕВАЛИДЕН: {reason}"
+                break
+
+        _write_config(config_file, data)
+        return True
+    except Exception as e:
+        logger.error(f"Ошибка при отметке валидности аккаунта: {e}")
+        return False
+
+
 def update_prompt(
     config_file: Union[str, Path], workdir: Union[str, Path], new_prompt: Optional[str]
 ) -> bool:

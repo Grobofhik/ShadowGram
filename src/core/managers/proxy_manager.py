@@ -133,7 +133,7 @@ def check_proxy_validity(proxy_url: Optional[str]) -> bool:
             opener.open("https://api.telegram.org", timeout=5)
             return True
         except Exception as urllib_e:
-            logger.error(f"Проверка прокси не удалась: {e} | urllib: {urllib_e}")
+            logger.warning(f"Проверка прокси {proxy_url[:30]}... не удалась: Ошибка авторизации/подключения (407 / Timeout)")
             return False
 
 

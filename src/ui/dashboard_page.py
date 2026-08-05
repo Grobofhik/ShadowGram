@@ -170,6 +170,7 @@ class HealthPanel(QFrame):
         
         self.ind_proxies = ProgressIndicator("Аккаунты с Прокси", styles.COLOR_INFO)
         self.ind_proxies_alive = ProgressIndicator("Живые Прокси", styles.COLOR_SUCCESS)
+        self.ind_invalid = ProgressIndicator("Невалидные аккаунты", styles.COLOR_DANGER)
         self.ind_bios = ProgressIndicator("Заполнено Bio", styles.COLOR_PRIMARY)
         self.ind_names = ProgressIndicator("Заполнено 'Имя'", "#E67E22")
         self.ind_usernames = ProgressIndicator("Установлен @Username", styles.COLOR_WARNING)
@@ -179,6 +180,7 @@ class HealthPanel(QFrame):
         
         layout.addWidget(self.ind_proxies)
         layout.addWidget(self.ind_proxies_alive)
+        layout.addWidget(self.ind_invalid)
         layout.addWidget(self.ind_bios)
         layout.addWidget(self.ind_names)
         layout.addWidget(self.ind_usernames)
@@ -242,6 +244,7 @@ class HealthPanel(QFrame):
         if total == 0: return
         
         c_proxies = 0
+        c_invalid = 0
         c_bios = 0
         c_names = 0
         c_usernames = 0
@@ -251,6 +254,7 @@ class HealthPanel(QFrame):
         
         for acc in accounts:
             if acc.get("proxy_url"): c_proxies += 1
+            if acc.get("is_valid") is False: c_invalid += 1
             if acc.get("bio"): c_bios += 1
             if acc.get("first_name"): c_names += 1
             if acc.get("username"): c_usernames += 1
@@ -263,6 +267,7 @@ class HealthPanel(QFrame):
                 c_avatars += 1
                 
         self.ind_proxies.set_value(c_proxies, total)
+        self.ind_invalid.set_value(c_invalid, total)
         self.ind_bios.set_value(c_bios, total)
         self.ind_names.set_value(c_names, total)
         self.ind_usernames.set_value(c_usernames, total)
@@ -314,6 +319,80 @@ class StatCard(QFrame):
     def update_value(self, text):
         self.val_lbl.setText(str(text))
 
+class InvalidAccountsPanel(QFrame):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setStyleSheet(f"""
+            InvalidAccountsPanel {{
+                background-color: {styles.COLOR_ACCENT_BG};
+                border-radius: 10px;
+                border: 1px solid #ef4444;
+            }}
+        """)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setSpacing(10)
+
+        hdr_layout = QHBoxLayout()
+        title_lbl = QLabel("⚠️ Невалидные Аккаунты")
+        title_lbl.setStyleSheet("color: #ef4444; font-size: 15px; font-weight: bold; border: none;")
+        hdr_layout.addWidget(title_lbl)
+
+        self.count_badge = QLabel("0")
+        self.count_badge.setStyleSheet("background-color: rgba(239, 68, 68, 0.2); color: #ef4444; font-weight: bold; border-radius: 10px; padding: 2px 8px;")
+        hdr_layout.addWidget(self.count_badge)
+        hdr_layout.addStretch()
+
+        layout.addLayout(hdr_layout)
+
+        self.scroll = QScrollArea()
+        self.scroll.setWidgetResizable(True)
+        self.scroll.setStyleSheet("QScrollArea { border: none; background: transparent; }")
+
+        self.scroll_content = QWidget()
+        self.scroll_content.setStyleSheet("background: transparent;")
+        self.list_layout = QVBoxLayout(self.scroll_content)
+        self.list_layout.setContentsMargins(0, 0, 0, 0)
+        self.list_layout.setSpacing(6)
+        self.scroll.setWidget(self.scroll_content)
+
+        layout.addWidget(self.scroll)
+
+    def update_accounts(self, invalid_accounts):
+        # Очистка старых карточек
+        while self.list_layout.count():
+            item = self.list_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+
+        self.count_badge.setText(str(len(invalid_accounts)))
+
+        if not invalid_accounts:
+            empty_lbl = QLabel("🎉 Все аккаунты на ферме валидны!")
+            empty_lbl.setStyleSheet(f"color: {styles.COLOR_TEXT_MUTED}; font-style: italic; border: none; padding: 10px;")
+            self.list_layout.addWidget(empty_lbl)
+            return
+
+        for acc in invalid_accounts:
+            card = QFrame()
+            card.setStyleSheet("QFrame { background-color: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 6px; padding: 6px; }")
+            c_layout = QVBoxLayout(card)
+            c_layout.setContentsMargins(8, 6, 8, 6)
+            c_layout.setSpacing(2)
+
+            name_lbl = QLabel(acc.get("name", "Unknown"))
+            name_lbl.setStyleSheet("color: #f8fafc; font-weight: bold; font-size: 13px; border: none;")
+            c_layout.addWidget(name_lbl)
+
+            reason_text = acc.get("invalid_reason") or "Причина не указана"
+            reason_lbl = QLabel(f"Причина: {reason_text}")
+            reason_lbl.setStyleSheet("color: #ef4444; font-size: 11px; border: none;")
+            c_layout.addWidget(reason_lbl)
+
+            self.list_layout.addWidget(card)
+        self.list_layout.addStretch()
+
+
 class DashboardPage(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -325,7 +404,17 @@ class DashboardPage(QWidget):
         self.timer.start(10000) # Обновление каждые 10 секунд
         
     def init_ui(self):
-        main_layout = QVBoxLayout(self)
+        page_layout = QVBoxLayout(self)
+        page_layout.setContentsMargins(0, 0, 0, 0)
+
+        # Скролл-область для всей страницы дашборда
+        self.main_scroll = QScrollArea()
+        self.main_scroll.setWidgetResizable(True)
+        self.main_scroll.setStyleSheet("QScrollArea { border: none; background: transparent; }")
+
+        self.scroll_content = QWidget()
+        self.scroll_content.setStyleSheet("background: transparent;")
+        main_layout = QVBoxLayout(self.scroll_content)
         main_layout.setContentsMargins(30, 20, 30, 20)
         main_layout.setSpacing(20)
         
@@ -364,8 +453,8 @@ class DashboardPage(QWidget):
         cards_layout2.addWidget(self.card_errors)
         main_layout.addLayout(cards_layout2)
         
-        # Bottom Layout (Graph + Health)
-        bottom_layout = QHBoxLayout()
+        # Mid Layout (Graph + Health)
+        mid_layout = QHBoxLayout()
         
         # Graph
         graph_frame = QFrame()
@@ -379,6 +468,7 @@ class DashboardPage(QWidget):
         pg.setConfigOption('background', styles.COLOR_ACCENT_BG)
         pg.setConfigOption('foreground', styles.COLOR_TEXT_MAIN)
         self.plot_widget = pg.PlotWidget()
+        self.plot_widget.setMinimumHeight(280)
         self.plot_widget.setStyleSheet("border: none;")
         self.plot_widget.showGrid(x=True, y=True, alpha=0.2)
         
@@ -387,13 +477,21 @@ class DashboardPage(QWidget):
         self.plot_widget.setLabel('bottom', 'Часы')
         
         graph_layout.addWidget(self.plot_widget)
-        bottom_layout.addWidget(graph_frame, stretch=6)
+        mid_layout.addWidget(graph_frame, stretch=6)
         
         # Health Panel
         self.health_panel = HealthPanel(self)
-        bottom_layout.addWidget(self.health_panel, stretch=4)
+        mid_layout.addWidget(self.health_panel, stretch=4)
         
-        main_layout.addLayout(bottom_layout, stretch=1)
+        main_layout.addLayout(mid_layout)
+
+        # Invalid Accounts Panel - Full Width Section
+        self.invalid_panel = InvalidAccountsPanel(self)
+        self.invalid_panel.setMinimumHeight(200)
+        main_layout.addWidget(self.invalid_panel)
+
+        self.main_scroll.setWidget(self.scroll_content)
+        page_layout.addWidget(self.main_scroll)
         
     def load_data(self):
         farm_name = farm_manager.get_active_farm_name()
@@ -444,6 +542,13 @@ class DashboardPage(QWidget):
                 cursor.execute("SELECT COUNT(*) FROM analytics WHERE action='error' OR action='log_error'")
                 errors = cursor.fetchone()[0]
                 self.card_errors.update_value(errors)
+
+                # Подсчет невалидных аккаунтов прямо из конфигурации
+                from src.core.managers.config_manager import _read_config
+                cfg_data = _read_config(config_path)
+                invalid_accs = [a for a in cfg_data.get("accounts", []) if a.get("is_valid") is False]
+                self.card_banned.update_value(len(invalid_accs))
+                self.invalid_panel.update_accounts(invalid_accs)
                 
                 # График: активность по часам
                 cursor.execute("""

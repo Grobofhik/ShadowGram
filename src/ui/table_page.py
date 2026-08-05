@@ -165,6 +165,9 @@ class AccountTablePage(QWidget):
                 acc.get("notes", "")
             ]
 
+            is_valid = acc.get("is_valid", True)
+            invalid_reason = acc.get("invalid_reason", "")
+
             for col, text in enumerate(items):
                 item = QTableWidgetItem(str(text))
                 if col == 0:
@@ -173,6 +176,11 @@ class AccountTablePage(QWidget):
                 else:
                     item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable) # Make read-only
                 
+                # Highlight invalid row cells in subtle red
+                if not is_valid:
+                    item.setBackground(QColor(239, 68, 68, 45))
+                    item.setToolTip(f"⚠️ Невалидный аккаунт: {invalid_reason}")
+
                 # Hidden data in column 1 to identify the account
                 if col == 1:
                     item.setData(Qt.ItemDataRole.UserRole, acc.get("workdir"))

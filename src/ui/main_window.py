@@ -95,6 +95,13 @@ class TelegramManager(QWidget):
 
         intro_layout.addLayout(logo_layout)
 
+        # Подпись текущей фермы
+        from src.core.managers.farm_manager import get_active_farm_name
+        farm_name = get_active_farm_name()
+        self.label_sidebar_farm = QLabel(f"🚜 Ферма: {farm_name}")
+        self.label_sidebar_farm.setStyleSheet(f"font-size: 11px; font-weight: bold; color: {styles.COLOR_PRIMARY}; background: {styles.COLOR_BG}; border-radius: 4px; padding: 3px 8px;")
+        intro_layout.addWidget(self.label_sidebar_farm)
+
         sidebar_layout.addWidget(sidebar_intro)
 
         # Навигационные кнопки
